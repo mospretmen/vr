@@ -1,6 +1,7 @@
 // Tracks repository. The in-memory implementation below seeds starter
-// content in code; a Drizzle/Neon-backed implementation can swap in later
-// by implementing the same TrackRepo interface.
+// content in code (default); the Drizzle/Neon-backed implementation lives in
+// drizzle-repo.ts and is used when DATABASE_URL is set. The seed data here is
+// also what `npm run db:seed` inserts.
 
 // --- Wire types (must match the Swift Codable models exactly) ---
 
@@ -153,14 +154,16 @@ function twoFiveOneInC(bpm: number): { track: Track; timeline: Timeline } {
   };
 }
 
-// --- In-memory implementation ---
+// --- Seed data (shared by the in-memory repo and the db:seed script) ---
 
-interface SeededTrack {
+export interface SeededTrack {
   track: Track;
   timeline: Timeline;
 }
 
-function seedTracks(): SeededTrack[] {
+/** The 4 starter tracks/timelines. Exported so `npm run db:seed` inserts
+ * exactly what the in-memory repo serves. */
+export function seedTracks(): SeededTrack[] {
   const A = 9;
   const E = 4;
   const G = 7;
@@ -171,6 +174,8 @@ function seedTracks(): SeededTrack[] {
     twoFiveOneInC(120),
   ];
 }
+
+// --- In-memory implementation ---
 
 export class InMemoryTrackRepo implements TrackRepo {
   private readonly byId: Map<string, SeededTrack>;

@@ -15,11 +15,25 @@ npm install
 npm run dev        # start API with watch mode (http://localhost:3000)
 npm test           # vitest
 npm run typecheck  # tsc --noEmit
-npm run db:generate  # generate SQL migrations from src/db/schema.ts
-npm run db:push      # push schema to the database
+npm run db:generate  # generate SQL migrations from src/db/schema.ts into ./drizzle
+npm run db:migrate   # apply pending migrations to DATABASE_URL
+npm run db:push      # push schema directly (dev shortcut; prefer db:migrate)
+npm run db:seed      # insert the 4 starter tracks + chord timelines
 ```
 
-Copy `.env.example` to `.env` and set `DATABASE_URL` to your Neon connection string before running Drizzle commands.
+## Database setup (Neon Postgres)
+
+The API runs with an in-memory store by default; set `DATABASE_URL` to switch to Postgres (the choice is logged at startup as `using postgres (drizzle) persistence` / `using in-memory persistence`).
+
+1. **Create a database** — sign in at [neon.tech](https://neon.tech), create a project, and copy the connection string (looks like `postgresql://USER:PASSWORD@ep-xxx.region.aws.neon.tech/dbname?sslmode=require`). Any Postgres works too (e.g. local Docker) — the driver is plain node-postgres.
+2. **Set `DATABASE_URL`** — copy `.env.example` to `.env` and paste the connection string (or export it in your shell; `npm run dev` reads the environment, not `.env`, unless you load it e.g. via `node --env-file` or `dotenv`).
+3. **Migrate** — `npm run db:migrate` applies the committed SQL migrations in `./drizzle`.
+4. **Seed** — `npm run db:seed` inserts the same 4 starter tracks/timelines the in-memory repo serves (12-bar blues in A/E/G, ii–V–I in C). Idempotent; safe to re-run.
+5. **Run** — `DATABASE_URL=... npm run dev`.
+
+After changing `src/db/schema.ts`, run `npm run db:generate` and commit the new files under `./drizzle`.
+
+Driver note: connections use `pg` (node-postgres) via `drizzle-orm/node-postgres` (`src/db/client.ts`). For edge/serverless runtimes, `@neondatabase/serverless` with `drizzle-orm/neon-serverless` is a documented drop-in swap.
 
 ## Environment variables
 
@@ -32,7 +46,7 @@ All are optional with sane defaults; parsed in `src/config.ts` into a single typ
 | `NODE_ENV` | `development` | `production` switches to plain JSON logs and hides 5xx details; `test` silences logging. |
 | `LOG_LEVEL` | `info` | Pino log level. |
 | `CORS_ORIGIN` | localhost dev origins | Comma-separated allowed origins (`*` allows any). |
-| `DATABASE_URL` | unset | Neon Postgres connection string; only needed for `drizzle-kit` commands today. |
+| `DATABASE_URL` | unset | Neon Postgres connection string. When set, the API persists to Postgres via Drizzle; when unset, it uses the seeded in-memory repos. Also used by `drizzle-kit` (`db:migrate`, `db:push`) and `db:seed`. |
 
 ## Routes
 
@@ -44,7 +58,7 @@ All are optional with sane defaults; parsed in `src/config.ts` into a single typ
 
 All `/v1` routes declare JSON request/response schemas (fast serialization + wire-contract enforcement against the Swift Codable models).
 
-Tracks are served from a seeded in-memory repository (`src/tracks/repo.ts`) and practice sessions from an in-memory repository (`src/practice/repo.ts`); the `TrackRepo` and `PracticeRepo` interfaces are the seams for future Drizzle/Neon implementations (device-id will map onto `practice_sessions.user_id` once auth lands).
+Both stores implement the `TrackRepo` / `PracticeRepo` interfaces (`src/tracks/repo.ts`, `src/practice/repo.ts`). Without `DATABASE_URL` the seeded in-memory implementations serve requests; with it, the Drizzle/Postgres implementations (`src/tracks/drizzle-repo.ts`, `src/practice/drizzle-repo.ts`) do. Practice sessions are stored per `device_id` (the `x-device-id` header); `practice_sessions.user_id` is nullable until auth lands, at which point each device-id maps onto a user.
 
 ## Ops behavior
 

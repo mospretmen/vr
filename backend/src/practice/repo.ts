@@ -1,13 +1,11 @@
-// Practice-sessions repository. The in-memory implementation below is the
-// pre-auth stand-in; a Drizzle/Neon-backed implementation can swap in later
-// by implementing the same PracticeRepo interface.
+// Practice-sessions repository. Two implementations exist: the in-memory
+// one below (default) and the Drizzle/Neon-backed one in drizzle-repo.ts
+// (used when DATABASE_URL is set).
 //
-// NOTE on the Drizzle schema: `practice_sessions` in src/db/schema.ts is
-// keyed to `users` (user_id). Until auth lands, the client identifies itself
-// with an `x-device-id` header, so the wire/storage type here carries
-// `deviceId` instead. When auth ships, deviceId maps onto
-// practice_sessions.user_id (one device-id → one user at migration time).
-// The Drizzle schema is intentionally left untouched.
+// NOTE on identity: until auth lands, the client identifies itself with an
+// `x-device-id` header, stored in `practice_sessions.device_id`. The
+// `user_id` column is nullable for now; when auth ships, one device-id maps
+// onto one user at migration time.
 
 // --- Wire types (must match the Swift Codable models exactly) ---
 
@@ -53,12 +51,34 @@ export interface PracticeRepo {
   getSummary(deviceId: string): Promise<PracticeSummary>;
 }
 
-// --- In-memory implementation ---
+// --- Pure summary computation (shared by in-memory and Drizzle repos) ---
 
 /** UTC calendar date (YYYY-MM-DD) of an ISO 8601 timestamp. */
 function utcDay(isoTimestamp: string): string {
   return new Date(isoTimestamp).toISOString().slice(0, 10);
 }
+
+/** Aggregate already-filtered sessions (one device) into the wire summary. */
+export function summarizeSessions(
+  sessions: Iterable<PracticeSession>,
+): PracticeSummary {
+  let totalTimeS = 0;
+  let sessionCount = 0;
+  const timeByMode: Partial<Record<PracticeMode, number>> = {};
+  const days = new Set<string>();
+
+  for (const session of sessions) {
+    sessionCount += 1;
+    totalTimeS += session.durationS;
+    timeByMode[session.mode] =
+      (timeByMode[session.mode] ?? 0) + session.durationS;
+    days.add(utcDay(session.startedAt));
+  }
+
+  return { totalTimeS, sessionCount, timeByMode, days: [...days].sort() };
+}
+
+// --- In-memory implementation ---
 
 export class InMemoryPracticeRepo implements PracticeRepo {
   private readonly byId = new Map<string, PracticeSession>();
@@ -71,21 +91,10 @@ export class InMemoryPracticeRepo implements PracticeRepo {
   }
 
   async getSummary(deviceId: string): Promise<PracticeSummary> {
-    let totalTimeS = 0;
-    let sessionCount = 0;
-    const timeByMode: Partial<Record<PracticeMode, number>> = {};
-    const days = new Set<string>();
-
-    for (const session of this.byId.values()) {
-      if (session.deviceId !== deviceId) continue;
-      sessionCount += 1;
-      totalTimeS += session.durationS;
-      timeByMode[session.mode] =
-        (timeByMode[session.mode] ?? 0) + session.durationS;
-      days.add(utcDay(session.startedAt));
-    }
-
-    return { totalTimeS, sessionCount, timeByMode, days: [...days].sort() };
+    const mine = [...this.byId.values()].filter(
+      (s) => s.deviceId === deviceId,
+    );
+    return summarizeSessions(mine);
   }
 }
 

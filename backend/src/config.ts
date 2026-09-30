@@ -12,7 +12,7 @@ export interface Config {
   logLevel: string;
   /** Allowed CORS origins (CORS_ORIGIN, comma-separated). */
   corsOrigins: string[];
-  /** Neon Postgres connection string (DATABASE_URL). Optional until the Drizzle repo lands. */
+  /** Neon Postgres connection string (DATABASE_URL). When set, the server uses Drizzle/Postgres repos; otherwise in-memory. */
   databaseUrl: string | undefined;
   /** Version from package.json, surfaced in the health payload. */
   version: string;

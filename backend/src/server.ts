@@ -1,7 +1,23 @@
-import { buildApp } from "./app";
+import { buildApp, type AppOptions } from "./app";
 import { config } from "./config";
+import { makeDb } from "./db/client";
+import { DrizzleTrackRepo } from "./tracks/drizzle-repo";
+import { DrizzlePracticeRepo } from "./practice/drizzle-repo";
 
-const app = buildApp();
+// Persistence: Drizzle/Postgres when DATABASE_URL is set, otherwise the
+// seeded in-memory repos (buildApp's defaults).
+let repos: Pick<AppOptions, "trackRepo" | "practiceRepo"> = {};
+const persistence = config.databaseUrl ? "postgres (drizzle)" : "in-memory";
+if (config.databaseUrl) {
+  const db = makeDb(config.databaseUrl);
+  repos = {
+    trackRepo: new DrizzleTrackRepo(db),
+    practiceRepo: new DrizzlePracticeRepo(db),
+  };
+}
+
+const app = buildApp(repos);
+app.log.info({ persistence }, "using %s persistence", persistence);
 
 /** How long to wait for in-flight requests before forcing exit. */
 const CLOSE_TIMEOUT_MS = 10_000;

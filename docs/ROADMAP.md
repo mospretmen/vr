@@ -19,8 +19,12 @@ seconds, see any scale/chord/arpeggio on your real fretboard.
 - [x] Exercise engine v1: scale runs (up/down through a box) and triad
       inversion drills, with step-through UI and dim lookahead preview
 - [x] Left-handed mode (mirror string order)
-- [ ] 3-notes-per-string patterns; auto-advance exercises via listen mode
-      (play the target note to advance) once Phase 3 audio is validated
+- [x] 3-notes-per-string patterns (canonical shapes verified in tests)
+- [x] Play-to-advance exercises: single-note detection (PitchClassDetector +
+      NoteHitTracker) advances the step when the target note is heard —
+      needs on-device validation with real guitar signal
+- [x] Practice stats: local log + streaks, anonymous device-id sync to the
+      backend practice API
 - [ ] App icon, onboarding flow, App Store metadata
 
 ## Phase 2 — Backing tracks & chord timelines
