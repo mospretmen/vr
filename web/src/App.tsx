@@ -1,9 +1,11 @@
-interface CardProps {
+import { TrackLibrary } from "./components/TrackLibrary";
+
+interface PlaceholderCardProps {
   title: string;
   description: string;
 }
 
-function Card({ title, description }: CardProps) {
+function PlaceholderCard({ title, description }: PlaceholderCardProps) {
   return (
     <div className="rounded-xl border border-zinc-800 bg-zinc-900/60 p-6 transition-colors hover:border-zinc-700">
       <h2 className="text-lg font-semibold text-zinc-100">{title}</h2>
@@ -23,16 +25,24 @@ export default function App() {
           </p>
         </header>
 
-        <section className="mt-16 grid gap-6 sm:grid-cols-3">
-          <Card
+        <section className="mt-16">
+          <h2 className="text-lg font-semibold text-zinc-100">
+            Track Library
+          </h2>
+          <p className="mt-1 text-sm text-zinc-400">
+            Backing tracks with chord timelines for in-headset overlays.
+          </p>
+          <div className="mt-6">
+            <TrackLibrary />
+          </div>
+        </section>
+
+        <section className="mt-12 grid gap-6 sm:grid-cols-2">
+          <PlaceholderCard
             title="Practice Stats"
             description="Session history, streaks, and time on the fretboard."
           />
-          <Card
-            title="Track Library"
-            description="Backing tracks with chord timelines for in-headset overlays."
-          />
-          <Card
+          <PlaceholderCard
             title="Account"
             description="Profile and sync settings for your Vision Pro."
           />
