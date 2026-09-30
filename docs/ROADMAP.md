@@ -6,7 +6,8 @@ The daily-use core: put on the headset, calibrate to your guitar in ~30
 seconds, see any scale/chord/arpeggio on your real fretboard.
 
 - [x] Music theory engine (scales, modes, pentatonics, triads, sevenths,
-      diatonic triads, tunings) — `MusicTheory`, 26 tests green
+      diatonic triads, tunings, chord identification, progression
+      templates) — `MusicTheory` (73 package tests green)
 - [x] Fret geometry + two-point calibration solver — `FretboardKit`
 - [x] visionOS app shell: control panel, immersive overlay, pinch calibration,
       2D chart panel
