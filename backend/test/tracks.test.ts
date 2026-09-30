@@ -108,4 +108,25 @@ describe("GET /v1/tracks/:id/timeline", () => {
     expect(res.statusCode).toBe(404);
     expect(res.json()).toEqual({ error: "not_found" });
   });
+
+  it("400s on track ids longer than 64 characters", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: `/v1/tracks/${"a".repeat(80)}/timeline`,
+    });
+    expect(res.statusCode).toBe(400);
+
+    const body = res.json<{ error: string; statusCode: number }>();
+    expect(body.statusCode).toBe(400);
+    expect(typeof body.error).toBe("string");
+  });
+
+  it("400s on track ids with characters outside [A-Za-z0-9_-]", async () => {
+    const res = await app.inject({
+      method: "GET",
+      url: "/v1/tracks/bad%24id/timeline", // decodes to "bad$id"
+    });
+    expect(res.statusCode).toBe(400);
+    expect(res.json<{ statusCode: number }>().statusCode).toBe(400);
+  });
 });

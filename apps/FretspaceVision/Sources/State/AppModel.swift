@@ -53,21 +53,48 @@ final class AppModel {
     var scaleType: ScaleType = .minorPentatonic
     var chordRoot: PitchClass = .a
     var chordQuality: ChordQuality = .minor
-    var tuning: Tuning = .standard
+    var tuning: Tuning = .standard { didSet { persistSettings() } }
     var fretCount: Int = 22
 
     // MARK: - Display options
-    var labelStyle: LabelStyle = .degrees
-    var showStringLines = true
-    var showFretLines = true
-    var leftHanded = false
+    var labelStyle: LabelStyle = .degrees { didSet { persistSettings() } }
+    var showStringLines = true { didSet { persistSettings() } }
+    var showFretLines = true { didSet { persistSettings() } }
+    var leftHanded = false { didSet { persistSettings() } }
     /// Index into `boxStartFrets` limiting the scale to one position box;
     /// nil shows the full neck. Scale mode only.
     var selectedBoxIndex: Int? = nil
 
+    // MARK: - Error surface
+    /// The one place user-visible failures land; ControlPanelView presents it.
+    var presentedError: UserFacingError?
+
+    init() {
+        restoreSettings()
+        listen.onError = { [weak self] error in self?.presentedError = error }
+    }
+
     // MARK: - Spatial state
     var calibration: CalibrationState = .notCalibrated
-    var immersiveSpaceOpen = false
+    var immersiveSpaceOpen = false {
+        didSet {
+            if immersiveSpaceOpen {
+                practiceLog.beginSegment(displayMode.practiceMode)
+            } else {
+                practiceLog.endSegment()
+            }
+        }
+    }
+
+    // MARK: - Practice tracking
+    let practiceLog = PracticeLog()
+
+    /// Call when displayMode changes while a session is running so time is
+    /// attributed to the mode actually practiced.
+    func practiceModeDidChange() {
+        guard immersiveSpaceOpen else { return }
+        practiceLog.beginSegment(displayMode.practiceMode)
+    }
 
     // MARK: - Listen mode (Phase 3 preview)
     let listen = ListenModeController()
@@ -194,8 +221,16 @@ final class AppModel {
             )
             if candidate.isPlausible, candidate.transform != nil {
                 calibration = .calibrated(candidate)
+                AppLog.calibration.info("""
+                    Calibrated: scale length \(candidate.scaleLength, format: .fixed(precision: 4)) m
+                    """)
             } else {
-                calibration = .placingNut // implausible — start over
+                AppLog.calibration.error("""
+                    Implausible calibration rejected: half-scale distance \
+                    \(simd_distance(nutPoint, point), format: .fixed(precision: 3)) m
+                    """)
+                presentedError = .calibrationImplausible
+                calibration = .placingNut // start over with guidance shown
             }
         case .notCalibrated, .calibrated:
             break
@@ -208,5 +243,50 @@ extension Array {
     subscript(safe index: Int?) -> Element? {
         guard let index, indices.contains(index) else { return nil }
         return self[index]
+    }
+}
+
+// MARK: - Settings persistence
+
+extension AppModel {
+    private static let settingsKey = "fretspace.displaySettings.v1"
+
+    private struct PersistedSettings: Codable {
+        var labelStyle: String
+        var showStringLines: Bool
+        var showFretLines: Bool
+        var leftHanded: Bool
+        var tuningName: String
+    }
+
+    func persistSettings() {
+        let settings = PersistedSettings(
+            labelStyle: labelStyle.rawValue,
+            showStringLines: showStringLines,
+            showFretLines: showFretLines,
+            leftHanded: leftHanded,
+            tuningName: tuning.name
+        )
+        do {
+            UserDefaults.standard.set(try JSONEncoder().encode(settings),
+                                      forKey: Self.settingsKey)
+        } catch {
+            // Non-fatal: settings just won't survive relaunch.
+            AppLog.app.error("Failed to persist settings: \(error)")
+        }
+    }
+
+    private func restoreSettings() {
+        guard let data = UserDefaults.standard.data(forKey: Self.settingsKey) else { return }
+        do {
+            let settings = try JSONDecoder().decode(PersistedSettings.self, from: data)
+            labelStyle = LabelStyle(rawValue: settings.labelStyle) ?? .degrees
+            showStringLines = settings.showStringLines
+            showFretLines = settings.showFretLines
+            leftHanded = settings.leftHanded
+            tuning = Tuning.all.first { $0.name == settings.tuningName } ?? .standard
+        } catch {
+            AppLog.app.error("Failed to restore settings, using defaults: \(error)")
+        }
     }
 }

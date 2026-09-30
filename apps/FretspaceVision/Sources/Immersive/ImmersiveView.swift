@@ -11,6 +11,7 @@ struct ImmersiveView: View {
     /// Anchors the overlay subtree; its transform is the calibration result.
     @State private var overlayAnchor = Entity()
     @State private var pinchTracker = HandPinchTracker()
+    @State private var persistence = CalibrationPersistence()
 
     var body: some View {
         RealityView { content in
@@ -33,13 +34,28 @@ struct ImmersiveView: View {
             rebuildOverlay()
         }
         .task {
+            pinchTracker.onError = { model.presentedError = $0 }
             // Only listen for pinches while a calibration flow is active.
             for await pinch in pinchTracker.pinchEvents() {
                 switch model.calibration {
                 case .placingNut, .placingTwelfthFret:
                     model.recordCalibrationPoint(pinch.position, devicePosition: pinch.devicePosition)
+                    // A fresh manual calibration supersedes the stored one.
+                    if case .calibrated(let calibration) = model.calibration {
+                        await persistence.save(calibration)
+                    }
                 case .notCalibrated, .calibrated:
                     continue
+                }
+            }
+        }
+        .task {
+            // Re-localized anchor from a previous session restores the
+            // overlay with zero setup — unless the user already calibrated.
+            for await restored in persistence.restoredCalibrations() {
+                if case .notCalibrated = model.calibration {
+                    model.calibration = .calibrated(restored)
+                    model.overlayDidChange()
                 }
             }
         }
@@ -63,6 +79,14 @@ struct ImmersiveView: View {
         )
         overlayAnchor.setTransformMatrix(transform, relativeTo: nil)
         overlayAnchor.addChild(overlay)
+
+        // Markers bloom in instead of popping: brief scale-up from the board.
+        let settled = overlay.transform
+        var compressed = settled
+        compressed.scale = SIMD3<Float>(1, 0.01, 1)
+        overlay.transform = compressed
+        overlay.move(to: settled, relativeTo: overlayAnchor,
+                     duration: 0.25, timingFunction: .easeOut)
 
         if let chord = model.listen.detectedChord {
             let aura = ChordAuraEntity.make(

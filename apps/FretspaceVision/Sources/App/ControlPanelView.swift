@@ -8,6 +8,7 @@ struct ControlPanelView: View {
     @Environment(\.openImmersiveSpace) private var openImmersiveSpace
     @Environment(\.dismissImmersiveSpace) private var dismissImmersiveSpace
     @Environment(\.openWindow) private var openWindow
+    @State private var showTrackLibrary = false
 
     var body: some View {
         @Bindable var model = model
@@ -86,13 +87,7 @@ struct ControlPanelView: View {
                         ProgressView(value: Double(model.backing.positionMs),
                                      total: Double(timeline.durationMs))
                     } else {
-                        Menu("Load Progression") {
-                            ForEach(StarterProgression.all) { starter in
-                                Button(starter.title) {
-                                    model.backing.load(starter.timeline, title: starter.title)
-                                }
-                            }
-                        }
+                        Button("Browse Backing Tracks") { showTrackLibrary = true }
                     }
                 }
 
@@ -121,18 +116,42 @@ struct ControlPanelView: View {
 
                 Section {
                     Button("Open Notation Panel") { openWindow(id: SceneID.notation) }
+                } footer: {
+                    let summary = model.practiceLog.summary
+                    if summary.sessionCount > 0 {
+                        Text("Streak: \(summary.currentStreakDays) day(s) · "
+                             + "Total practice: \(Self.formatted(summary.totalTime))")
+                    }
                 }
             }
             .navigationTitle("Fretspace")
+            .sheet(isPresented: $showTrackLibrary) {
+                TrackLibraryView()
+            }
         }
         .onChange(of: model.root) { model.overlayDidChange() }
         .onChange(of: model.scaleType) { model.overlayDidChange() }
         .onChange(of: model.chordRoot) { model.overlayDidChange() }
         .onChange(of: model.chordQuality) { model.overlayDidChange() }
         .onChange(of: model.tuning) { model.overlayDidChange() }
-        .onChange(of: model.displayMode) { model.overlayDidChange() }
+        .onChange(of: model.displayMode) {
+            model.overlayDidChange()
+            model.practiceModeDidChange()
+        }
         .onChange(of: model.selectedBoxIndex) { model.overlayDidChange() }
         .onChange(of: model.leftHanded) { model.overlayDidChange() }
+        .alert(
+            model.presentedError?.title ?? "Something went wrong",
+            isPresented: Binding(
+                get: { model.presentedError != nil },
+                set: { if !$0 { model.presentedError = nil } }
+            ),
+            presenting: model.presentedError
+        ) { _ in
+            Button("OK", role: .cancel) {}
+        } message: { error in
+            Text(error.message)
+        }
     }
 
     @ViewBuilder
@@ -165,6 +184,12 @@ struct ControlPanelView: View {
                 Task { await dismissImmersiveSpace() }
             }
         }
+    }
+
+    private static func formatted(_ interval: TimeInterval) -> String {
+        let hours = Int(interval) / 3600
+        let minutes = (Int(interval) % 3600) / 60
+        return hours > 0 ? "\(hours)h \(minutes)m" : "\(minutes)m"
     }
 
     private func rootPicker(_ title: String, selection: Binding<PitchClass>) -> some View {

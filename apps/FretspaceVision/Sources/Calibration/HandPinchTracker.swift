@@ -22,12 +22,16 @@ final class HandPinchTracker {
     private static let pinchCloseDistance: Float = 0.015 // meters — fingers touching
     private static let pinchOpenDistance: Float = 0.035  // hysteresis for release
 
+    /// Failures the user must act on (permission revoked, tracking dead).
+    var onError: (@MainActor (UserFacingError) -> Void)?
+
     /// Runs until cancelled, yielding one event per completed pinch of either hand.
     func pinchEvents() -> AsyncStream<PinchEvent> {
         AsyncStream { continuation in
             let task = Task {
                 do {
                     try await session.run([handTracking, worldTracking])
+                    AppLog.calibration.info("Hand tracking session started")
                     for await update in handTracking.anchorUpdates {
                         guard update.event == .updated else { continue }
                         if let event = self.detectPinch(in: update.anchor) {
@@ -35,6 +39,8 @@ final class HandPinchTracker {
                         }
                     }
                 } catch {
+                    AppLog.calibration.error("Hand tracking session failed: \(error)")
+                    self.onError?(.handTrackingUnavailable)
                     continuation.finish()
                 }
             }

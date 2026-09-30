@@ -17,11 +17,23 @@ final class ListenModeController {
     private var smoother = ChordDecisionSmoother(holdFrames: 3)
     private var listenTask: Task<Void, Never>?
 
+    /// Failures the user must act on are routed here (owned by AppModel).
+    var onError: (@MainActor (UserFacingError) -> Void)?
+
     func start() async {
         guard !isListening else { return }
-        guard await AVAudioApplication.requestRecordPermission() else { return }
-        guard let extractor = ChromaExtractor() else { return }
+        guard await AVAudioApplication.requestRecordPermission() else {
+            AppLog.audio.notice("Listen mode blocked: microphone permission denied")
+            onError?(.microphonePermissionDenied)
+            return
+        }
+        guard let extractor = ChromaExtractor() else {
+            AppLog.audio.error("Listen mode failed: FFT setup returned nil")
+            onError?(.audioEngineUnavailable)
+            return
+        }
 
+        AppLog.audio.info("Listen mode started")
         smoother.reset()
         isListening = true
         listenTask = Task {
@@ -29,6 +41,11 @@ final class ListenModeController {
                 let match = ChordMatcher.match(chroma)
                 confidence = match?.score ?? 0
                 detectedChord = smoother.feed(match)
+            }
+            // Stream ending on its own means the engine died mid-session.
+            if isListening {
+                AppLog.audio.error("Listen mode audio stream ended unexpectedly")
+                onError?(.audioEngineUnavailable)
             }
             isListening = false
         }

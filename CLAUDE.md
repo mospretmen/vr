@@ -57,6 +57,17 @@ final name TBD before App Store submission.
   relevant catalog (`ScaleType.all`, `ChordQuality.all`, `Tuning.all`).
 - Run `cd packages/GuitarCore && swift test` before considering any core
   change done.
+- **Quality bar (owner directive): state of the art, no exceptions.** Every
+  feature ships with structured logging, user-facing error surfacing, and
+  motion polish as part of the feature — not as a later pass.
+  - Logging: `AppLog.<category>` (os.Logger) in the app; pino in the backend.
+    Never log user-identifying content.
+  - Errors: raw errors never reach the UI. Log them, map them to a
+    `UserFacingError` case (title + recovery guidance), route it to
+    `AppModel.presentedError` — the single alert surface.
+  - API changes: the JSON wire format is pinned by WireFormatTests in
+    GuitarCore against backend/src/tracks/repo.ts. Change both sides and the
+    fixtures together, never one alone.
 
 ## Environment notes
 
