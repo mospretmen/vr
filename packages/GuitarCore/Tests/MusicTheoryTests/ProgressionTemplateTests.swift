@@ -37,6 +37,25 @@ struct ProgressionTemplateTests {
         ])
     }
 
+    @Test func minorBluesInA() {
+        let blues = ProgressionTemplate.minorBlues(in: .a)
+        #expect(blues.events.count == 12)
+        #expect(blues.events[0].chord == Chord(root: .a, quality: .minor7))
+        #expect(blues.events[4].chord == Chord(root: .d, quality: .minor7))
+        #expect(blues.events[8].chord == Chord(root: .e, quality: .dominant7)) // dominant V
+        #expect(blues.key == Scale(root: .a, type: .naturalMinor))
+    }
+
+    @Test func doowopInC() {
+        let loop = ProgressionTemplate.doowop(in: .c)
+        #expect(loop.events.map(\.chord) == [
+            Chord(root: .c, quality: .major),
+            Chord(root: .a, quality: .minor),
+            Chord(root: .f, quality: .major),
+            Chord(root: .g, quality: .major),
+        ])
+    }
+
     @Test func barLengthTracksTempo() {
         #expect(ProgressionTemplate.barMs(bpm: 120) == 2000)
         #expect(ProgressionTemplate.barMs(bpm: 60) == 4000)

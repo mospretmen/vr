@@ -25,6 +25,27 @@ public enum ProgressionTemplate {
                         key: Scale(root: key, type: .major))
     }
 
+    /// Minor 12-bar blues: i7 i7 i7 i7 / iv7 iv7 i7 i7 / V7 iv7 i7 V7
+    /// (dominant V, the harmonic-minor pull).
+    public static func minorBlues(in key: PitchClass, bpm: Double = 120) -> ChordTimeline {
+        let one = Chord(root: key, quality: .minor7)
+        let four = Chord(root: key.transposed(by: 5), quality: .minor7)
+        let five = Chord(root: key.transposed(by: 7), quality: .dominant7)
+        let bars = [one, one, one, one, four, four, one, one, five, four, one, five]
+        return timeline(bars: bars, bpm: bpm, key: Scale(root: key, type: .naturalMinor))
+    }
+
+    /// The 50s doo-wop loop: I–vi–IV–V.
+    public static func doowop(in key: PitchClass, bpm: Double = 120) -> ChordTimeline {
+        let bars = [
+            Chord(root: key, quality: .major),
+            Chord(root: key.transposed(by: 9), quality: .minor),
+            Chord(root: key.transposed(by: 5), quality: .major),
+            Chord(root: key.transposed(by: 7), quality: .major),
+        ]
+        return timeline(bars: bars, bpm: bpm, key: Scale(root: key, type: .major))
+    }
+
     /// The I–V–vi–IV pop loop.
     public static func popLoop(in key: PitchClass, bpm: Double = 120) -> ChordTimeline {
         let bars = [

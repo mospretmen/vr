@@ -14,9 +14,13 @@ struct StarterProgression: Identifiable {
               timeline: ProgressionTemplate.twelveBarBlues(in: .e)),
         .init(id: "blues-g", title: "12-Bar Blues in G",
               timeline: ProgressionTemplate.twelveBarBlues(in: .g)),
+        .init(id: "minor-blues-a", title: "Minor Blues in Am",
+              timeline: ProgressionTemplate.minorBlues(in: .a)),
         .init(id: "251-c", title: "ii–V–I in C",
               timeline: ProgressionTemplate.twoFiveOne(in: .c)),
         .init(id: "pop-g", title: "Pop Loop in G (I–V–vi–IV)",
               timeline: ProgressionTemplate.popLoop(in: .g)),
+        .init(id: "doowop-c", title: "50s Loop in C (I–vi–IV–V)",
+              timeline: ProgressionTemplate.doowop(in: .c)),
     ]
 }
