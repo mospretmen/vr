@@ -18,7 +18,11 @@ struct NotationPanelView: View {
                 labelStyle: model.labelStyle
             )
             .frame(maxHeight: .infinity)
-            noteStrip
+            if model.backing.timeline != nil {
+                ProgressionStrip()
+            } else {
+                noteStrip
+            }
         }
         .padding(24)
     }
@@ -74,6 +78,70 @@ struct NotationPanelView: View {
                     .background(.thinMaterial, in: .capsule)
             }
         }
+    }
+}
+
+/// The loaded backing track's progression as a horizontal bar strip.
+/// The sounding bar glows and the strip auto-scrolls to keep it visible;
+/// the next change is pre-announced by a subtle ring.
+struct ProgressionStrip: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 8) {
+            Text(model.backing.title)
+                .font(.headline)
+                .foregroundStyle(.secondary)
+            ScrollViewReader { proxy in
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 6) {
+                        let events = model.backing.timeline?.events ?? []
+                        ForEach(Array(events.enumerated()), id: \.offset) { index, event in
+                            barCell(index: index, event: event)
+                                .id(index)
+                        }
+                    }
+                }
+                .onChange(of: model.backing.currentChord) {
+                    guard let timeline = model.backing.timeline,
+                          let index = timeline.events.firstIndex(where: {
+                              $0.startMs <= model.backing.positionMs
+                              && model.backing.positionMs < $0.endMs
+                          }) else { return }
+                    withAnimation(.easeInOut(duration: 0.3)) {
+                        proxy.scrollTo(index, anchor: .center)
+                    }
+                }
+            }
+        }
+    }
+
+    private func barCell(index: Int, event: ChordEvent) -> some View {
+        let isCurrent = model.backing.isPlaying
+            && event.startMs <= model.backing.positionMs
+            && model.backing.positionMs < event.endMs
+        let isNext = model.backing.upcoming?.startMs == event.startMs
+
+        return VStack(spacing: 2) {
+            Text("\(index + 1)")
+                .font(.caption2)
+                .foregroundStyle(.tertiary)
+            Text(event.chord.symbol)
+                .font(.title3.monospaced().weight(isCurrent ? .bold : .regular))
+        }
+        .padding(.horizontal, 14)
+        .padding(.vertical, 8)
+        .background(
+            isCurrent ? AnyShapeStyle(.orange.opacity(0.35)) : AnyShapeStyle(.thinMaterial),
+            in: .rect(cornerRadius: 10)
+        )
+        .overlay {
+            if isNext {
+                RoundedRectangle(cornerRadius: 10)
+                    .strokeBorder(.orange.opacity(0.5), lineWidth: 1.5)
+            }
+        }
+        .animation(.easeInOut(duration: 0.2), value: isCurrent)
     }
 }
 
