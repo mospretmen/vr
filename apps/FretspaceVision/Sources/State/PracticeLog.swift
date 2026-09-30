@@ -16,9 +16,12 @@ final class PracticeLog {
 
     private var activeMode: PracticeSession.Mode?
     private var activeStart: Date?
+    private let sync = PracticeSyncClient()
+    private var syncTask: Task<Void, Never>?
 
     init() {
         restore()
+        scheduleSync() // push anything recorded while offline last time
     }
 
     var summary: PracticeStats.Summary {
@@ -45,10 +48,25 @@ final class PracticeLog {
         sessions.append(PracticeSession(
             id: UUID(), startedAt: start, duration: duration, mode: mode))
         persist()
+        scheduleSync()
         AppLog.app.info("""
             Practice segment: \(mode.rawValue, privacy: .public), \
             \(Int(duration))s
             """)
+    }
+
+    // MARK: - Sync
+
+    /// Debounced best-effort push; the server upserts by id so re-sending
+    /// the recent window is harmless.
+    private func scheduleSync() {
+        syncTask?.cancel()
+        let recent = sessions
+        syncTask = Task { [sync] in
+            try? await Task.sleep(for: .seconds(2))
+            guard !Task.isCancelled else { return }
+            await sync.push(recent)
+        }
     }
 
     // MARK: - Persistence

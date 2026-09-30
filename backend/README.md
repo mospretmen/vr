@@ -39,10 +39,12 @@ All are optional with sane defaults; parsed in `src/config.ts` into a single typ
 - `GET /health` (alias `GET /healthz`) → `{ "status": "ok", "uptime": <seconds>, "version": "<package.json version>" }`
 - `GET /v1/tracks` → `Track[]` — seeded backing tracks (12-bar blues in A, E, G at 120 bpm; ii–V–I in C). `Track: { id, title, artist, bpm, key }` where `key` is `{ root, type: { name, intervals } } | null` and `root` is a pitch class 0–11 (C = 0).
 - `GET /v1/tracks/:id/timeline` → `{ events, key }` — chord timeline for a track. Each event is `{ startMs, durationMs, chord: { root, quality: { name, symbol, intervals } } }`. Unknown ids return `404 { "error": "not_found" }`. `:id` is validated (`^[A-Za-z0-9_-]+$`, max 64 chars); invalid ids return `400`.
+- `POST /v1/practice-sessions` → `{ "accepted": <count> }` — batch sync of practice sessions (max 500 per batch). Body is `{ sessions: [{ id, startedAt, durationS, mode }] }` where `id` is a client-generated UUID (idempotency key: upserts by id, so retries are safe), `startedAt` is ISO 8601, and `mode` is one of `scale | chord | chordInScale | exercise | backingTrack | listen`. Requires an `x-device-id` header (UUID; the pre-auth stand-in for a user id) — missing/malformed header, an unknown `mode`, or a batch over 500 return `400`.
+- `GET /v1/practice-sessions/summary` → `{ totalTimeS, sessionCount, timeByMode, days }` — per-device practice summary. Requires the same `x-device-id` header. `timeByMode` maps each practiced mode to seconds; `days` is the sorted unique list of `YYYY-MM-DD` dates (UTC) with practice, for client-side streak rendering.
 
-Both `/v1` routes declare JSON response schemas (fast serialization + wire-contract enforcement against the Swift Codable models).
+All `/v1` routes declare JSON request/response schemas (fast serialization + wire-contract enforcement against the Swift Codable models).
 
-Tracks are currently served from a seeded in-memory repository (`src/tracks/repo.ts`); the `TrackRepo` interface is the seam for a future Drizzle/Neon implementation.
+Tracks are served from a seeded in-memory repository (`src/tracks/repo.ts`) and practice sessions from an in-memory repository (`src/practice/repo.ts`); the `TrackRepo` and `PracticeRepo` interfaces are the seams for future Drizzle/Neon implementations (device-id will map onto `practice_sessions.user_id` once auth lands).
 
 ## Ops behavior
 

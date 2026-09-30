@@ -72,6 +72,7 @@ final class AppModel {
     init() {
         restoreSettings()
         listen.onError = { [weak self] error in self?.presentedError = error }
+        listen.onNoteHit = { [weak self] in self?.exerciseNoteWasHit() }
     }
 
     // MARK: - Spatial state
@@ -126,6 +127,7 @@ final class AppModel {
         exercise = ExerciseGenerator.scaleRun(scale: scale, box: start, on: fretboardModel)
         exerciseIndex = 0
         displayMode = .exercise
+        syncExerciseNoteTarget()
         overlayDidChange()
     }
 
@@ -134,20 +136,58 @@ final class AppModel {
             chord: chord, strings: [3, 4, 5], on: fretboardModel)
         exerciseIndex = 0
         displayMode = .exercise
+        syncExerciseNoteTarget()
+        overlayDidChange()
+    }
+
+    func startThreeNPSExercise() {
+        let start = boxStartFrets[safe: selectedBoxIndex ?? 1] ?? 5
+        guard let generated = ExerciseGenerator.threeNotesPerString(
+            scale: scale, startingAt: start, on: fretboardModel) else {
+            AppLog.app.notice("3NPS pattern doesn't fit at fret \(start)")
+            return
+        }
+        exercise = generated
+        exerciseIndex = 0
+        displayMode = .exercise
+        syncExerciseNoteTarget()
         overlayDidChange()
     }
 
     func advanceExercise() {
         guard let exercise else { return }
         exerciseIndex = (exerciseIndex + 1) % exercise.steps.count
+        syncExerciseNoteTarget()
         overlayDidChange()
     }
 
     func stopExercise() {
         exercise = nil
         exerciseIndex = 0
+        listen.noteTarget = nil
         if displayMode == .exercise { displayMode = .scale }
         overlayDidChange()
+    }
+
+    /// Play-to-advance: while listening during an exercise, the current
+    /// step's pitch class is the note target; a stable hit advances.
+    private func syncExerciseNoteTarget() {
+        guard listen.isListening, let exercise,
+              exercise.steps.indices.contains(exerciseIndex) else {
+            listen.noteTarget = nil
+            return
+        }
+        listen.noteTarget = exercise.steps[exerciseIndex].note.pitchClass
+    }
+
+    private func exerciseNoteWasHit() {
+        guard displayMode == .exercise, exercise != nil else { return }
+        advanceExercise()
+    }
+
+    /// Re-sync the target when listen mode starts/stops mid-exercise.
+    func listenStateDidChange() {
+        syncExerciseNoteTarget()
     }
 
     // MARK: - Derived musical state

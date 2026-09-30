@@ -98,7 +98,13 @@ struct ControlPanelView: View {
                         Button("Stop Exercise", role: .destructive) { model.stopExercise() }
                     } else {
                         Button("Scale Run in Current Box") { model.startScaleRunExercise() }
+                        Button("3-Notes-Per-String Pattern") { model.startThreeNPSExercise() }
                         Button("Triad Drill on Top Strings") { model.startTriadDrillExercise() }
+                    }
+                    if model.exercise != nil, !model.listen.isListening {
+                        Text("Tip: start Listen mode and steps advance when you play the target note.")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
                 }
 
@@ -106,10 +112,16 @@ struct ControlPanelView: View {
                     if model.listen.isListening {
                         LabeledContent("Hearing",
                                        value: model.listen.detectedChord?.symbol ?? "—")
-                        Button("Stop Listening") { model.listen.stop() }
+                        Button("Stop Listening") {
+                            model.listen.stop()
+                            model.listenStateDidChange()
+                        }
                     } else {
                         Button("Start Listening") {
-                            Task { await model.listen.start() }
+                            Task {
+                                await model.listen.start()
+                                model.listenStateDidChange()
+                            }
                         }
                     }
                 }

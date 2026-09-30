@@ -10,10 +10,17 @@ import rateLimit from "@fastify/rate-limit";
 import { config as defaultConfig, type Config } from "./config";
 import { createInMemoryTrackRepo, type TrackRepo } from "./tracks/repo";
 import { tracksRoutes } from "./tracks/routes";
+import {
+  createInMemoryPracticeRepo,
+  type PracticeRepo,
+} from "./practice/repo";
+import { practiceRoutes } from "./practice/routes";
 
 export interface AppOptions {
   /** Tracks repository. Defaults to the seeded in-memory implementation. */
   trackRepo?: TrackRepo;
+  /** Practice-sessions repository. Defaults to the in-memory implementation. */
+  practiceRepo?: PracticeRepo;
   /** Config to run with. Defaults to the env-derived singleton. */
   config?: Config;
   /** Logger override (e.g. `false` in tests). Defaults to env-appropriate pino settings. */
@@ -64,6 +71,7 @@ const healthSchema = {
 export function buildApp(opts: AppOptions = {}): FastifyInstance {
   const cfg = opts.config ?? defaultConfig;
   const trackRepo = opts.trackRepo ?? createInMemoryTrackRepo();
+  const practiceRepo = opts.practiceRepo ?? createInMemoryPracticeRepo();
 
   const app = Fastify({
     logger: opts.logger ?? loggerOptions(cfg),
@@ -122,6 +130,7 @@ export function buildApp(opts: AppOptions = {}): FastifyInstance {
   app.register(
     async (v1) => {
       await v1.register(tracksRoutes, { repo: trackRepo });
+      await v1.register(practiceRoutes, { repo: practiceRepo });
     },
     { prefix: "/v1" },
   );

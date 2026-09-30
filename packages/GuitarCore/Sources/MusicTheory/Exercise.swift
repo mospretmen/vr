@@ -76,6 +76,47 @@ public enum ExerciseGenerator {
         )
     }
 
+    /// Three-notes-per-string pattern: 18 consecutive scale tones laid out
+    /// three to a string, starting from the first scale tone at or above
+    /// `startFret` on the lowest string. The modern-technique counterpart to
+    /// position boxes — wider stretches, symmetric picking.
+    public static func threeNotesPerString(
+        scale: Scale,
+        startingAt startFret: Int,
+        on model: FretboardModel
+    ) -> Exercise? {
+        let lowString = model.tuning.openStrings[0]
+
+        // First scale tone on the low string at or above startFret.
+        guard let firstFret = (startFret...model.fretCount).first(where: {
+            scale.contains(lowString.transposed(by: $0).pitchClass)
+        }) else { return nil }
+
+        // Stream of consecutive ascending scale tones from that note.
+        var tones: [Note] = [lowString.transposed(by: firstFret)]
+        while tones.count < model.tuning.stringCount * 3 {
+            var next = tones.last!.transposed(by: 1)
+            while !scale.contains(next.pitchClass) {
+                next = next.transposed(by: 1)
+            }
+            tones.append(next)
+        }
+
+        var steps: [ExerciseStep] = []
+        for (index, note) in tones.enumerated() {
+            let string = index / 3
+            let fret = note.midi - model.tuning.openStrings[string].midi
+            guard fret >= 0, fret <= model.fretCount else { return nil }
+            steps.append(ExerciseStep(position: FretPosition(string: string, fret: fret),
+                                      note: note))
+        }
+        let descending = steps.dropLast().reversed()
+        return Exercise(
+            name: "\(scale.name) 3NPS — fret \(firstFret)",
+            steps: steps + descending
+        )
+    }
+
     /// Lowest fret combination putting `pitchClasses[i]` on `strings[i]` with
     /// strictly ascending sounding pitch and a hand-sized fret spread.
     private static func lowestVoicing(

@@ -15,10 +15,18 @@ final class ListenModeController {
     private(set) var confidence: Double = 0
 
     private var smoother = ChordDecisionSmoother(holdFrames: 3)
+    private var noteTracker = NoteHitTracker(holdFrames: 2)
     private var listenTask: Task<Void, Never>?
 
     /// Failures the user must act on are routed here (owned by AppModel).
     var onError: (@MainActor (UserFacingError) -> Void)?
+
+    /// When set, frames are also matched against this single note; a stable
+    /// hit fires `onNoteHit` once. Drives play-to-advance exercises.
+    var noteTarget: PitchClass? {
+        didSet { noteTracker.setTarget(noteTarget) }
+    }
+    var onNoteHit: (@MainActor () -> Void)?
 
     func start() async {
         guard !isListening else { return }
@@ -41,6 +49,9 @@ final class ListenModeController {
                 let match = ChordMatcher.match(chroma)
                 confidence = match?.score ?? 0
                 detectedChord = smoother.feed(match)
+                if noteTracker.feed(chroma) {
+                    onNoteHit?()
+                }
             }
             // Stream ending on its own means the engine died mid-session.
             if isListening {

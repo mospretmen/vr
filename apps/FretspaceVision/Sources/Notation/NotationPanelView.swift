@@ -15,7 +15,8 @@ struct NotationPanelView: View {
                 highlights: model.highlights,
                 stringCount: model.tuning.stringCount,
                 fretCount: min(model.fretCount, 15), // charts read best to fret 15
-                labelStyle: model.labelStyle
+                labelStyle: model.labelStyle,
+                leftHanded: model.leftHanded
             )
             .frame(maxHeight: .infinity)
             if model.backing.timeline != nil {
@@ -152,6 +153,7 @@ struct FretboardDiagram: View {
     let stringCount: Int
     let fretCount: Int
     let labelStyle: LabelStyle
+    var leftHanded = false
 
     var body: some View {
         Canvas { context, size in
@@ -163,8 +165,12 @@ struct FretboardDiagram: View {
             let stringGap = rect.height / CGFloat(max(stringCount - 1, 1))
 
             func x(fret: Int) -> CGFloat { rect.minX + CGFloat(fret) * fretWidth }
-            // String 0 (lowest pitch) at the bottom.
-            func y(string: Int) -> CGFloat { rect.maxY - CGFloat(string) * stringGap }
+            // String 0 (lowest pitch) at the bottom; mirrored for lefties to
+            // match the flipped spatial overlay.
+            func y(string: Int) -> CGFloat {
+                leftHanded ? rect.minY + CGFloat(string) * stringGap
+                           : rect.maxY - CGFloat(string) * stringGap
+            }
 
             // Frets
             for fret in 0...fretCount {
