@@ -86,6 +86,8 @@ struct ControlPanelView: View {
                         }
                         ProgressView(value: Double(model.backing.positionMs),
                                      total: Double(timeline.durationMs))
+                        @Bindable var backing = model.backing
+                        Toggle("Metronome click", isOn: $backing.clickEnabled)
                     } else {
                         Button("Browse Backing Tracks") { showTrackLibrary = true }
                     }

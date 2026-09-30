@@ -18,13 +18,21 @@ final class BackingTrackController {
     private(set) var upcoming: ChordEvent?
 
     var loops = true
+    var clickEnabled = false {
+        didSet { updateMetronome() }
+    }
+    /// Beats per minute, inferred from the first event on load (one bar per
+    /// event in all seeded content) unless supplied explicitly.
+    private(set) var bpm: Double?
 
+    private let metronome = MetronomeEngine()
     private var tickTask: Task<Void, Never>?
 
-    func load(_ timeline: ChordTimeline, title: String) {
+    func load(_ timeline: ChordTimeline, title: String, bpm: Double? = nil) {
         stop()
         self.timeline = timeline
         self.title = title
+        self.bpm = bpm ?? timeline.events.first.map { 240_000.0 / Double($0.durationMs) }
         positionMs = 0
         currentChord = timeline.chord(atMs: 0)
         upcoming = timeline.nextChange(afterMs: 0)
@@ -33,6 +41,7 @@ final class BackingTrackController {
     func play() {
         guard let timeline, !isPlaying, timeline.durationMs > 0 else { return }
         isPlaying = true
+        updateMetronome()
         let start = ContinuousClock.now - .milliseconds(positionMs)
 
         tickTask = Task {
@@ -68,6 +77,15 @@ final class BackingTrackController {
         tickTask?.cancel()
         tickTask = nil
         isPlaying = false
+        updateMetronome()
+    }
+
+    private func updateMetronome() {
+        if isPlaying, clickEnabled, let bpm {
+            if !metronome.isRunning { metronome.start(bpm: bpm) }
+        } else if metronome.isRunning {
+            metronome.stop()
+        }
     }
 
     func stop() {

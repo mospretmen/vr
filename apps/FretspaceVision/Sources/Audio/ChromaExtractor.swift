@@ -37,6 +37,19 @@ final class ChromaExtractor {
     /// Caller must have obtained mic permission first.
     func chromagrams() -> AsyncStream<Chromagram> {
         AsyncStream { continuation in
+            // Measurement mode disables system voice processing (AGC, echo
+            // cancellation) that would smear the guitar's spectrum.
+            do {
+                let audioSession = AVAudioSession.sharedInstance()
+                try audioSession.setCategory(.playAndRecord, mode: .measurement,
+                                             options: [.mixWithOthers])
+                try audioSession.setActive(true)
+            } catch {
+                AppLog.audio.error("Audio session activation failed: \(error)")
+                continuation.finish()
+                return
+            }
+
             let input = engine.inputNode
             let format = input.outputFormat(forBus: 0)
 
