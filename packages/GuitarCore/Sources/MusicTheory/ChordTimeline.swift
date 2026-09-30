@@ -28,6 +28,20 @@ public struct ChordTimeline: Codable, Sendable, Hashable {
         self.key = key
     }
 
+    /// Custom decode routes through the sorting initializer so the binary
+    /// search invariant holds even for unsorted wire payloads.
+    public init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.init(
+            events: try container.decode([ChordEvent].self, forKey: .events),
+            key: try container.decodeIfPresent(Scale.self, forKey: .key)
+        )
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case events, key
+    }
+
     public var durationMs: Int { events.map(\.endMs).max() ?? 0 }
 
     /// The chord sounding at `timeMs`, if any (binary search over starts).

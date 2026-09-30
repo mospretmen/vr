@@ -1,0 +1,62 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  guitar-core:
+    name: GuitarCore (swift test)
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Run tests
+        run: swift test --package-path packages/GuitarCore
+
+  app-syntax:
+    name: visionOS app (syntax parse)
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      # Full visionOS build needs the visionOS SDK + signing; until that's
+      # configured, parse-check the sources so obvious breakage fails CI.
+      - name: Parse app sources
+        run: find apps/FretspaceVision/Sources -name '*.swift' -print0 | xargs -0 swiftc -parse
+      - name: Validate project.yml
+        run: |
+          brew install xcodegen
+          cd apps/FretspaceVision && xcodegen generate
+
+  backend:
+    name: Backend (vitest + typecheck)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npm test
+      - run: npm run typecheck
+
+  web:
+    name: Web (build)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: web
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: web/package-lock.json
+      - run: npm ci
+      - run: npm run build
