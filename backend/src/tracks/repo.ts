@@ -74,6 +74,18 @@ export const MAJOR_7: ChordQuality = {
   intervals: [0, 4, 7, 11],
 };
 
+export const MAJOR: ChordQuality = {
+  name: "Major",
+  symbol: "",
+  intervals: [0, 4, 7],
+};
+
+export const MINOR: ChordQuality = {
+  name: "Minor",
+  symbol: "m",
+  intervals: [0, 3, 7],
+};
+
 export const BLUES_SCALE: ScaleType = {
   name: "Blues",
   intervals: [0, 3, 5, 6, 7, 10],
@@ -82,6 +94,11 @@ export const BLUES_SCALE: ScaleType = {
 export const MAJOR_SCALE: ScaleType = {
   name: "Major (Ionian)",
   intervals: [0, 2, 4, 5, 7, 9, 11],
+};
+
+export const NATURAL_MINOR_SCALE: ScaleType = {
+  name: "Minor (Aeolian)",
+  intervals: [0, 2, 3, 5, 7, 8, 10],
 };
 
 // --- Seed generation ---
@@ -154,6 +171,51 @@ function twoFiveOneInC(bpm: number): { track: Track; timeline: Timeline } {
   };
 }
 
+/**
+ * Minor 12-bar blues: i7 i7 i7 i7 / iv7 iv7 i7 i7 / V7 iv7 i7 V7
+ * (dominant V, the harmonic-minor pull). Mirrors
+ * ProgressionTemplate.minorBlues in the Swift core.
+ */
+function minorBlues(tonic: number, bpm: number): { track: Track; timeline: Timeline } {
+  const key: Key = { root: tonic, type: NATURAL_MINOR_SCALE };
+  const bars: Chord[] = TWELVE_BAR_BLUES_OFFSETS.map((offset) => ({
+    root: (tonic + offset) % PITCH_CLASSES,
+    quality: offset === 7 ? DOMINANT_7 : MINOR_7, // only the V is dominant
+  }));
+  const tonicName = NOTE_NAMES[tonic % PITCH_CLASSES];
+  return {
+    track: {
+      id: `minor-blues-${tonicName?.toLowerCase().replace("#", "s")}`,
+      title: `Minor Blues in ${tonicName}m`,
+      artist: null,
+      bpm,
+      key,
+    },
+    timeline: { events: buildEvents(bars, bpm), key },
+  };
+}
+
+/** The 50s doo-wop loop: I–vi–IV–V. Mirrors ProgressionTemplate.doowop. */
+function doowopInC(bpm: number): { track: Track; timeline: Timeline } {
+  const key: Key = { root: 0, type: MAJOR_SCALE };
+  const bars: Chord[] = [
+    { root: 0, quality: MAJOR }, // C
+    { root: 9, quality: MINOR }, // Am
+    { root: 5, quality: MAJOR }, // F
+    { root: 7, quality: MAJOR }, // G
+  ];
+  return {
+    track: {
+      id: "doowop-c",
+      title: "50s Loop in C (I–vi–IV–V)",
+      artist: null,
+      bpm,
+      key,
+    },
+    timeline: { events: buildEvents(bars, bpm), key },
+  };
+}
+
 // --- Seed data (shared by the in-memory repo and the db:seed script) ---
 
 export interface SeededTrack {
@@ -161,7 +223,7 @@ export interface SeededTrack {
   timeline: Timeline;
 }
 
-/** The 4 starter tracks/timelines. Exported so `npm run db:seed` inserts
+/** The starter tracks/timelines. Exported so `npm run db:seed` inserts
  * exactly what the in-memory repo serves. */
 export function seedTracks(): SeededTrack[] {
   const A = 9;
@@ -171,7 +233,9 @@ export function seedTracks(): SeededTrack[] {
     twelveBarBlues(A, 120),
     twelveBarBlues(E, 120),
     twelveBarBlues(G, 120),
+    minorBlues(A, 120),
     twoFiveOneInC(120),
+    doowopInC(120),
   ];
 }
 

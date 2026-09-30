@@ -1,3 +1,4 @@
+import { PracticeStats } from "./components/PracticeStats";
 import { TrackLibrary } from "./components/TrackLibrary";
 
 interface PlaceholderCardProps {
@@ -38,10 +39,7 @@ export default function App() {
         </section>
 
         <section className="mt-12 grid gap-6 sm:grid-cols-2">
-          <PlaceholderCard
-            title="Practice Stats"
-            description="Session history, streaks, and time on the fretboard."
-          />
+          <PracticeStats />
           <PlaceholderCard
             title="Account"
             description="Profile and sync settings for your Vision Pro."

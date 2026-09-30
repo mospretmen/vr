@@ -46,14 +46,27 @@ export interface Timeline {
   key: Key | null;
 }
 
+export interface PracticeSummary {
+  totalTimeS: number;
+  sessionCount: number;
+  /** Seconds practiced per mode (scale, chord, chordInScale, …). */
+  timeByMode: Record<string, number>;
+  /** Sorted unique "YYYY-MM-DD" UTC dates with at least one session. */
+  days: string[];
+}
+
 // --- Fetch helpers ---
 
 const API_BASE = "/api/v1";
 
-async function getJson<T>(path: string, signal?: AbortSignal): Promise<T> {
+async function getJson<T>(
+  path: string,
+  signal?: AbortSignal,
+  headers?: Record<string, string>,
+): Promise<T> {
   let res: Response;
   try {
-    res = await fetch(`${API_BASE}${path}`, { signal });
+    res = await fetch(`${API_BASE}${path}`, { signal, headers });
   } catch (err) {
     // Let aborts propagate untouched; callers ignore them.
     if (err instanceof DOMException && err.name === "AbortError") throw err;
@@ -85,4 +98,13 @@ export function fetchTimeline(
     `/tracks/${encodeURIComponent(trackId)}/timeline`,
     signal,
   );
+}
+
+export function fetchPracticeSummary(
+  deviceId: string,
+  signal?: AbortSignal,
+): Promise<PracticeSummary> {
+  return getJson<PracticeSummary>("/practice-sessions/summary", signal, {
+    "x-device-id": deviceId,
+  });
 }

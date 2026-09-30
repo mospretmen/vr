@@ -14,12 +14,12 @@ afterAll(async () => {
 });
 
 describe("GET /v1/tracks", () => {
-  it("returns 4 seeded tracks in the wire format", async () => {
+  it("returns 6 seeded tracks in the wire format", async () => {
     const res = await app.inject({ method: "GET", url: "/v1/tracks" });
     expect(res.statusCode).toBe(200);
 
     const tracks = res.json<Track[]>();
-    expect(tracks).toHaveLength(4);
+    expect(tracks).toHaveLength(6);
 
     for (const track of tracks) {
       expect(typeof track.id).toBe("string");
