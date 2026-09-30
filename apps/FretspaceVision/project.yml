@@ -1,0 +1,60 @@
+# XcodeGen project definition — regenerate with:
+#   brew install xcodegen   (once)
+#   cd apps/FretspaceVision && xcodegen generate
+name: FretspaceVision
+options:
+  bundleIdPrefix: com.gabrielmotta
+  deploymentTarget:
+    visionOS: "2.0"
+  createIntermediateGroups: true
+
+packages:
+  GuitarCore:
+    path: ../../packages/GuitarCore
+
+targets:
+  FretspaceVision:
+    type: application
+    platform: visionOS
+    sources: [Sources]
+    dependencies:
+      - package: GuitarCore
+        product: MusicTheory
+      - package: GuitarCore
+        product: FretboardKit
+      - package: GuitarCore
+        product: AudioAnalysis
+    info:
+      path: Sources/Info.plist
+      properties:
+        CFBundleDisplayName: Fretspace
+        UIApplicationSceneManifest:
+          UIApplicationSupportsMultipleScenes: true
+          UIApplicationPreferredDefaultSceneSessionRole: UIWindowSceneSessionRoleApplication
+        # Hand tracking for pinch-based fretboard calibration.
+        NSHandsTrackingUsageDescription: >-
+          Fretspace uses hand tracking so you can pinch to align the virtual
+          fretboard overlay with your real guitar.
+        # Mic is used in the (future) live chord-detection mode. Declared now
+        # so the entitlement/consent flow is designed in from the start.
+        NSMicrophoneUsageDescription: >-
+          Fretspace listens to your guitar to detect the chords you play and
+          light up the fretboard in response.
+        UIApplicationSupportsIndirectInputEvents: true
+    settings:
+      base:
+        SWIFT_VERSION: "6.0"
+        ENABLE_USER_SCRIPT_SANDBOXING: true
+        GENERATE_INFOPLIST_FILE: false
+        PRODUCT_BUNDLE_IDENTIFIER: com.gabrielmotta.fretspace
+        CODE_SIGN_STYLE: Automatic
+
+schemes:
+  FretspaceVision:
+    build:
+      targets:
+        FretspaceVision: all
+    run:
+      config: Debug
+    archive:
+      config: Release

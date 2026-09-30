@@ -1,0 +1,149 @@
+import SwiftUI
+import MusicTheory
+import FretboardKit
+
+/// Floating chart window: a 2D fretboard diagram mirroring the spatial
+/// overlay, plus the notes/degrees of the current selection. Staff notation
+/// rendering is a later phase (see docs/ROADMAP.md).
+struct NotationPanelView: View {
+    @Environment(AppModel.self) private var model
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 16) {
+            header
+            FretboardDiagram(
+                highlights: model.highlights,
+                stringCount: model.tuning.stringCount,
+                fretCount: min(model.fretCount, 15), // charts read best to fret 15
+                labelStyle: model.labelStyle
+            )
+            .frame(maxHeight: .infinity)
+            noteStrip
+        }
+        .padding(24)
+    }
+
+    private var header: some View {
+        HStack {
+            Text(title).font(.largeTitle.bold())
+            Spacer()
+            legend
+        }
+    }
+
+    private var title: String {
+        switch model.displayMode {
+        case .scale: model.scale.name
+        case .chord: model.chord.symbol
+        case .chordInScale: "\(model.chord.symbol) over \(model.scale.name)"
+        }
+    }
+
+    private var legend: some View {
+        HStack(spacing: 12) {
+            if model.displayMode != .scale {
+                legendDot(.orange, "Root")
+                legendDot(.cyan, "3rd")
+                legendDot(.green, "5th")
+                legendDot(.purple, "7th")
+            } else {
+                legendDot(.orange, "Root")
+                legendDot(Color.white.opacity(0.55), "Scale")
+            }
+        }
+        .font(.caption)
+    }
+
+    private func legendDot(_ color: Color, _ text: String) -> some View {
+        HStack(spacing: 4) {
+            Circle().fill(color).frame(width: 10, height: 10)
+            Text(text)
+        }
+    }
+
+    private var noteStrip: some View {
+        HStack(spacing: 10) {
+            let pcs = model.displayMode == .chord
+                ? model.chord.pitchClasses
+                : model.scale.pitchClasses
+            ForEach(Array(pcs.enumerated()), id: \.offset) { _, pc in
+                Text(pc.name())
+                    .font(.title3.monospaced())
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 6)
+                    .background(.thinMaterial, in: .capsule)
+            }
+        }
+    }
+}
+
+/// 2D fretboard chart drawn with Canvas. Strings run horizontally
+/// (lowest string at the bottom, like tab), frets vertically.
+struct FretboardDiagram: View {
+    let highlights: [FretboardHighlight]
+    let stringCount: Int
+    let fretCount: Int
+    let labelStyle: LabelStyle
+
+    var body: some View {
+        Canvas { context, size in
+            let inset: CGFloat = 28
+            let rect = CGRect(x: inset, y: inset,
+                              width: size.width - inset * 2,
+                              height: size.height - inset * 2)
+            let fretWidth = rect.width / CGFloat(fretCount)
+            let stringGap = rect.height / CGFloat(max(stringCount - 1, 1))
+
+            func x(fret: Int) -> CGFloat { rect.minX + CGFloat(fret) * fretWidth }
+            // String 0 (lowest pitch) at the bottom.
+            func y(string: Int) -> CGFloat { rect.maxY - CGFloat(string) * stringGap }
+
+            // Frets
+            for fret in 0...fretCount {
+                var line = Path()
+                line.move(to: CGPoint(x: x(fret: fret), y: rect.minY))
+                line.addLine(to: CGPoint(x: x(fret: fret), y: rect.maxY))
+                context.stroke(line, with: .color(.white.opacity(fret == 0 ? 0.9 : 0.3)),
+                               lineWidth: fret == 0 ? 3 : 1)
+            }
+
+            // Inlay markers
+            for fret in [3, 5, 7, 9, 12, 15] where fret <= fretCount {
+                let cx = x(fret: fret) - fretWidth / 2
+                let count = fret == 12 ? 2 : 1
+                for i in 0..<count {
+                    let cy = rect.midY + (count == 2 ? (CGFloat(i) * 2 - 1) * rect.height / 5 : 0)
+                    let dot = Path(ellipseIn: CGRect(x: cx - 4, y: cy - 4, width: 8, height: 8))
+                    context.fill(dot, with: .color(.white.opacity(0.15)))
+                }
+            }
+
+            // Strings
+            for string in 0..<stringCount {
+                var line = Path()
+                line.move(to: CGPoint(x: rect.minX, y: y(string: string)))
+                line.addLine(to: CGPoint(x: rect.maxX, y: y(string: string)))
+                context.stroke(line, with: .color(.white.opacity(0.4)), lineWidth: 1)
+            }
+
+            // Highlights
+            for h in highlights where h.position.fret <= fretCount {
+                let cx = h.position.fret == 0
+                    ? rect.minX - 14 // open strings sit left of the nut
+                    : x(fret: h.position.fret) - fretWidth / 2
+                let cy = y(string: h.position.string)
+                let radius: CGFloat = CGFloat(OverlayPalette.radius(for: h.role)) * 2200
+                let circle = Path(ellipseIn: CGRect(x: cx - radius, y: cy - radius,
+                                                    width: radius * 2, height: radius * 2))
+                context.fill(circle, with: .color(OverlayPalette.color(for: h.role)))
+
+                if let label = OverlayPalette.label(for: h, style: labelStyle) {
+                    context.draw(
+                        Text(label).font(.system(size: 9, weight: .bold)).foregroundStyle(.black),
+                        at: CGPoint(x: cx, y: cy)
+                    )
+                }
+            }
+        }
+    }
+}
