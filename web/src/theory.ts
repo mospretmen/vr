@@ -41,6 +41,17 @@ export const TRIAD_QUALITIES: readonly TriadQualityPreset[] = [
 ] as const;
 
 /**
+ * Seventh-chord catalog (mirrors ChordQuality's seventh presets). Same shape
+ * as the triad presets so pickers can mix the two catalogs freely.
+ */
+export const SEVENTH_QUALITIES: readonly TriadQualityPreset[] = [
+  { name: "Major 7", symbol: "maj7", intervals: [0, 4, 7, 11] },
+  { name: "Dominant 7", symbol: "7", intervals: [0, 4, 7, 10] },
+  { name: "Minor 7", symbol: "m7", intervals: [0, 3, 7, 10] },
+  { name: "Half-diminished", symbol: "m7♭5", intervals: [0, 3, 6, 10] },
+] as const;
+
+/**
  * Standard tuning as MIDI note numbers, string index 0 = lowest-pitched
  * string (E2 A2 D3 G3 B3 E4) — same convention as the Swift core.
  */
