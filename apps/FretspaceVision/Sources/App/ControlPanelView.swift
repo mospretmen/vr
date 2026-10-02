@@ -65,6 +65,8 @@ struct ControlPanelView: View {
                                 }
                             }
                         }
+                        Button("Drill These Voicings") { model.startVoicingDrillExercise() }
+                            .disabled(model.voicingGroups.isEmpty)
                     } header: {
                         Label("Voicings", systemImage: "triangle")
                     } footer: {

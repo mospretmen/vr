@@ -205,6 +205,23 @@ final class AppModel {
         overlayDidChange()
     }
 
+    /// Turn whatever the Voicings mode is showing into a step-through drill
+    /// (works for triads, drop-2, and the harmonized ladder alike).
+    func startVoicingDrillExercise() {
+        let steps = voicingGroups.flatMap(\.steps)
+        guard !steps.isEmpty else { return }
+        let name: String = switch voicingStyle {
+        case .triads: "\(chord.symbol) triads — \(voicingStyle.rawValue)"
+        case .drop2: "\(chord.symbol) drop-2 voicings"
+        case .harmonized: "\(scale.name) harmonized ladder"
+        }
+        exercise = Exercise(name: name, steps: steps)
+        exerciseIndex = 0
+        displayMode = .exercise
+        syncExerciseNoteTarget()
+        overlayDidChange()
+    }
+
     func startThreeNPSExercise() {
         let start = boxStartFrets[safe: selectedBoxIndex ?? 1] ?? 5
         guard let generated = ExerciseGenerator.threeNotesPerString(
