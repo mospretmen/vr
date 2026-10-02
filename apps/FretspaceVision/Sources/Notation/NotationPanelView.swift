@@ -23,6 +23,8 @@ struct NotationPanelView: View {
             .frame(maxHeight: .infinity)
             if model.backing.timeline != nil {
                 ProgressionStrip()
+            } else if model.displayMode == .triads {
+                voicingCaptionStrip
             } else {
                 noteStrip
             }
@@ -77,6 +79,20 @@ struct NotationPanelView: View {
         HStack(spacing: 4) {
             Circle().fill(color).frame(width: 10, height: 10)
             Text(text)
+        }
+    }
+
+    private var voicingCaptionStrip: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 10) {
+                ForEach(Array(model.voicingCaptions.enumerated()), id: \.offset) { _, caption in
+                    Text(caption)
+                        .font(.callout)
+                        .padding(.horizontal, 12)
+                        .padding(.vertical, 6)
+                        .background(.thinMaterial, in: .capsule)
+                }
+            }
         }
     }
 

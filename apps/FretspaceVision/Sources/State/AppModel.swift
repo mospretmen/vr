@@ -74,11 +74,11 @@ final class AppModel {
         var id: String { rawValue }
     }
 
-    var voicingStyle: VoicingStyle = .triads
+    var voicingStyle: VoicingStyle = .triads { didSet { persistSettings() } }
     /// Index into `TriadVoicings.stringSets`; defaults to the top strings.
-    var triadStringSetIndex = 3
+    var triadStringSetIndex = 3 { didSet { persistSettings() } }
     /// Index into `SeventhVoicings.stringSets`; defaults to the top four.
-    var seventhStringSetIndex = 2
+    var seventhStringSetIndex = 2 { didSet { persistSettings() } }
     /// nil shows all inversions at once, each a connected shape.
     var focusedInversion: TriadVoicing.Inversion? = nil
     var focusedSeventhInversion: SeventhVoicing.Inversion? = nil
@@ -128,6 +128,18 @@ final class AppModel {
     /// Marker groups the overlay connects with lines (voicing shapes).
     var connectionGroups: [[FretPosition]] {
         displayMode == .triads ? voicingGroups.map { $0.steps.map(\.position) } : []
+    }
+
+    /// One caption per voicing shape, for the chart panel strip.
+    var voicingCaptions: [String] {
+        switch voicingStyle {
+        case .triads:
+            triadVoicings.map { "\($0.inversion.label) · fret \($0.lowestFret)" }
+        case .drop2:
+            seventhVoicings.map { "\($0.inversion.label) · fret \($0.lowestFret)" }
+        case .harmonized:
+            harmonizedTriads.map { "\($0.romanNumeral) \($0.chord.symbol) · fret \($0.voicing.lowestFret)" }
+        }
     }
 
     // MARK: - Error surface
@@ -387,6 +399,11 @@ extension AppModel {
         var showFretLines: Bool
         var leftHanded: Bool
         var tuningName: String
+        // Added after v1 shipped to devices would need migration; optionals
+        // keep older payloads decodable.
+        var voicingStyle: String?
+        var triadStringSetIndex: Int?
+        var seventhStringSetIndex: Int?
     }
 
     func persistSettings() {
@@ -395,7 +412,10 @@ extension AppModel {
             showStringLines: showStringLines,
             showFretLines: showFretLines,
             leftHanded: leftHanded,
-            tuningName: tuning.name
+            tuningName: tuning.name,
+            voicingStyle: voicingStyle.rawValue,
+            triadStringSetIndex: triadStringSetIndex,
+            seventhStringSetIndex: seventhStringSetIndex
         )
         do {
             UserDefaults.standard.set(try JSONEncoder().encode(settings),
@@ -415,6 +435,17 @@ extension AppModel {
             showFretLines = settings.showFretLines
             leftHanded = settings.leftHanded
             tuning = Tuning.all.first { $0.name == settings.tuningName } ?? .standard
+            if let style = settings.voicingStyle.flatMap(VoicingStyle.init(rawValue:)) {
+                voicingStyle = style
+            }
+            if let index = settings.triadStringSetIndex,
+               TriadVoicings.stringSets.indices.contains(index) {
+                triadStringSetIndex = index
+            }
+            if let index = settings.seventhStringSetIndex,
+               SeventhVoicings.stringSets.indices.contains(index) {
+                seventhStringSetIndex = index
+            }
         } catch {
             AppLog.app.error("Failed to restore settings, using defaults: \(error)")
         }
