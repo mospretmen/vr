@@ -16,7 +16,8 @@ struct NotationPanelView: View {
                 stringCount: model.tuning.stringCount,
                 fretCount: min(model.fretCount, 15), // charts read best to fret 15
                 labelStyle: model.labelStyle,
-                leftHanded: model.leftHanded
+                leftHanded: model.leftHanded,
+                scale: model.activeScale
             )
             .frame(maxHeight: .infinity)
             if model.backing.timeline != nil {
@@ -158,6 +159,7 @@ struct FretboardDiagram: View {
     let fretCount: Int
     let labelStyle: LabelStyle
     var leftHanded = false
+    var scale: Scale? = nil
 
     var body: some View {
         Canvas { context, size in
@@ -215,7 +217,7 @@ struct FretboardDiagram: View {
                                                     width: radius * 2, height: radius * 2))
                 context.fill(circle, with: .color(OverlayPalette.color(for: h.role)))
 
-                if let label = OverlayPalette.label(for: h, style: labelStyle) {
+                if let label = OverlayPalette.label(for: h, style: labelStyle, scale: scale) {
                     context.draw(
                         Text(label).font(.system(size: 9, weight: .bold)).foregroundStyle(.black),
                         at: CGPoint(x: cx, y: cy)

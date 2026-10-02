@@ -39,7 +39,7 @@ struct ControlPanelView: View {
                 }
 
                 if model.displayMode != .chord && model.displayMode != .triads {
-                    Section("Scale") {
+                    Section {
                         rootPicker("Root", selection: $model.root)
                         Picker("Scale", selection: $model.scaleType) {
                             ForEach(ScaleType.all, id: \.self) { Text($0.name).tag($0) }
@@ -51,6 +51,12 @@ struct ControlPanelView: View {
                                     Text("Box \(index + 1) (fret \(fret))").tag(Int?.some(index))
                                 }
                             }
+                        }
+                    } header: {
+                        Text("Scale")
+                    } footer: {
+                        if let summary = Modes.summary(of: model.scale) {
+                            Text(summary)
                         }
                     }
                 }

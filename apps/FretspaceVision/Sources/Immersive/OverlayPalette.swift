@@ -34,7 +34,11 @@ enum OverlayPalette {
         }
     }
 
-    static func label(for highlight: FretboardHighlight, style: LabelStyle) -> String? {
+    static func label(
+        for highlight: FretboardHighlight,
+        style: LabelStyle,
+        scale: Scale? = nil
+    ) -> String? {
         switch style {
         case .none:
             return nil
@@ -42,7 +46,13 @@ enum OverlayPalette {
             return highlight.note.pitchClass.name()
         case .degrees:
             switch highlight.role {
-            case .scaleDegree(let d): return "\(d)"
+            case .scaleDegree(let d):
+                // Spelled degrees (♭3, ♭7…) when the scale context is known.
+                if let scale,
+                   let spelled = Modes.degreeLabel(of: highlight.note.pitchClass, in: scale) {
+                    return spelled
+                }
+                return "\(d)"
             case .chordTone(let tone):
                 switch tone {
                 case .root: return "R"

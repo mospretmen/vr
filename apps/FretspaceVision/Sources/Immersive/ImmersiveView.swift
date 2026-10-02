@@ -76,7 +76,8 @@ struct ImmersiveView: View {
             labelStyle: model.labelStyle,
             showStringLines: model.showStringLines,
             showFretLines: model.showFretLines,
-            connections: model.connectionGroups
+            connections: model.connectionGroups,
+            scale: model.activeScale
         )
         overlayAnchor.setTransformMatrix(transform, relativeTo: nil)
         overlayAnchor.addChild(overlay)

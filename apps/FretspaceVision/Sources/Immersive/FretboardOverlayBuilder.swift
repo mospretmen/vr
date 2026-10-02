@@ -16,7 +16,8 @@ enum FretboardOverlayBuilder {
         labelStyle: LabelStyle,
         showStringLines: Bool,
         showFretLines: Bool,
-        connections: [[FretPosition]] = []
+        connections: [[FretPosition]] = [],
+        scale: Scale? = nil
     ) -> Entity {
         let root = Entity()
         root.name = "fretboardOverlay"
@@ -30,7 +31,8 @@ enum FretboardOverlayBuilder {
         if !connections.isEmpty {
             root.addChild(connectionLines(groups: connections, geometry: geometry))
         }
-        root.addChild(markers(highlights: highlights, geometry: geometry, labelStyle: labelStyle))
+        root.addChild(markers(highlights: highlights, geometry: geometry,
+                              labelStyle: labelStyle, scale: scale))
 
         return root
     }
@@ -72,7 +74,8 @@ enum FretboardOverlayBuilder {
     private static func markers(
         highlights: [FretboardHighlight],
         geometry: FretboardGeometry,
-        labelStyle: LabelStyle
+        labelStyle: LabelStyle,
+        scale: Scale? = nil
     ) -> Entity {
         let container = Entity()
         container.name = "markers"
@@ -101,7 +104,7 @@ enum FretboardOverlayBuilder {
             marker.position = position
             container.addChild(marker)
 
-            if let text = OverlayPalette.label(for: highlight, style: labelStyle) {
+            if let text = OverlayPalette.label(for: highlight, style: labelStyle, scale: scale) {
                 marker.addChild(labelEntity(text: text, radius: radius))
             }
         }
