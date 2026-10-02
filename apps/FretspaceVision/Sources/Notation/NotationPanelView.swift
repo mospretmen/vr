@@ -17,7 +17,8 @@ struct NotationPanelView: View {
                 fretCount: min(model.fretCount, 15), // charts read best to fret 15
                 labelStyle: model.labelStyle,
                 leftHanded: model.leftHanded,
-                scale: model.activeScale
+                scale: model.activeScale,
+                connections: model.connectionGroups
             )
             .frame(maxHeight: .infinity)
             if model.backing.timeline != nil {
@@ -73,7 +74,7 @@ struct NotationPanelView: View {
 
     private var noteStrip: some View {
         HStack(spacing: 10) {
-            let pcs = model.displayMode == .chord
+            let pcs = (model.displayMode == .chord || model.displayMode == .triads)
                 ? model.chord.pitchClasses
                 : model.scale.pitchClasses
             ForEach(Array(pcs.enumerated()), id: \.offset) { _, pc in
@@ -160,6 +161,7 @@ struct FretboardDiagram: View {
     let labelStyle: LabelStyle
     var leftHanded = false
     var scale: Scale? = nil
+    var connections: [[FretPosition]] = []
 
     var body: some View {
         Canvas { context, size in
@@ -204,6 +206,26 @@ struct FretboardDiagram: View {
                 line.move(to: CGPoint(x: rect.minX, y: y(string: string)))
                 line.addLine(to: CGPoint(x: rect.maxX, y: y(string: string)))
                 context.stroke(line, with: .color(.white.opacity(0.4)), lineWidth: 1)
+            }
+
+            // Marker center, shared by connections and highlights.
+            func center(_ position: FretPosition) -> CGPoint {
+                let cx = position.fret == 0
+                    ? rect.minX - 14
+                    : x(fret: position.fret) - fretWidth / 2
+                return CGPoint(x: cx, y: y(string: position.string))
+            }
+
+            // Shape connections (triad voicings) under the markers.
+            for group in connections where group.allSatisfy({ $0.fret <= fretCount }) {
+                guard group.count > 1 else { continue }
+                var path = Path()
+                path.move(to: center(group[0]))
+                for position in group.dropFirst() {
+                    path.addLine(to: center(position))
+                }
+                context.stroke(path, with: .color(.white.opacity(0.5)),
+                               style: StrokeStyle(lineWidth: 2, lineCap: .round))
             }
 
             // Highlights
