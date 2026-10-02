@@ -24,19 +24,43 @@ struct ControlPanelView: View {
 
                 if model.displayMode == .triads {
                     Section {
-                        Picker("Strings", selection: $model.triadStringSetIndex) {
-                            ForEach(Array(TriadVoicings.stringSets.enumerated()), id: \.offset) { index, set in
-                                Text(stringSetLabel(set)).tag(index)
-                            }
+                        Picker("Style", selection: $model.voicingStyle) {
+                            ForEach(AppModel.VoicingStyle.allCases) { Text($0.rawValue).tag($0) }
                         }
-                        Picker("Inversion", selection: $model.focusedInversion) {
-                            Text("All three").tag(TriadVoicing.Inversion?.none)
-                            ForEach(TriadVoicing.Inversion.allCases) { inversion in
-                                Text(inversion.label).tag(TriadVoicing.Inversion?.some(inversion))
+                        .pickerStyle(.segmented)
+
+                        switch model.voicingStyle {
+                        case .triads:
+                            Picker("Strings", selection: $model.triadStringSetIndex) {
+                                ForEach(Array(TriadVoicings.stringSets.enumerated()), id: \.offset) { index, set in
+                                    Text(stringSetLabel(set)).tag(index)
+                                }
+                            }
+                            Picker("Inversion", selection: $model.focusedInversion) {
+                                Text("All three").tag(TriadVoicing.Inversion?.none)
+                                ForEach(TriadVoicing.Inversion.allCases) { inversion in
+                                    Text(inversion.label).tag(TriadVoicing.Inversion?.some(inversion))
+                                }
+                            }
+                        case .drop2:
+                            Picker("Strings", selection: $model.seventhStringSetIndex) {
+                                ForEach(Array(SeventhVoicings.stringSets.enumerated()), id: \.offset) { index, set in
+                                    Text(stringSetLabel(set)).tag(index)
+                                }
+                            }
+                            Picker("Inversion", selection: $model.focusedSeventhInversion) {
+                                Text("All four").tag(SeventhVoicing.Inversion?.none)
+                                ForEach(SeventhVoicing.Inversion.allCases) { inversion in
+                                    Text(inversion.label).tag(SeventhVoicing.Inversion?.some(inversion))
+                                }
                             }
                         }
                     } header: {
-                        Label("Triads", systemImage: "triangle")
+                        Label("Voicings", systemImage: "triangle")
+                    } footer: {
+                        if model.voicingStyle == .drop2, model.chordQuality.intervals.count < 4 {
+                            Text("Pick a seventh quality (maj7, 7, m7, m7♭5, °7) to see drop-2 shapes.")
+                        }
                     }
                 }
 
@@ -182,6 +206,9 @@ struct ControlPanelView: View {
         .onChange(of: model.leftHanded) { model.overlayDidChange() }
         .onChange(of: model.triadStringSetIndex) { model.overlayDidChange() }
         .onChange(of: model.focusedInversion) { model.overlayDidChange() }
+        .onChange(of: model.voicingStyle) { model.overlayDidChange() }
+        .onChange(of: model.seventhStringSetIndex) { model.overlayDidChange() }
+        .onChange(of: model.focusedSeventhInversion) { model.overlayDidChange() }
         .alert(
             model.presentedError?.title ?? "Something went wrong",
             isPresented: Binding(

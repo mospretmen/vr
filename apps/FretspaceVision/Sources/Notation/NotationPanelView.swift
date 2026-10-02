@@ -43,8 +43,14 @@ struct NotationPanelView: View {
         case .scale: model.scale.name
         case .chord: model.chord.symbol
         case .triads:
-            model.focusedInversion.map { "\(model.chord.symbol) — \($0.label)" }
-                ?? "\(model.chord.symbol) Triads"
+            switch model.voicingStyle {
+            case .triads:
+                model.focusedInversion.map { "\(model.chord.symbol) — \($0.label)" }
+                    ?? "\(model.chord.symbol) Triads"
+            case .drop2:
+                model.focusedSeventhInversion.map { "\(model.chord.symbol) drop-2 — \($0.label)" }
+                    ?? "\(model.chord.symbol) Drop-2 Voicings"
+            }
         case .chordInScale: "\(model.chord.symbol) over \(model.scale.name)"
         case .exercise: model.exercise?.name ?? "Exercise"
         }

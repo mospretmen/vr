@@ -8,7 +8,7 @@ import FretboardKit
 enum DisplayMode: String, CaseIterable, Identifiable {
     case scale = "Scale"
     case chord = "Chord"
-    case triads = "Triads"
+    case triads = "Voicings"
     case chordInScale = "Chord + Scale"
     case exercise = "Exercise"
 
@@ -66,16 +66,33 @@ final class AppModel {
     /// nil shows the full neck. Scale mode only.
     var selectedBoxIndex: Int? = nil
 
-    // MARK: - Triad study
+    // MARK: - Voicing study (triads & drop-2 sevenths)
+    enum VoicingStyle: String, CaseIterable, Identifiable {
+        case triads = "Triads"
+        case drop2 = "Drop-2 7ths"
+        var id: String { rawValue }
+    }
+
+    var voicingStyle: VoicingStyle = .triads
     /// Index into `TriadVoicings.stringSets`; defaults to the top strings.
     var triadStringSetIndex = 3
-    /// nil shows all three inversions at once, each a connected shape.
+    /// Index into `SeventhVoicings.stringSets`; defaults to the top four.
+    var seventhStringSetIndex = 2
+    /// nil shows all inversions at once, each a connected shape.
     var focusedInversion: TriadVoicing.Inversion? = nil
+    var focusedSeventhInversion: SeventhVoicing.Inversion? = nil
 
     var triadStrings: [Int] {
         TriadVoicings.stringSets[
             TriadVoicings.stringSets.indices.contains(triadStringSetIndex)
                 ? triadStringSetIndex : TriadVoicings.stringSets.count - 1
+        ]
+    }
+
+    var seventhStrings: [Int] {
+        SeventhVoicings.stringSets[
+            SeventhVoicings.stringSets.indices.contains(seventhStringSetIndex)
+                ? seventhStringSetIndex : SeventhVoicings.stringSets.count - 1
         ]
     }
 
@@ -85,9 +102,23 @@ final class AppModel {
         return all.filter { $0.inversion == focusedInversion }
     }
 
-    /// Marker groups the overlay connects with lines (triad shapes).
+    var seventhVoicings: [SeventhVoicing] {
+        let all = SeventhVoicings.drop2(of: chord, strings: seventhStrings, on: fretboardModel)
+        guard let focusedSeventhInversion else { return all }
+        return all.filter { $0.inversion == focusedSeventhInversion }
+    }
+
+    /// The voicing shapes the overlay currently studies, as step groups.
+    var voicingStepGroups: [[ExerciseStep]] {
+        switch voicingStyle {
+        case .triads: triadVoicings.map(\.steps)
+        case .drop2: seventhVoicings.map(\.steps)
+        }
+    }
+
+    /// Marker groups the overlay connects with lines (voicing shapes).
     var connectionGroups: [[FretPosition]] {
-        displayMode == .triads ? triadVoicings.map(\.positions) : []
+        displayMode == .triads ? voicingStepGroups.map { $0.map(\.position) } : []
     }
 
     // MARK: - Error surface
@@ -235,9 +266,9 @@ final class AppModel {
         case .chord:
             return fretboardModel.highlights(for: activeChord)
         case .triads:
-            return triadVoicings.flatMap { voicing in
-                voicing.steps.compactMap { step in
-                    guard let tone = voicing.chord.tone(of: step.note.pitchClass) else { return nil }
+            return voicingStepGroups.flatMap { steps in
+                steps.compactMap { step in
+                    guard let tone = chord.tone(of: step.note.pitchClass) else { return nil }
                     return FretboardHighlight(position: step.position, note: step.note,
                                               role: .chordTone(tone))
                 }

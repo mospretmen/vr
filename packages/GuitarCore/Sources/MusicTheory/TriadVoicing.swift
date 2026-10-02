@@ -77,43 +77,48 @@ public enum TriadVoicings {
 
     /// Lowest fret combination putting `pitchClasses[i]` on `strings[i]` with
     /// strictly ascending sounding pitch and a hand-sized fret spread.
+    /// Works for any voice count (triads, drop-2 sevenths, …).
     static func lowestVoicing(
         of pitchClasses: [PitchClass],
         strings: [Int],
         on model: FretboardModel,
         maxSpan: Int
     ) -> [ExerciseStep]? {
+        precondition(pitchClasses.count == strings.count)
+
         func candidateFrets(_ pc: PitchClass, string: Int) -> [Int] {
             (0...model.fretCount).filter {
                 model.note(at: FretPosition(string: string, fret: $0)).pitchClass == pc
             }
         }
         let candidates = zip(pitchClasses, strings).map { candidateFrets($0, string: $1) }
+        guard candidates.allSatisfy({ !$0.isEmpty }) else { return nil }
 
         var best: [ExerciseStep]? = nil
         var bestKey = (Int.max, Int.max) // (lowest fret of voicing, spread)
-        for f0 in candidates[0] {
-            for f1 in candidates[1] {
-                for f2 in candidates[2] {
-                    let frets = [f0, f1, f2]
-                    let fretted = frets.filter { $0 > 0 }
-                    let spread = fretted.isEmpty ? 0 : fretted.max()! - fretted.min()! + 1
-                    guard spread <= maxSpan else { continue }
 
-                    let steps = zip(frets, strings).map { fret, string in
-                        let position = FretPosition(string: string, fret: fret)
-                        return ExerciseStep(position: position, note: model.note(at: position))
-                    }
-                    guard steps[0].note < steps[1].note, steps[1].note < steps[2].note else { continue }
-
-                    let key = (frets.min()!, spread)
-                    if key < bestKey {
-                        bestKey = key
-                        best = steps
-                    }
+        func search(_ voice: Int, _ chosen: [ExerciseStep]) {
+            if voice == candidates.count {
+                let frets = chosen.map(\.position.fret)
+                let fretted = frets.filter { $0 > 0 }
+                let spread = fretted.isEmpty ? 0 : fretted.max()! - fretted.min()! + 1
+                guard spread <= maxSpan else { return }
+                let key = (frets.min()!, spread)
+                if key < bestKey {
+                    bestKey = key
+                    best = chosen
                 }
+                return
+            }
+            for fret in candidates[voice] {
+                let position = FretPosition(string: strings[voice], fret: fret)
+                let step = ExerciseStep(position: position, note: model.note(at: position))
+                // Prune: voices must ascend in pitch as we stack upward.
+                if let previous = chosen.last, !(previous.note < step.note) { continue }
+                search(voice + 1, chosen + [step])
             }
         }
+        search(0, [])
         return best
     }
 }
