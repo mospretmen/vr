@@ -291,7 +291,7 @@ struct ControlPanelView: View {
                 Button("Calibrate to My Guitar") { model.startCalibration() }
             case .placingNut, .placingTwelfthFret:
                 Button("Cancel Calibration", role: .cancel) {
-                    model.calibration = .notCalibrated
+                    model.cancelCalibration()
                 }
             case .calibrated(let cal):
                 LabeledContent("Scale length",

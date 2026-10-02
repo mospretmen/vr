@@ -71,11 +71,13 @@ final name TBD before App Store submission.
 
 ## Environment notes
 
-- Xcode 27 is installed at /Applications/Xcode.app but the license hasn't
-  been accepted locally (`sudo xcodebuild -license accept` — needs the
-  owner). Until then, build locally via
-  `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` once licensed;
-  `swift test` on the packages works regardless.
+- Xcode 27 is fully set up locally (license accepted, xcode-select points
+  at it, visionOS 27 SDK + simulator runtime installed). Build with
+  `xcodebuild -scheme FretspaceVision -destination 'generic/platform=visionOS Simulator'
+  -derivedDataPath .derived-data CODE_SIGNING_ALLOWED=NO` from
+  apps/FretspaceVision. Keep derived data and build logs in the repo's
+  gitignored `.derived-data/`; screenshots in `captures/`. Never write
+  outside the working directory without asking the owner first.
 - **CI builds the real app**: the "visionOS app (simulator build)" job
   compiles the full app against the visionOS SDK on every push — it is the
   required gate. `swiftc -parse` locally is only a fast pre-flight.

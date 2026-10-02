@@ -68,7 +68,10 @@ struct ImmersiveView: View {
         overlayAnchor.children.removeAll()
 
         guard case .calibrated(let calibration) = model.calibration,
-              let transform = calibration.transform else { return }
+              let transform = calibration.transform else {
+            showCalibrationFeedback()
+            return
+        }
 
         let overlay = FretboardOverlayBuilder.build(
             highlights: model.highlights,
@@ -99,5 +102,32 @@ struct ImmersiveView: View {
             )
             overlayAnchor.addChild(aura)
         }
+    }
+
+    /// Mid-calibration feedback: once the nut is pinched, a glowing dot
+    /// confirms exactly where it registered while the user lines up the
+    /// 12th-fret pinch.
+    @MainActor
+    private func showCalibrationFeedback() {
+        guard case .placingTwelfthFret(let nutPoint) = model.calibration else { return }
+
+        overlayAnchor.setTransformMatrix(matrix_identity_float4x4, relativeTo: nil)
+
+        var material = UnlitMaterial(color: .orange)
+        material.blending = .transparent(opacity: 0.95)
+        let dot = ModelEntity(
+            mesh: .generateSphere(radius: 0.008),
+            materials: [material]
+        )
+        dot.name = "nutConfirmation"
+        dot.position = nutPoint
+
+        // Gentle pulse so it reads as "registered, waiting for the next one".
+        let settled = dot.transform
+        var grown = settled
+        grown.scale = SIMD3<Float>(repeating: 1.35)
+        dot.move(to: grown, relativeTo: overlayAnchor, duration: 0.5, timingFunction: .easeInOut)
+
+        overlayAnchor.addChild(dot)
     }
 }

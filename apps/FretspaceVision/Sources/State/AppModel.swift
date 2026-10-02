@@ -359,7 +359,15 @@ final class AppModel {
 
     func overlayDidChange() { overlayRevision += 1 }
 
-    func startCalibration() { calibration = .placingNut }
+    func startCalibration() {
+        calibration = .placingNut
+        overlayDidChange()
+    }
+
+    func cancelCalibration() {
+        calibration = .notCalibrated
+        overlayDidChange()
+    }
 
     func recordCalibrationPoint(_ point: SIMD3<Float>, devicePosition: SIMD3<Float>) {
         switch calibration {
