@@ -96,7 +96,9 @@ extension DisplayMode {
     var practiceMode: PracticeSession.Mode {
         switch self {
         case .scale: .scale
-        case .chord: .chord
+        // Triad study is chord work; the sync wire format's mode enum stays
+        // unchanged until the backend adds a dedicated value.
+        case .chord, .triads: .chord
         case .chordInScale: .chordInScale
         case .exercise: .exercise
         }

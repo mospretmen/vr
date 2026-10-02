@@ -22,7 +22,23 @@ struct ControlPanelView: View {
                     .pickerStyle(.segmented)
                 }
 
-                if model.displayMode != .chord {
+                if model.displayMode == .triads {
+                    Section("Triads") {
+                        Picker("Strings", selection: $model.triadStringSetIndex) {
+                            ForEach(Array(TriadVoicings.stringSets.enumerated()), id: \.offset) { index, set in
+                                Text(stringSetLabel(set)).tag(index)
+                            }
+                        }
+                        Picker("Inversion", selection: $model.focusedInversion) {
+                            Text("All three").tag(TriadVoicing.Inversion?.none)
+                            ForEach(TriadVoicing.Inversion.allCases) { inversion in
+                                Text(inversion.label).tag(TriadVoicing.Inversion?.some(inversion))
+                            }
+                        }
+                    }
+                }
+
+                if model.displayMode != .chord && model.displayMode != .triads {
                     Section("Scale") {
                         rootPicker("Root", selection: $model.root)
                         Picker("Scale", selection: $model.scaleType) {
@@ -154,6 +170,8 @@ struct ControlPanelView: View {
         }
         .onChange(of: model.selectedBoxIndex) { model.overlayDidChange() }
         .onChange(of: model.leftHanded) { model.overlayDidChange() }
+        .onChange(of: model.triadStringSetIndex) { model.overlayDidChange() }
+        .onChange(of: model.focusedInversion) { model.overlayDidChange() }
         .alert(
             model.presentedError?.title ?? "Something went wrong",
             isPresented: Binding(
@@ -204,6 +222,12 @@ struct ControlPanelView: View {
         let hours = Int(interval) / 3600
         let minutes = (Int(interval) % 3600) / 60
         return hours > 0 ? "\(hours)h \(minutes)m" : "\(minutes)m"
+    }
+
+    /// "G · B · E" style label for a string set, from the active tuning.
+    private func stringSetLabel(_ set: [Int]) -> String {
+        set.map { model.tuning.openStrings[$0].pitchClass.name() }
+            .joined(separator: " · ")
     }
 
     private func rootPicker(_ title: String, selection: Binding<PitchClass>) -> some View {

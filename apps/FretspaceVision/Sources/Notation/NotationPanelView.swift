@@ -40,7 +40,11 @@ struct NotationPanelView: View {
         switch model.displayMode {
         case .scale: model.scale.name
         case .chord: model.chord.symbol
+        case .triads:
+            model.focusedInversion.map { "\(model.chord.symbol) — \($0.label)" }
+                ?? "\(model.chord.symbol) Triads"
         case .chordInScale: "\(model.chord.symbol) over \(model.scale.name)"
+        case .exercise: model.exercise?.name ?? "Exercise"
         }
     }
 

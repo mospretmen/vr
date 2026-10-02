@@ -15,7 +15,8 @@ enum FretboardOverlayBuilder {
         geometry: FretboardGeometry,
         labelStyle: LabelStyle,
         showStringLines: Bool,
-        showFretLines: Bool
+        showFretLines: Bool,
+        connections: [[FretPosition]] = []
     ) -> Entity {
         let root = Entity()
         root.name = "fretboardOverlay"
@@ -26,9 +27,44 @@ enum FretboardOverlayBuilder {
         if showStringLines {
             root.addChild(stringLines(geometry: geometry))
         }
+        if !connections.isEmpty {
+            root.addChild(connectionLines(groups: connections, geometry: geometry))
+        }
         root.addChild(markers(highlights: highlights, geometry: geometry, labelStyle: labelStyle))
 
         return root
+    }
+
+    // MARK: - Shape connections (triad voicings, etc.)
+
+    /// Thin luminous segments linking consecutive positions of each group,
+    /// floated just above the board so shapes read as units.
+    private static func connectionLines(
+        groups: [[FretPosition]],
+        geometry: FretboardGeometry
+    ) -> Entity {
+        let container = Entity()
+        container.name = "connections"
+        let material = UnlitMaterial(color: UIColor.white.withAlphaComponent(0.45))
+        let lift = SIMD3<Float>(0, 0.004, 0) // match marker float height
+
+        for group in groups {
+            for (a, b) in zip(group, group.dropFirst()) {
+                let start = geometry.markerPosition(for: a) + lift
+                let end = geometry.markerPosition(for: b) + lift
+                let vector = end - start
+                let length = simd_length(vector)
+                guard length > 1e-5 else { continue }
+
+                let mesh = MeshResource.generateBox(width: length, height: 0.0008, depth: 0.0016)
+                let segment = ModelEntity(mesh: mesh, materials: [material])
+                segment.position = (start + end) / 2
+                segment.orientation = simd_quatf(from: SIMD3<Float>(1, 0, 0),
+                                                 to: vector / length)
+                container.addChild(segment)
+            }
+        }
+        return container
     }
 
     // MARK: - Markers

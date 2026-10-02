@@ -8,6 +8,7 @@ import FretboardKit
 enum DisplayMode: String, CaseIterable, Identifiable {
     case scale = "Scale"
     case chord = "Chord"
+    case triads = "Triads"
     case chordInScale = "Chord + Scale"
     case exercise = "Exercise"
 
@@ -64,6 +65,30 @@ final class AppModel {
     /// Index into `boxStartFrets` limiting the scale to one position box;
     /// nil shows the full neck. Scale mode only.
     var selectedBoxIndex: Int? = nil
+
+    // MARK: - Triad study
+    /// Index into `TriadVoicings.stringSets`; defaults to the top strings.
+    var triadStringSetIndex = 3
+    /// nil shows all three inversions at once, each a connected shape.
+    var focusedInversion: TriadVoicing.Inversion? = nil
+
+    var triadStrings: [Int] {
+        TriadVoicings.stringSets[
+            TriadVoicings.stringSets.indices.contains(triadStringSetIndex)
+                ? triadStringSetIndex : TriadVoicings.stringSets.count - 1
+        ]
+    }
+
+    var triadVoicings: [TriadVoicing] {
+        let all = TriadVoicings.inversions(of: chord, strings: triadStrings, on: fretboardModel)
+        guard let focusedInversion else { return all }
+        return all.filter { $0.inversion == focusedInversion }
+    }
+
+    /// Marker groups the overlay connects with lines (triad shapes).
+    var connectionGroups: [[FretPosition]] {
+        displayMode == .triads ? triadVoicings.map(\.positions) : []
+    }
 
     // MARK: - Error surface
     /// The one place user-visible failures land; ControlPanelView presents it.
@@ -209,6 +234,14 @@ final class AppModel {
             return fretboardModel.highlights(for: scale)
         case .chord:
             return fretboardModel.highlights(for: activeChord)
+        case .triads:
+            return triadVoicings.flatMap { voicing in
+                voicing.steps.compactMap { step in
+                    guard let tone = voicing.chord.tone(of: step.note.pitchClass) else { return nil }
+                    return FretboardHighlight(position: step.position, note: step.note,
+                                              role: .chordTone(tone))
+                }
+            }
         case .chordInScale:
             return fretboardModel.highlights(for: activeChord, within: activeScale)
         case .exercise:
