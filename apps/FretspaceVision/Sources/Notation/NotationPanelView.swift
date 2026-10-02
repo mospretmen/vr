@@ -50,6 +50,8 @@ struct NotationPanelView: View {
             case .drop2:
                 model.focusedSeventhInversion.map { "\(model.chord.symbol) drop-2 — \($0.label)" }
                     ?? "\(model.chord.symbol) Drop-2 Voicings"
+            case .harmonized:
+                "\(model.scale.name) — Harmonized"
             }
         case .chordInScale: "\(model.chord.symbol) over \(model.scale.name)"
         case .exercise: model.exercise?.name ?? "Exercise"
@@ -80,9 +82,9 @@ struct NotationPanelView: View {
 
     private var noteStrip: some View {
         HStack(spacing: 10) {
-            let pcs = (model.displayMode == .chord || model.displayMode == .triads)
-                ? model.chord.pitchClasses
-                : model.scale.pitchClasses
+            let showChordTones = model.displayMode == .chord
+                || (model.displayMode == .triads && model.voicingStyle != .harmonized)
+            let pcs = showChordTones ? model.chord.pitchClasses : model.scale.pitchClasses
             ForEach(Array(pcs.enumerated()), id: \.offset) { _, pc in
                 Text(pc.name())
                     .font(.title3.monospaced())

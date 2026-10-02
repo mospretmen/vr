@@ -54,12 +54,30 @@ struct ControlPanelView: View {
                                     Text(inversion.label).tag(SeventhVoicing.Inversion?.some(inversion))
                                 }
                             }
+                        case .harmonized:
+                            rootPicker("Key", selection: $model.root)
+                            Picker("Scale", selection: $model.scaleType) {
+                                ForEach(ScaleType.all, id: \.self) { Text($0.name).tag($0) }
+                            }
+                            Picker("Strings", selection: $model.triadStringSetIndex) {
+                                ForEach(Array(TriadVoicings.stringSets.enumerated()), id: \.offset) { index, set in
+                                    Text(stringSetLabel(set)).tag(index)
+                                }
+                            }
                         }
                     } header: {
                         Label("Voicings", systemImage: "triangle")
                     } footer: {
                         if model.voicingStyle == .drop2, model.chordQuality.intervals.count < 4 {
                             Text("Pick a seventh quality (maj7, 7, m7, m7♭5, °7) to see drop-2 shapes.")
+                        } else if model.voicingStyle == .harmonized {
+                            if model.harmonizedTriads.isEmpty {
+                                Text("Harmonization needs a seven-note scale.")
+                            } else {
+                                Text(model.harmonizedTriads
+                                    .map { "\($0.romanNumeral) \($0.chord.symbol)" }
+                                    .joined(separator: "  ·  "))
+                            }
                         }
                     }
                 }
@@ -87,7 +105,8 @@ struct ControlPanelView: View {
                     }
                 }
 
-                if model.displayMode != .scale {
+                if model.displayMode != .scale,
+                   !(model.displayMode == .triads && model.voicingStyle == .harmonized) {
                     Section {
                         rootPicker("Chord root", selection: $model.chordRoot)
                         Picker("Quality", selection: $model.chordQuality) {

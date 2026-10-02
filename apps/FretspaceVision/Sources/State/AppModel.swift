@@ -70,6 +70,7 @@ final class AppModel {
     enum VoicingStyle: String, CaseIterable, Identifiable {
         case triads = "Triads"
         case drop2 = "Drop-2 7ths"
+        case harmonized = "Harmonized"
         var id: String { rawValue }
     }
 
@@ -108,17 +109,25 @@ final class AppModel {
         return all.filter { $0.inversion == focusedSeventhInversion }
     }
 
-    /// The voicing shapes the overlay currently studies, as step groups.
-    var voicingStepGroups: [[ExerciseStep]] {
+    /// The scale's diatonic triad ladder on the selected 3-string set.
+    var harmonizedTriads: [HarmonizedTriad] {
+        HarmonizedScale.triadLadder(of: scale, strings: triadStrings, on: fretboardModel)
+    }
+
+    /// The voicing shapes the overlay currently studies; each group carries
+    /// its own chord so tone roles color correctly (harmonized rungs are
+    /// all different chords).
+    var voicingGroups: [(chord: Chord, steps: [ExerciseStep])] {
         switch voicingStyle {
-        case .triads: triadVoicings.map(\.steps)
-        case .drop2: seventhVoicings.map(\.steps)
+        case .triads: triadVoicings.map { ($0.chord, $0.steps) }
+        case .drop2: seventhVoicings.map { ($0.chord, $0.steps) }
+        case .harmonized: harmonizedTriads.map { ($0.chord, $0.voicing.steps) }
         }
     }
 
     /// Marker groups the overlay connects with lines (voicing shapes).
     var connectionGroups: [[FretPosition]] {
-        displayMode == .triads ? voicingStepGroups.map { $0.map(\.position) } : []
+        displayMode == .triads ? voicingGroups.map { $0.steps.map(\.position) } : []
     }
 
     // MARK: - Error surface
@@ -266,9 +275,9 @@ final class AppModel {
         case .chord:
             return fretboardModel.highlights(for: activeChord)
         case .triads:
-            return voicingStepGroups.flatMap { steps in
-                steps.compactMap { step in
-                    guard let tone = chord.tone(of: step.note.pitchClass) else { return nil }
+            return voicingGroups.flatMap { group in
+                group.steps.compactMap { step in
+                    guard let tone = group.chord.tone(of: step.note.pitchClass) else { return nil }
                     return FretboardHighlight(position: step.position, note: step.note,
                                               role: .chordTone(tone))
                 }
