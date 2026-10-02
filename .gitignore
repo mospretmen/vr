@@ -19,3 +19,7 @@ dist/
 *.o
 *.d
 *.swiftdeps
+
+# Local captures & build output (not for the repo)
+captures/
+.derived-data/
