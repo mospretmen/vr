@@ -28,6 +28,32 @@ jobs:
           brew install xcodegen
           cd apps/FretspaceVision && xcodegen generate
 
+  app-build:
+    name: visionOS app (simulator build)
+    runs-on: macos-15
+    # Advisory while runner Xcode/platform availability settles; the parse
+    # job above stays the required gate.
+    continue-on-error: true
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+      - name: Toolchain info
+        run: xcodebuild -version && xcrun simctl list runtimes || true
+      - name: Install visionOS platform if missing
+        run: |
+          xcrun simctl list runtimes | grep -qi visionos || sudo xcodebuild -downloadPlatform visionOS
+      - name: Generate project
+        run: |
+          brew install xcodegen
+          cd apps/FretspaceVision && xcodegen generate
+      - name: Build for visionOS Simulator
+        run: |
+          set -o pipefail
+          cd apps/FretspaceVision
+          xcodebuild build -scheme FretspaceVision \
+            -destination 'generic/platform=visionOS Simulator' \
+            CODE_SIGNING_ALLOWED=NO 2>&1 | tail -120
+
   backend:
     name: Backend (vitest + typecheck)
     runs-on: ubuntu-latest
