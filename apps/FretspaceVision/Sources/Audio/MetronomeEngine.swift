@@ -14,6 +14,12 @@ final class MetronomeEngine {
     private var softClick: AVAudioPCMBuffer?
     private var scheduling = false
 
+    // Beat state lives on the actor (not closure captures) so the rolling
+    // schedule stays data-race free under strict concurrency.
+    private var framesPerBeat: AVAudioFramePosition = 0
+    private var nextBeatFrame: AVAudioFramePosition = 0
+    private var beatInBar = 0
+
     var isRunning: Bool { scheduling }
 
     init() {
@@ -27,7 +33,7 @@ final class MetronomeEngine {
     /// Starts clicking at `bpm` (4/4), phase-aligned to "now" = the current
     /// bar position of the timeline clock.
     func start(bpm: Double) {
-        guard !scheduling, bpm > 0, let strong = strongClick, let soft = softClick else { return }
+        guard !scheduling, bpm > 0, strongClick != nil, softClick != nil else { return }
         do {
             try engine.start()
         } catch {
@@ -37,24 +43,26 @@ final class MetronomeEngine {
         scheduling = true
         player.play()
 
-        let framesPerBeat = AVAudioFramePosition(sampleRate * 60.0 / bpm)
-        var nextBeatFrame: AVAudioFramePosition = 0
-        var beatInBar = 0
+        framesPerBeat = AVAudioFramePosition(sampleRate * 60.0 / bpm)
+        nextBeatFrame = 0
+        beatInBar = 0
 
-        // Schedule a rolling window of beats; each completion tops up one.
-        func scheduleNext() {
-            guard scheduling else { return }
-            let buffer = beatInBar == 0 ? strong : soft
-            let when = AVAudioTime(sampleTime: nextBeatFrame, atRate: sampleRate)
-            player.scheduleBuffer(buffer, at: when) { [weak self] in
-                Task { @MainActor in scheduleNext() }
-                _ = self
-            }
-            nextBeatFrame += framesPerBeat
-            beatInBar = (beatInBar + 1) % 4
+        // Prime one bar of lookahead; each completion tops up one beat.
+        for _ in 0..<4 { scheduleNextBeat() }
+    }
+
+    /// Rolling schedule: one beat per call, re-armed from each buffer's
+    /// completion. (MetronomeEngine is @MainActor and therefore Sendable,
+    /// so the hop back from the audio completion thread is clean.)
+    private func scheduleNextBeat() {
+        guard scheduling, let strong = strongClick, let soft = softClick else { return }
+        let buffer = beatInBar == 0 ? strong : soft
+        let when = AVAudioTime(sampleTime: nextBeatFrame, atRate: sampleRate)
+        player.scheduleBuffer(buffer, at: when) { [weak self] in
+            Task { @MainActor [weak self] in self?.scheduleNextBeat() }
         }
-        // Prime one bar of lookahead.
-        for _ in 0..<4 { scheduleNext() }
+        nextBeatFrame += framesPerBeat
+        beatInBar = (beatInBar + 1) % 4
     }
 
     func stop() {

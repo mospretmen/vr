@@ -71,10 +71,9 @@ final class ChromaExtractor {
                 return
             }
 
-            // AVAudioEngine isn't Sendable; tearing the tap down from the
-            // termination handler is safe (engine outlives the stream and
-            // these calls are thread-safe teardown).
-            nonisolated(unsafe) let engine = self.engine
+            // Tearing the tap down from the termination handler is safe:
+            // the engine outlives the stream and these are teardown calls.
+            let engine = self.engine
             continuation.onTermination = { _ in
                 engine.inputNode.removeTap(onBus: 0)
                 engine.stop()
