@@ -181,6 +181,7 @@ struct ControlPanelView: View {
             Toggle("String lines", isOn: $model.showStringLines)
             Toggle("Fret lines", isOn: $model.showFretLines)
             Toggle("Left-handed", isOn: $model.leftHanded)
+            Toggle("Color altered degrees", isOn: $model.emphasizeAlterations)
             Picker("Tuning", selection: $model.tuning) {
                 ForEach(Tuning.all, id: \.self) { Text($0.name).tag($0) }
             }
@@ -337,6 +338,7 @@ private struct OverlayInvalidation: ViewModifier {
             }
             .onChange(of: model.selectedBoxIndex) { model.overlayDidChange() }
             .onChange(of: model.leftHanded) { model.overlayDidChange() }
+            .onChange(of: model.emphasizeAlterations) { model.overlayDidChange() }
             .onChange(of: model.triadStringSetIndex) { model.overlayDidChange() }
             .onChange(of: model.focusedInversion) { model.overlayDidChange() }
             .onChange(of: model.voicingStyle) { model.overlayDidChange() }

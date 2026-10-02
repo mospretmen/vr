@@ -17,7 +17,8 @@ enum FretboardOverlayBuilder {
         showStringLines: Bool,
         showFretLines: Bool,
         connections: [[FretPosition]] = [],
-        scale: Scale? = nil
+        scale: Scale? = nil,
+        emphasizeAlterations: Bool = false
     ) -> Entity {
         let root = Entity()
         root.name = "fretboardOverlay"
@@ -32,7 +33,8 @@ enum FretboardOverlayBuilder {
             root.addChild(connectionLines(groups: connections, geometry: geometry))
         }
         root.addChild(markers(highlights: highlights, geometry: geometry,
-                              labelStyle: labelStyle, scale: scale))
+                              labelStyle: labelStyle, scale: scale,
+                              emphasizeAlterations: emphasizeAlterations))
 
         return root
     }
@@ -75,14 +77,16 @@ enum FretboardOverlayBuilder {
         highlights: [FretboardHighlight],
         geometry: FretboardGeometry,
         labelStyle: LabelStyle,
-        scale: Scale? = nil
+        scale: Scale? = nil,
+        emphasizeAlterations: Bool = false
     ) -> Entity {
         let container = Entity()
         container.name = "markers"
 
-        // One mesh + material per distinct role keeps entity counts cheap.
+        // One mesh per radius, one material per distinct color keeps entity
+        // counts cheap.
         var meshCache: [Float: MeshResource] = [:]
-        var materialCache: [HighlightRole: UnlitMaterial] = [:]
+        var materialCache: [Color: UnlitMaterial] = [:]
 
         for highlight in highlights {
             let radius = OverlayPalette.radius(for: highlight.role)
@@ -91,10 +95,12 @@ enum FretboardOverlayBuilder {
                 meshCache[radius] = m
                 return m
             }()
-            let material = materialCache[highlight.role] ?? {
-                var m = UnlitMaterial(color: UIColor(OverlayPalette.color(for: highlight.role)))
+            let color = OverlayPalette.color(for: highlight, scale: scale,
+                                             emphasizeAlterations: emphasizeAlterations)
+            let material = materialCache[color] ?? {
+                var m = UnlitMaterial(color: UIColor(color))
                 m.blending = .transparent(opacity: 0.92)
-                materialCache[highlight.role] = m
+                materialCache[color] = m
                 return m
             }()
 

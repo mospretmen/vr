@@ -62,6 +62,8 @@ final class AppModel {
     var showStringLines = true { didSet { persistSettings() } }
     var showFretLines = true { didSet { persistSettings() } }
     var leftHanded = false { didSet { persistSettings() } }
+    /// Violet-tint the degrees that differ from the parallel major.
+    var emphasizeAlterations = true { didSet { persistSettings() } }
     /// Index into `boxStartFrets` limiting the scale to one position box;
     /// nil shows the full neck. Scale mode only.
     var selectedBoxIndex: Int? = nil
@@ -414,6 +416,7 @@ extension AppModel {
         var voicingStyle: String?
         var triadStringSetIndex: Int?
         var seventhStringSetIndex: Int?
+        var emphasizeAlterations: Bool?
     }
 
     func persistSettings() {
@@ -425,7 +428,8 @@ extension AppModel {
             tuningName: tuning.name,
             voicingStyle: voicingStyle.rawValue,
             triadStringSetIndex: triadStringSetIndex,
-            seventhStringSetIndex: seventhStringSetIndex
+            seventhStringSetIndex: seventhStringSetIndex,
+            emphasizeAlterations: emphasizeAlterations
         )
         do {
             UserDefaults.standard.set(try JSONEncoder().encode(settings),
@@ -455,6 +459,9 @@ extension AppModel {
             if let index = settings.seventhStringSetIndex,
                SeventhVoicings.stringSets.indices.contains(index) {
                 seventhStringSetIndex = index
+            }
+            if let emphasize = settings.emphasizeAlterations {
+                emphasizeAlterations = emphasize
             }
         } catch {
             AppLog.app.error("Failed to restore settings, using defaults: \(error)")

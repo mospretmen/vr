@@ -18,7 +18,8 @@ struct NotationPanelView: View {
                 labelStyle: model.labelStyle,
                 leftHanded: model.leftHanded,
                 scale: model.activeScale,
-                connections: model.connectionGroups
+                connections: model.connectionGroups,
+                emphasizeAlterations: model.emphasizeAlterations
             )
             .frame(maxHeight: .infinity)
             if model.backing.timeline != nil {
@@ -188,6 +189,7 @@ struct FretboardDiagram: View {
     var leftHanded = false
     var scale: Scale? = nil
     var connections: [[FretPosition]] = []
+    var emphasizeAlterations = false
 
     var body: some View {
         Canvas { context, size in
@@ -263,7 +265,8 @@ struct FretboardDiagram: View {
                 let radius: CGFloat = CGFloat(OverlayPalette.radius(for: h.role)) * 2200
                 let circle = Path(ellipseIn: CGRect(x: cx - radius, y: cy - radius,
                                                     width: radius * 2, height: radius * 2))
-                context.fill(circle, with: .color(OverlayPalette.color(for: h.role)))
+                context.fill(circle, with: .color(OverlayPalette.color(
+                    for: h, scale: scale, emphasizeAlterations: emphasizeAlterations)))
 
                 if let label = OverlayPalette.label(for: h, style: labelStyle, scale: scale) {
                     context.draw(

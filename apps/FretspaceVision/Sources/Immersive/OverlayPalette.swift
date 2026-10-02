@@ -4,6 +4,24 @@ import MusicTheory
 /// Central color language for the overlay. Chord tones and scale degrees get
 /// distinct, consistent hues so muscle memory forms around color.
 enum OverlayPalette {
+    /// Marker color with optional mode-alteration emphasis: degrees that
+    /// differ from the parallel major (♭3, ♭7…) pop in violet so switching
+    /// modes shows exactly what changed.
+    static func color(
+        for highlight: FretboardHighlight,
+        scale: Scale?,
+        emphasizeAlterations: Bool
+    ) -> Color {
+        if emphasizeAlterations,
+           case .scaleDegree(let degree) = highlight.role, degree != 1,
+           let scale,
+           let label = Modes.degreeLabel(of: highlight.note.pitchClass, in: scale),
+           label.count > 1 {
+            return Color(red: 0.65, green: 0.55, blue: 0.98) // altered-degree violet
+        }
+        return color(for: highlight.role)
+    }
+
     static func color(for role: HighlightRole) -> Color {
         switch role {
         case .chordTone(let tone):
