@@ -9,7 +9,7 @@ struct FretspaceApp: App {
             ControlPanelView()
                 .environment(model)
         }
-        .defaultSize(width: 480, height: 640)
+        .defaultSize(width: 560, height: 700)
 
         WindowGroup(id: SceneID.notation) {
             NotationPanelView()

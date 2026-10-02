@@ -23,7 +23,7 @@ struct ControlPanelView: View {
                 }
 
                 if model.displayMode == .triads {
-                    Section("Triads") {
+                    Section {
                         Picker("Strings", selection: $model.triadStringSetIndex) {
                             ForEach(Array(TriadVoicings.stringSets.enumerated()), id: \.offset) { index, set in
                                 Text(stringSetLabel(set)).tag(index)
@@ -35,6 +35,8 @@ struct ControlPanelView: View {
                                 Text(inversion.label).tag(TriadVoicing.Inversion?.some(inversion))
                             }
                         }
+                    } header: {
+                        Label("Triads", systemImage: "triangle")
                     }
                 }
 
@@ -53,7 +55,7 @@ struct ControlPanelView: View {
                             }
                         }
                     } header: {
-                        Text("Scale")
+                        Label("Scale", systemImage: "music.note.list")
                     } footer: {
                         if let summary = Modes.summary(of: model.scale) {
                             Text(summary)
@@ -62,15 +64,17 @@ struct ControlPanelView: View {
                 }
 
                 if model.displayMode != .scale {
-                    Section("Chord") {
+                    Section {
                         rootPicker("Chord root", selection: $model.chordRoot)
                         Picker("Quality", selection: $model.chordQuality) {
                             ForEach(ChordQuality.all, id: \.self) { Text($0.name).tag($0) }
                         }
+                    } header: {
+                        Label("Chord", systemImage: "pianokeys")
                     }
                 }
 
-                Section("Display") {
+                Section(header: Label("Display", systemImage: "slider.horizontal.3")) {
                     Picker("Labels", selection: $model.labelStyle) {
                         ForEach(LabelStyle.allCases) { Text($0.rawValue).tag($0) }
                     }
@@ -82,11 +86,11 @@ struct ControlPanelView: View {
                     }
                 }
 
-                Section("Guitar") {
+                Section(header: Label("Guitar", systemImage: "guitars")) {
                     immersiveControls
                 }
 
-                Section("Backing Track (preview)") {
+                Section(header: Label("Backing Track", systemImage: "metronome")) {
                     if let timeline = model.backing.timeline {
                         LabeledContent("Track", value: model.backing.title)
                         LabeledContent("Now",
@@ -115,7 +119,7 @@ struct ControlPanelView: View {
                     }
                 }
 
-                Section("Exercise") {
+                Section(header: Label("Exercise", systemImage: "list.number")) {
                     if let progress = model.exerciseProgress {
                         LabeledContent("Step", value: progress)
                         Button("Next Step") { model.advanceExercise() }
@@ -132,7 +136,7 @@ struct ControlPanelView: View {
                     }
                 }
 
-                Section("Listen (beta)") {
+                Section(header: Label("Listen", systemImage: "ear")) {
                     if model.listen.isListening {
                         LabeledContent("Hearing",
                                        value: model.listen.detectedChord?.symbol ?? "—")
@@ -237,9 +241,48 @@ struct ControlPanelView: View {
     }
 
     private func rootPicker(_ title: String, selection: Binding<PitchClass>) -> some View {
-        Picker(title, selection: selection) {
-            ForEach(PitchClass.allCases, id: \.self) { Text($0.name()).tag($0) }
+        RootNotePicker(title: title, selection: selection)
+    }
+}
+
+/// Chromatic note row: twelve tappable pills, selected root in the accent
+/// color. Faster than a menu and reads like an instrument control.
+struct RootNotePicker: View {
+    let title: String
+    @Binding var selection: PitchClass
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title)
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 6) {
+                    ForEach(PitchClass.allCases, id: \.self) { pitchClass in
+                        let isSelected = pitchClass == selection
+                        Button {
+                            withAnimation(.snappy(duration: 0.15)) { selection = pitchClass }
+                        } label: {
+                            Text(pitchClass.name())
+                                .font(.callout.weight(isSelected ? .bold : .regular))
+                                .monospacedDigit()
+                                .frame(width: 42, height: 42)
+                                .background(
+                                    isSelected
+                                        ? AnyShapeStyle(.orange.opacity(0.85))
+                                        : AnyShapeStyle(.thinMaterial),
+                                    in: .circle
+                                )
+                                .foregroundStyle(isSelected ? .black : .primary)
+                        }
+                        .buttonStyle(.plain)
+                        .accessibilityLabel("\(title) \(pitchClass.name())")
+                        .accessibilityAddTraits(isSelected ? .isSelected : [])
+                    }
+                }
+                .padding(.vertical, 2)
+            }
         }
-        .pickerStyle(.menu)
+        .padding(.vertical, 4)
     }
 }
