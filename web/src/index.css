@@ -1,1 +1,124 @@
 @import "tailwindcss";
+
+/* ---------------------------------------------------------------------------
+   Fretspace design tokens
+   Near-black zinc base, one warm accent (the app's root-note orange),
+   hairline white/10 borders, Space Grotesk display over Inter body.
+--------------------------------------------------------------------------- */
+
+@theme {
+  --font-sans: "Inter", ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: "Space Grotesk", "Inter", ui-sans-serif, system-ui, sans-serif;
+
+  /* Surfaces */
+  --color-base: #09090b; /* page ground */
+  --color-raise: #101013; /* cards, panels */
+  --color-raise-2: #17171b; /* nested surfaces */
+
+  /* Ink */
+  --color-ink: #fafafa;
+  --color-ink-dim: #a1a1aa;
+  --color-ink-mute: #70707a;
+
+  /* Accent — root-note orange */
+  --color-accent: #fb923c; /* text, strokes, rings */
+  --color-accent-strong: #f97316; /* fills */
+  --color-accent-deep: #431407; /* ink on accent fills */
+}
+
+:root {
+  color-scheme: dark;
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem; /* clear the sticky nav on anchor jumps */
+}
+
+body {
+  background-color: var(--color-base);
+  color: var(--color-ink);
+  font-family: var(--font-sans);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: color-mix(in srgb, var(--color-accent-strong) 35%, transparent);
+  color: var(--color-ink);
+}
+
+/* Single focus language everywhere. */
+:focus-visible {
+  outline: 2px solid var(--color-accent);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------------------------
+   Hero field: layered radial glows + a faint perspective grid.
+   Pure gradients — no images, no blobs.
+--------------------------------------------------------------------------- */
+
+.hero-field {
+  background:
+    radial-gradient(
+      1100px 480px at 50% -12%,
+      color-mix(in srgb, var(--color-accent-strong) 14%, transparent),
+      transparent 62%
+    ),
+    radial-gradient(
+      760px 360px at 82% -4%,
+      color-mix(in srgb, var(--color-accent) 6%, transparent),
+      transparent 58%
+    ),
+    radial-gradient(
+      900px 520px at 12% 4%,
+      rgba(161, 161, 170, 0.055),
+      transparent 60%
+    );
+}
+
+.hero-grid {
+  background-image:
+    linear-gradient(to right, rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(to bottom, rgba(255, 255, 255, 0.045) 1px, transparent 1px);
+  background-size: 56px 56px;
+  mask-image: radial-gradient(
+    900px 460px at 50% 0%,
+    black 30%,
+    transparent 78%
+  );
+}
+
+/* Entrance motion — opacity-led, disabled under reduced motion. */
+@keyframes rise-in {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+
+.rise-in {
+  animation: rise-in 0.7s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
+.rise-in-1 { animation-delay: 0.06s; }
+.rise-in-2 { animation-delay: 0.14s; }
+.rise-in-3 { animation-delay: 0.22s; }
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

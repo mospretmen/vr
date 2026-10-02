@@ -8,15 +8,15 @@ export function ErrorNotice({ message, onRetry, compact }: ErrorNoticeProps) {
   return (
     <div
       role="alert"
-      className={`rounded-xl border border-red-900/60 bg-red-950/30 ${compact ? "p-4" : "p-6"}`}
+      className={`rounded-2xl border border-red-500/20 bg-red-950/25 ${compact ? "p-4" : "p-6"}`}
     >
-      <p className={`text-red-300 ${compact ? "text-xs" : "text-sm"}`}>
+      <p className={`text-red-300/90 ${compact ? "text-xs" : "text-sm"}`}>
         {message}
       </p>
       <button
         type="button"
         onClick={onRetry}
-        className="mt-3 rounded-lg border border-zinc-700 bg-zinc-900 px-3 py-1.5 text-xs font-medium text-zinc-200 transition-colors hover:border-zinc-500 hover:bg-zinc-800"
+        className="mt-3 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-ink transition-colors hover:border-white/25 hover:bg-white/10"
       >
         Retry
       </button>
