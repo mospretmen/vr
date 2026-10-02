@@ -70,7 +70,8 @@ final class AppModel {
     enum VoicingStyle: String, CaseIterable, Identifiable {
         case triads = "Triads"
         case drop2 = "Drop-2 7ths"
-        case harmonized = "Harmonized"
+        case harmonized = "Harmonized Ladder"
+        case open = "Open Shapes"
         var id: String { rawValue }
     }
 
@@ -122,6 +123,12 @@ final class AppModel {
         case .triads: triadVoicings.map { ($0.chord, $0.steps) }
         case .drop2: seventhVoicings.map { ($0.chord, $0.steps) }
         case .harmonized: harmonizedTriads.map { ($0.chord, $0.voicing.steps) }
+        case .open:
+            OpenChords.shapes(for: chord).map { shape in
+                (shape.chord, shape.positions.map { position in
+                    ExerciseStep(position: position, note: fretboardModel.note(at: position))
+                })
+            }
         }
     }
 
@@ -139,6 +146,8 @@ final class AppModel {
             seventhVoicings.map { "\($0.inversion.label) · fret \($0.lowestFret)" }
         case .harmonized:
             harmonizedTriads.map { "\($0.romanNumeral) \($0.chord.symbol) · fret \($0.voicing.lowestFret)" }
+        case .open:
+            OpenChords.shapes(for: chord).map(\.name)
         }
     }
 
@@ -226,6 +235,7 @@ final class AppModel {
         case .triads: "\(chord.symbol) triads — \(voicingStyle.rawValue)"
         case .drop2: "\(chord.symbol) drop-2 voicings"
         case .harmonized: "\(scale.name) harmonized ladder"
+        case .open: "\(chord.symbol) open shape"
         }
         exercise = Exercise(name: name, steps: steps)
         exerciseIndex = 0

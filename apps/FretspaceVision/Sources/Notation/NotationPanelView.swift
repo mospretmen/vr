@@ -54,6 +54,8 @@ struct NotationPanelView: View {
                     ?? "\(model.chord.symbol) Drop-2 Voicings"
             case .harmonized:
                 "\(model.scale.name) — Harmonized"
+            case .open:
+                "\(model.chord.symbol) — Open Shape"
             }
         case .chordInScale: "\(model.chord.symbol) over \(model.scale.name)"
         case .exercise: model.exercise?.name ?? "Exercise"

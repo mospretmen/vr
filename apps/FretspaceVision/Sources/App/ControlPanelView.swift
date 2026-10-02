@@ -27,7 +27,6 @@ struct ControlPanelView: View {
                         Picker("Style", selection: $model.voicingStyle) {
                             ForEach(AppModel.VoicingStyle.allCases) { Text($0.rawValue).tag($0) }
                         }
-                        .pickerStyle(.segmented)
 
                         switch model.voicingStyle {
                         case .triads:
@@ -64,6 +63,8 @@ struct ControlPanelView: View {
                                     Text(stringSetLabel(set)).tag(index)
                                 }
                             }
+                        case .open:
+                            EmptyView() // chord pickers below are all it needs
                         }
                         Button("Drill These Voicings") { model.startVoicingDrillExercise() }
                             .disabled(model.voicingGroups.isEmpty)
@@ -80,6 +81,9 @@ struct ControlPanelView: View {
                                     .map { "\($0.romanNumeral) \($0.chord.symbol)" }
                                     .joined(separator: "  ·  "))
                             }
+                        } else if model.voicingStyle == .open, model.voicingGroups.isEmpty {
+                            Text("No open shape for \(model.chord.symbol) — "
+                                 + "try Triads or Drop-2 for a movable grip.")
                         }
                     }
                 }
