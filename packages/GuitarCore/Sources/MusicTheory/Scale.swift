@@ -28,11 +28,20 @@ public struct ScaleType: Codable, Sendable, Hashable {
     public static let harmonicMinor = ScaleType(name: "Harmonic Minor", intervals: [0, 2, 3, 5, 7, 8, 11])
     public static let melodicMinor  = ScaleType(name: "Melodic Minor",  intervals: [0, 2, 3, 5, 7, 9, 11])
 
+    // MARK: - Advanced colors
+    /// 5th mode of harmonic minor — flamenco/metal staple over V chords.
+    public static let phrygianDominant = ScaleType(name: "Phrygian Dominant", intervals: [0, 1, 4, 5, 7, 8, 10])
+    /// 4th mode of melodic minor — the lydian ♭7 sound over dominants.
+    public static let lydianDominant = ScaleType(name: "Lydian Dominant", intervals: [0, 2, 4, 6, 7, 9, 10])
+    /// Mixolydian plus the chromatic passing major 7 (eight notes).
+    public static let bebopDominant = ScaleType(name: "Bebop Dominant", intervals: [0, 2, 4, 5, 7, 9, 10, 11])
+
     /// The catalog shown in pickers, in display order.
     public static let all: [ScaleType] = [
         .major, .dorian, .phrygian, .lydian, .mixolydian, .naturalMinor, .locrian,
         .majorPentatonic, .minorPentatonic, .blues,
         .harmonicMinor, .melodicMinor,
+        .phrygianDominant, .lydianDominant, .bebopDominant,
     ]
 }
 

@@ -51,6 +51,23 @@ struct ModesTests {
         #expect(Modes.summary(of: Scale(root: .a, type: .blues)) == nil)
     }
 
+    @Test func advancedScalesSpellAndClassifyCorrectly() {
+        // E Phrygian Dominant: E F G♯ A B C D.
+        let phrygDom = Scale(root: .e, type: .phrygianDominant)
+        #expect(phrygDom.pitchClasses == [.e, .f, .gSharp, .a, .b, .c, .d])
+        #expect(Modes.alterations(of: .phrygianDominant) == ["♭2", "♭6", "♭7"])
+        #expect(Modes.majorDegree(of: .phrygianDominant) == nil) // not diatonic
+
+        #expect(Modes.alterations(of: .lydianDominant) == ["♭5", "♭7"]) // ♯4 spelled flat-side
+        #expect(ScaleType.bebopDominant.intervals.count == 8)
+        // Eight-note scales are excluded from harmonization.
+        let ladder = HarmonizedScale.triadLadder(
+            of: Scale(root: .c, type: .bebopDominant),
+            strings: [3, 4, 5],
+            on: FretboardModel())
+        #expect(ladder.isEmpty)
+    }
+
     @Test func pitchClassDegreeLabelInScale() {
         let aDorian = Scale(root: .a, type: .dorian)
         #expect(Modes.degreeLabel(of: .c, in: aDorian) == "♭3")
