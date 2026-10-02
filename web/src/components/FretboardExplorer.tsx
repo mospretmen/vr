@@ -16,6 +16,7 @@ import {
   drop2,
   triadInversions,
 } from "../voicings";
+import { triadLadder } from "../harmonized";
 
 /*
  * Interactive fretboard explorer. Pure view over src/theory.ts and
@@ -65,8 +66,18 @@ const NUMBERED_FRETS = [3, 5, 7, 9, 12, 15];
 
 type DisplayMode = "scale" | "triad" | "voicings";
 
-/** Voicings-mode quality catalog: the four triads, then the four sevenths. */
-const VOICING_QUALITIES = [...TRIAD_QUALITIES, ...SEVENTH_QUALITIES];
+/** Voicings-mode styles: inversion shapes, drop-2 grips, or the harmonized
+ * ladder (diatonic triads up the neck) — mirrors the headset app's modes. */
+type VoicingStyle = "triads" | "drop2" | "harmonized";
+
+const VOICING_STYLES: readonly { id: VoicingStyle; label: string }[] = [
+  { id: "triads", label: "Triads" },
+  { id: "drop2", label: "Drop-2" },
+  { id: "harmonized", label: "Harmonized" },
+] as const;
+
+/** Harmonizing yields one triad per degree only for seven-note scales. */
+const SEVEN_NOTE_SCALES = SCALE_TYPES.filter((s) => s.intervals.length === 7);
 
 /** Chord-tone marker styling, indexed root/third/fifth/seventh. Full literal
  * class names so Tailwind generates the token utilities. */
@@ -96,7 +107,11 @@ export function FretboardExplorer() {
   const [mode, setMode] = useState<DisplayMode>("scale");
   const [scaleIndex, setScaleIndex] = useState(8); // Minor Pentatonic
   const [triadIndex, setTriadIndex] = useState(0);
-  const [voicingQualityIndex, setVoicingQualityIndex] = useState(0);
+  const [voicingStyle, setVoicingStyle] = useState<VoicingStyle>("triads");
+  // One quality index per style, so flipping styles keeps context.
+  const [voicingTriadIndex, setVoicingTriadIndex] = useState(0);
+  const [voicingSeventhIndex, setVoicingSeventhIndex] = useState(0);
+  const [harmonizedScaleIndex, setHarmonizedScaleIndex] = useState(0); // Major
   // One set index per set size, so switching triad ↔ seventh keeps context.
   const [setIndex3, setSetIndex3] = useState(3); // G · B · E
   const [setIndex4, setSetIndex4] = useState(2); // D · G · B · E
@@ -104,46 +119,69 @@ export function FretboardExplorer() {
   const [hovered, setHovered] = useState<Hovered | null>(null);
 
   const voicingsMode = mode === "voicings";
-  const voicingQuality = VOICING_QUALITIES[voicingQualityIndex];
-  const isSeventh = voicingQuality.intervals.length === 4;
+  const harmonized = voicingStyle === "harmonized";
+  const isSeventh = voicingStyle === "drop2";
+  const voicingQuality = isSeventh
+    ? SEVENTH_QUALITIES[voicingSeventhIndex]
+    : TRIAD_QUALITIES[voicingTriadIndex];
   const stringSets = isSeventh ? STRING_SETS_4 : STRING_SETS_3;
   const setIndex = isSeventh ? setIndex4 : setIndex3;
   const stringSet = stringSets[setIndex];
   const inversionCount = isSeventh ? 4 : 3;
+  const harmonizedScale = SEVEN_NOTE_SCALES[harmonizedScaleIndex];
 
-  function pickVoicingQuality(index: number) {
-    setVoicingQualityIndex(index);
-    // A triad has no 3rd inversion — drop a stale filter back to All.
-    if (VOICING_QUALITIES[index].intervals.length === 3 && inversionFilter === 3) {
+  function pickVoicingStyle(style: VoicingStyle) {
+    setVoicingStyle(style);
+    // Only drop-2 has a 3rd inversion — drop a stale filter back to All.
+    if (style !== "drop2" && inversionFilter === 3) {
       setInversionFilter(null);
     }
   }
 
   const voicings = useMemo(
     () =>
-      isSeventh
-        ? drop2(root, voicingQuality.intervals, stringSet)
-        : triadInversions(root, voicingQuality.intervals, stringSet),
-    [root, voicingQuality, stringSet, isSeventh],
+      harmonized
+        ? []
+        : isSeventh
+          ? drop2(root, voicingQuality.intervals, stringSet)
+          : triadInversions(root, voicingQuality.intervals, stringSet),
+    [root, voicingQuality, stringSet, isSeventh, harmonized],
   );
   const shownVoicings =
     inversionFilter === null
       ? voicings
       : voicings.filter((v) => v.inversion === inversionFilter);
 
+  const ladder = useMemo(
+    () =>
+      voicingsMode && harmonized
+        ? triadLadder(root, harmonizedScale.intervals, stringSet)
+        : [],
+    [voicingsMode, harmonized, root, harmonizedScale, stringSet],
+  );
+
+  /** Shapes drawn on the board, with stable keys across both styles. */
+  const shapes = harmonized
+    ? ladder.map((rung) => ({ key: `deg-${rung.degree}`, voicing: rung.voicing }))
+    : shownVoicings.map((v) => ({ key: `inv-${v.inversion}`, voicing: v }));
+
   const intervals =
     mode === "scale"
       ? SCALE_TYPES[scaleIndex].intervals
       : mode === "triad"
         ? TRIAD_QUALITIES[triadIndex].intervals
-        : voicingQuality.intervals;
+        : harmonized
+          ? harmonizedScale.intervals
+          : voicingQuality.intervals;
 
   const selectionName =
     mode === "scale"
       ? `${noteName(root)} ${SCALE_TYPES[scaleIndex].name}`
       : mode === "triad"
         ? `${noteName(root)}${TRIAD_QUALITIES[triadIndex].symbol} triad`
-        : `${noteName(root)}${voicingQuality.symbol} ${isSeventh ? "drop-2" : "triad"} voicings`;
+        : harmonized
+          ? `${noteName(root)} ${harmonizedScale.name} harmonized`
+          : `${noteName(root)}${voicingQuality.symbol} ${isSeventh ? "drop-2" : "triad"} voicings`;
 
   const selectionTones = useMemo(
     () => intervals.map((i) => noteName((root + i) % 12)),
@@ -266,27 +304,80 @@ export function FretboardExplorer() {
               ))}
             </div>
           ) : (
-            <div
-              role="group"
-              aria-label="Chord quality"
-              className="flex flex-wrap gap-1"
-            >
-              {VOICING_QUALITIES.map((quality, i) => (
-                <button
-                  key={quality.name}
-                  type="button"
-                  aria-pressed={voicingQualityIndex === i}
-                  onClick={() => pickVoicingQuality(i)}
-                  className={`h-8 rounded-lg px-3 text-sm font-medium transition-colors duration-200 ${
-                    voicingQualityIndex === i
-                      ? "bg-white/10 text-ink"
-                      : "text-ink-dim hover:bg-white/5 hover:text-ink"
-                  }`}
+            <>
+              <div
+                role="group"
+                aria-label="Voicing style"
+                className="flex rounded-lg border border-white/10 p-0.5"
+              >
+                {VOICING_STYLES.map((style) => (
+                  <button
+                    key={style.id}
+                    type="button"
+                    aria-pressed={voicingStyle === style.id}
+                    onClick={() => pickVoicingStyle(style.id)}
+                    className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors duration-200 ${
+                      voicingStyle === style.id
+                        ? "bg-white/10 text-ink"
+                        : "text-ink-dim hover:text-ink"
+                    }`}
+                  >
+                    {style.label}
+                  </button>
+                ))}
+              </div>
+              {harmonized ? (
+                <label className="flex items-center gap-2">
+                  <span className="sr-only">Scale to harmonize</span>
+                  <select
+                    value={harmonizedScaleIndex}
+                    onChange={(e) =>
+                      setHarmonizedScaleIndex(Number(e.target.value))
+                    }
+                    className="h-9 rounded-lg border border-white/10 bg-raise-2 px-3 pr-8 text-sm text-ink transition-colors hover:border-white/20"
+                  >
+                    {SEVEN_NOTE_SCALES.map((scale, i) => (
+                      <option key={scale.name} value={i}>
+                        {scale.name}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+              ) : (
+                <div
+                  role="group"
+                  aria-label="Chord quality"
+                  className="flex flex-wrap gap-1"
                 >
-                  {quality.name}
-                </button>
-              ))}
-            </div>
+                  {(isSeventh ? SEVENTH_QUALITIES : TRIAD_QUALITIES).map(
+                    (quality, i) => {
+                      const active =
+                        (isSeventh ? voicingSeventhIndex : voicingTriadIndex) ===
+                        i;
+                      return (
+                        <button
+                          key={quality.name}
+                          type="button"
+                          aria-pressed={active}
+                          onClick={() =>
+                            isSeventh
+                              ? setVoicingSeventhIndex(i)
+                              : setVoicingTriadIndex(i)
+                          }
+                          className={`h-8 rounded-lg px-3 text-sm font-medium transition-colors duration-200 ${
+                            active
+                              ? "bg-white/10 text-ink"
+                              : "text-ink-dim hover:bg-white/5 hover:text-ink"
+                          }`}
+                        >
+                          {quality.name}
+                        </button>
+                      );
+                    },
+                  )}
+                </div>
+              )}
+            </>
           )}
         </div>
 
@@ -318,29 +409,31 @@ export function FretboardExplorer() {
                 </button>
               ))}
             </div>
-            <div
-              role="group"
-              aria-label="Inversion"
-              className="flex flex-wrap gap-1"
-            >
-              {[null, ...Array.from({ length: inversionCount }, (_, i) => i)].map(
-                (inv) => (
-                  <button
-                    key={inv === null ? "all" : inv}
-                    type="button"
-                    aria-pressed={inversionFilter === inv}
-                    onClick={() => setInversionFilter(inv)}
-                    className={`h-8 rounded-lg px-2.5 text-sm font-medium transition-colors duration-200 ${
-                      inversionFilter === inv
-                        ? "bg-white/10 text-ink"
-                        : "text-ink-dim hover:bg-white/5 hover:text-ink"
-                    }`}
-                  >
-                    {inv === null ? "All" : INVERSION_LABELS[inv]}
-                  </button>
-                ),
-              )}
-            </div>
+            {!harmonized && (
+              <div
+                role="group"
+                aria-label="Inversion"
+                className="flex flex-wrap gap-1"
+              >
+                {[null, ...Array.from({ length: inversionCount }, (_, i) => i)].map(
+                  (inv) => (
+                    <button
+                      key={inv === null ? "all" : inv}
+                      type="button"
+                      aria-pressed={inversionFilter === inv}
+                      onClick={() => setInversionFilter(inv)}
+                      className={`h-8 rounded-lg px-2.5 text-sm font-medium transition-colors duration-200 ${
+                        inversionFilter === inv
+                          ? "bg-white/10 text-ink"
+                          : "text-ink-dim hover:bg-white/5 hover:text-ink"
+                      }`}
+                    >
+                      {inv === null ? "All" : INVERSION_LABELS[inv]}
+                    </button>
+                  ),
+                )}
+              </div>
+            )}
           </div>
         )}
       </div>
@@ -355,6 +448,7 @@ export function FretboardExplorer() {
             {selectionTones.join(" · ")}
           </span>
           {voicingsMode &&
+            !harmonized &&
             inversionFilter === null &&
             shownVoicings.map((v) => (
               <span
@@ -362,6 +456,17 @@ export function FretboardExplorer() {
                 className="font-mono text-xs tabular-nums text-ink-mute"
               >
                 {v.label} · fret {v.lowestFret}
+              </span>
+            ))}
+          {voicingsMode &&
+            harmonized &&
+            ladder.map((rung) => (
+              <span
+                key={rung.degree}
+                className="font-mono text-xs tabular-nums text-ink-mute"
+              >
+                {rung.romanNumeral} {rung.symbol} · fret{" "}
+                {rung.voicing.lowestFret}
               </span>
             ))}
         </p>
@@ -573,13 +678,19 @@ export function FretboardExplorer() {
               every selection change (respects reduced motion). */}
           {voicingsMode && (
             <g
-              key={`${root}-${voicingQualityIndex}-${setIndex}-${inversionFilter ?? "all"}`}
+              key={`${root}-${voicingStyle}-${
+                harmonized
+                  ? harmonizedScaleIndex
+                  : isSeventh
+                    ? voicingSeventhIndex
+                    : voicingTriadIndex
+              }-${setIndex}-${inversionFilter ?? "all"}`}
               className="fade-in"
               pointerEvents="none"
             >
-              {shownVoicings.map((v) => (
+              {shapes.map(({ key, voicing: v }) => (
                 <polyline
-                  key={`line-${v.inversion}`}
+                  key={`line-${key}`}
                   points={v.steps
                     .map((step) => `${noteX(step.fret)},${stringY(step.string)}`)
                     .join(" ")}
@@ -590,9 +701,9 @@ export function FretboardExplorer() {
                   strokeLinejoin="round"
                 />
               ))}
-              {shownVoicings.map((v) =>
+              {shapes.map(({ key, voicing: v }) =>
                 v.steps.map((step) => (
-                  <g key={`${v.inversion}-${step.string}`}>
+                  <g key={`${key}-${step.string}`}>
                     <circle
                       cx={noteX(step.fret)}
                       cy={stringY(step.string)}
