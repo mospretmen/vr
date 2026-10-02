@@ -31,9 +31,6 @@ jobs:
   app-build:
     name: visionOS app (simulator build)
     runs-on: macos-15
-    # Advisory while runner Xcode/platform availability settles; the parse
-    # job above stays the required gate.
-    continue-on-error: true
     timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4

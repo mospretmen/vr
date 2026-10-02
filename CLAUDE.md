@@ -71,5 +71,16 @@ final name TBD before App Store submission.
 
 ## Environment notes
 
-- This Mac currently has Command Line Tools only (no Xcode.app) — the app
-  target can't be built here until Xcode is installed; the packages can.
+- Xcode 27 is installed at /Applications/Xcode.app but the license hasn't
+  been accepted locally (`sudo xcodebuild -license accept` — needs the
+  owner). Until then, build locally via
+  `DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer` once licensed;
+  `swift test` on the packages works regardless.
+- **CI builds the real app**: the "visionOS app (simulator build)" job
+  compiles the full app against the visionOS SDK on every push — it is the
+  required gate. `swiftc -parse` locally is only a fast pre-flight.
+- SwiftUI type-checker budget: keep view bodies small — one section per
+  computed property/subview (the monolithic control-panel Form hit "unable
+  to type-check this expression in reasonable time" on CI).
+- Audio-thread code (ChromaExtractor) is deliberately not actor-isolated;
+  keep its state immutable and let AsyncStream carry data out.
