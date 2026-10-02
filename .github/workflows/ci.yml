@@ -48,11 +48,16 @@ jobs:
           cd apps/FretspaceVision && xcodegen generate
       - name: Build for visionOS Simulator
         run: |
-          set -o pipefail
           cd apps/FretspaceVision
+          set +e
           xcodebuild build -scheme FretspaceVision \
             -destination 'generic/platform=visionOS Simulator' \
-            CODE_SIGNING_ALLOWED=NO 2>&1 | tail -120
+            CODE_SIGNING_ALLOWED=NO > xcodebuild.log 2>&1
+          status=$?
+          echo "== errors/warnings =="
+          grep -E "(error|warning): " xcodebuild.log | sort -u | head -100 || true
+          tail -5 xcodebuild.log
+          exit $status
 
   backend:
     name: Backend (vitest + typecheck)

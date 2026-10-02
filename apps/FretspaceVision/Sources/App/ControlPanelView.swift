@@ -161,8 +161,7 @@ struct ControlPanelView: View {
                         }
                         ProgressView(value: Double(model.backing.positionMs),
                                      total: Double(timeline.durationMs))
-                        @Bindable var backing = model.backing
-                        Toggle("Metronome click", isOn: $backing.clickEnabled)
+                        MetronomeToggle(backing: model.backing)
                     } else {
                         Button("Browse Backing Tracks") { showTrackLibrary = true }
                     }
@@ -294,6 +293,16 @@ struct ControlPanelView: View {
 
     private func rootPicker(_ title: String, selection: Binding<PitchClass>) -> some View {
         RootNotePicker(title: title, selection: selection)
+    }
+}
+
+/// Small wrapper so the metronome toggle gets a proper @Bindable home
+/// (property-wrapper locals don't belong inside result builders).
+private struct MetronomeToggle: View {
+    @Bindable var backing: BackingTrackController
+
+    var body: some View {
+        Toggle("Metronome click", isOn: $backing.clickEnabled)
     }
 }
 

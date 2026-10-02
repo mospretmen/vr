@@ -3,23 +3,25 @@ import Accelerate
 import AudioAnalysis
 import MusicTheory
 
-/// Mic → chromagram pipeline for "listen" mode (Phase 3).
+/// Mic → chromagram pipeline for "listen" mode.
 ///
 /// Taps the input node, windows + FFTs each buffer, folds spectral energy
 /// into 12 pitch-class bins over the guitar's range, and yields a
 /// `Chromagram` per hop. All recognition logic lives in the testable
 /// `AudioAnalysis` package; this class is only the signal front-end.
-@MainActor
+///
+/// Concurrency: deliberately not actor-isolated — the tap callback runs on
+/// the audio render thread and touches only immutable state (`fft`,
+/// `window`). Create and consume from one task (ListenModeController does).
 final class ChromaExtractor {
-    static let sampleRate: Double = 44_100
-    static let fftSize = 4096                    // ~93 ms window, ~10.8 Hz bins
+    static let fftSize = 4096                    // ~93 ms window @ 44.1k
     /// Guitar fundamentals: E2 (82 Hz) up to ~E6 (1319 Hz) covers fret 24.
     static let minFrequency = 75.0
     static let maxFrequency = 1350.0
 
     private let engine = AVAudioEngine()
     private let fft: vDSP.FFT<DSPSplitComplex>
-    private var window: [Float]
+    private let window: [Float]
 
     init?() {
         let log2n = vDSP_Length(log2(Double(Self.fftSize)))
@@ -64,11 +66,16 @@ final class ChromaExtractor {
             do {
                 try engine.start()
             } catch {
+                AppLog.audio.error("Audio engine failed to start: \(error)")
                 continuation.finish()
                 return
             }
 
-            continuation.onTermination = { [engine] _ in
+            // AVAudioEngine isn't Sendable; tearing the tap down from the
+            // termination handler is safe (engine outlives the stream and
+            // these calls are thread-safe teardown).
+            nonisolated(unsafe) let engine = self.engine
+            continuation.onTermination = { _ in
                 engine.inputNode.removeTap(onBus: 0)
                 engine.stop()
             }
@@ -76,7 +83,7 @@ final class ChromaExtractor {
     }
 
     /// Window → FFT → magnitude → fold bins into pitch classes.
-    nonisolated private func extract(from buffer: AVAudioPCMBuffer, sampleRate: Double) -> Chromagram? {
+    private func extract(from buffer: AVAudioPCMBuffer, sampleRate: Double) -> Chromagram? {
         guard let channel = buffer.floatChannelData?[0],
               buffer.frameLength >= AVAudioFrameCount(Self.fftSize) else { return nil }
 
@@ -91,9 +98,9 @@ final class ChromaExtractor {
             imaginary.withUnsafeMutableBufferPointer { imagPtr in
                 var split = DSPSplitComplex(realp: realPtr.baseAddress!,
                                             imagp: imagPtr.baseAddress!)
-                samples.withUnsafeBytes {
-                    $0.baseAddress!.withMemoryRebound(to: DSPComplex.self,
-                                                      capacity: Self.fftSize / 2) {
+                samples.withUnsafeBufferPointer { samplePtr in
+                    samplePtr.baseAddress!.withMemoryRebound(to: DSPComplex.self,
+                                                             capacity: Self.fftSize / 2) {
                         vDSP_ctoz($0, 2, &split, 1, vDSP_Length(Self.fftSize / 2))
                     }
                 }
