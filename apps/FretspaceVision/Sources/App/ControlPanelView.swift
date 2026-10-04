@@ -52,18 +52,23 @@ struct ControlPanelView: View {
     private var stageSection: some View {
         @Bindable var model = model
         return Section {
-            Toggle("Show floating board", isOn: $model.stageBoardEnabled)
-            if model.stageBoardEnabled {
+            Picker("Board", selection: $model.boardPlacement) {
+                ForEach(AppModel.BoardPlacement.allCases) { Text($0.rawValue).tag($0) }
+            }
+            .pickerStyle(.segmented)
+            if model.boardPlacement == .floating {
                 Toggle("Guide tones (3rds & 7ths)", isOn: $model.stageGuideTones)
                 Toggle("Dim avoid notes", isOn: $model.stageAvoidDimming)
             }
         } header: {
-            Label("Stage Board", systemImage: "rectangle.on.rectangle")
+            Label("Fretboard", systemImage: "rectangle.on.rectangle")
         } footer: {
-            if model.stageBoardEnabled {
-                Text("The floating fretboard follows the harmony — gold dots are "
-                     + "the current chord's 3rd and 7th: your landing targets. "
-                     + "Load a backing track and it changes with every bar.")
+            if model.boardPlacement == .floating {
+                Text("The floating board follows the harmony — gold disks are the "
+                     + "current chord's 3rd and 7th: your landing targets. With "
+                     + "Listen on, the note you play glows cyan.")
+            } else {
+                Text("On-guitar mode needs a parked guitar and calibration below.")
             }
         }
     }

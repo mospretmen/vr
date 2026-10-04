@@ -11,8 +11,13 @@ import MusicTheory
 final class ListenModeController {
     private(set) var isListening = false
     private(set) var detectedChord: Chord?
+    /// The single note currently heard (dominant pitch class), with a short
+    /// ring-out hold — drives the stage board's played-note glow.
+    private(set) var detectedPitchClass: PitchClass?
     /// Raw per-frame confidence, for a subtle UI meter.
     private(set) var confidence: Double = 0
+
+    private var lastPitchHeardAt: Date = .distantPast
 
     private var smoother = ChordDecisionSmoother(holdFrames: 3)
     private var noteTracker = NoteHitTracker(holdFrames: 2)
@@ -52,6 +57,13 @@ final class ListenModeController {
                 if noteTracker.feed(chroma) {
                     onNoteHit?()
                 }
+                // Single-note glow with a short ring-out hold.
+                if let pc = PitchClassDetector.dominantPitchClass(in: chroma) {
+                    detectedPitchClass = pc
+                    lastPitchHeardAt = .now
+                } else if Date.now.timeIntervalSince(lastPitchHeardAt) > 0.6 {
+                    detectedPitchClass = nil
+                }
             }
             // Stream ending on its own means the engine died mid-session.
             if isListening {
@@ -67,6 +79,7 @@ final class ListenModeController {
         listenTask = nil
         isListening = false
         detectedChord = nil
+        detectedPitchClass = nil
         confidence = 0
     }
 }

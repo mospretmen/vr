@@ -47,9 +47,10 @@ struct ImmersiveView: View {
             _ = model.listen.detectedChord
             _ = model.backing.currentChord
             _ = model.adjustingCalibration
-            _ = model.stageBoardEnabled
+            _ = model.boardPlacement
             _ = model.stageGuideTones
             _ = model.stageAvoidDimming
+            _ = model.listen.detectedPitchClass
             rebuildOverlay()
         }
         .task {
@@ -144,6 +145,10 @@ struct ImmersiveView: View {
         overlayAnchor.children.removeAll()
         refreshHandles()
 
+        // On-guitar overlay renders only in its placement mode — the two
+        // boards are never shown together.
+        guard model.boardPlacement == .onGuitar else { return }
+
         guard case .calibrated(let calibration) = model.calibration,
               let transform = calibration.transform else {
             showCalibrationFeedback()
@@ -181,23 +186,28 @@ struct ImmersiveView: View {
         }
     }
 
-    /// The floating performance board — rebuilt on harmony or option
-    /// changes, shown regardless of guitar calibration.
+    /// The floating performance board — shows whatever the current display
+    /// mode is studying, synced to the active harmony.
     @MainActor
     private func rebuildStageBoard() {
         stageAnchor.children.removeAll()
-        guard model.stageBoardEnabled else { return }
+        guard model.boardPlacement == .floating else { return }
 
+        let chordContext = model.stageShowsChordContext
         let board = StageBoardEntity.build(
-            highlights: model.stageHighlights,
+            content: .init(
+                highlights: model.highlights,
+                connections: model.connectionGroups,
+                guideTones: chordContext ? model.guideTonePitchClasses : [],
+                avoidNotes: chordContext ? model.avoidPitchClasses : [],
+                emphasizeGuideTones: model.stageGuideTones && chordContext,
+                dimAvoidNotes: model.stageAvoidDimming && chordContext,
+                labelStyle: model.labelStyle,
+                scale: model.activeScale,
+                litPitchClass: model.listen.detectedPitchClass
+            ),
             geometry: FretboardGeometry(stringCount: model.tuning.stringCount,
-                                        fretCount: model.fretCount),
-            guideTones: model.guideTonePitchClasses,
-            avoidNotes: model.avoidPitchClasses,
-            emphasizeGuideTones: model.stageGuideTones,
-            dimAvoidNotes: model.stageAvoidDimming,
-            labelStyle: model.labelStyle,
-            scale: model.activeScale
+                                        fretCount: model.fretCount)
         )
         stageAnchor.addChild(board)
     }

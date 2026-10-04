@@ -170,20 +170,27 @@ final class AppModel {
         }
     }
 
-    // MARK: - Stage board (floating performance fretboard)
-    /// The hero view for playing along: a large diagram-oriented fretboard
-    /// floating in space, synced to the active harmony. Independent of
-    /// guitar calibration entirely.
-    var stageBoardEnabled = true
+    // MARK: - Board placement (the one fretboard, two possible homes)
+    enum BoardPlacement: String, CaseIterable, Identifiable {
+        case floating = "Floating"
+        case onGuitar = "On guitar"
+        var id: String { rawValue }
+    }
+
+    /// Where the fretboard visualization lives. Floating is the performance
+    /// default; On guitar is the calibrated study mode. Never both at once.
+    var boardPlacement: BoardPlacement = .floating
     /// Glow the current chord's 3rd & 7th as voice-leading targets.
     var stageGuideTones = true
     /// Recess scale notes a semitone above a chord tone (classic avoid notes).
     var stageAvoidDimming = true
 
-    /// What the stage board renders: the active chord inside the active
-    /// scale — tracks the backing progression automatically via activeChord.
-    var stageHighlights: [FretboardHighlight] {
-        fretboardModel.highlights(for: activeChord, within: activeScale)
+    /// Guide/avoid layers only make sense when a chord context is on screen.
+    var stageShowsChordContext: Bool {
+        switch displayMode {
+        case .chord, .chordInScale: return true
+        case .scale, .triads, .exercise: return false
+        }
     }
 
     /// Pitch classes of the voice-leading guide tones (3rd, and 7th if any).
