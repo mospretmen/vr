@@ -4,19 +4,29 @@ import MusicTheory
 import FretboardKit
 
 /// The mixed-immersion scene: renders the fretboard overlay locked onto the
-/// player's guitar, and hosts the calibration flow.
+/// player's guitar, and hosts the calibration + adjust flows.
 struct ImmersiveView: View {
     @Environment(AppModel.self) private var model
 
     /// Anchors the overlay subtree; its transform is the calibration result.
     @State private var overlayAnchor = Entity()
+    /// World-space helpers that must survive overlay rebuilds: the live
+    /// pinch cursor and the adjust-mode grab handles.
+    @State private var helperAnchor = Entity()
+    @State private var cursor = Entity()
     @State private var pinchTracker = HandPinchTracker()
     @State private var persistence = CalibrationPersistence()
+    @State private var activeHandle: CalibrationHandle?
 
     var body: some View {
         RealityView { content in
             overlayAnchor.name = "overlayAnchor"
+            helperAnchor.name = "helperAnchor"
+            cursor = Self.makeCursor()
+            cursor.isEnabled = false
+            helperAnchor.addChild(cursor)
             content.add(overlayAnchor)
+            content.add(helperAnchor)
             rebuildOverlay()
         } update: { _ in
             // Re-runs when observed model state changes.
@@ -31,22 +41,13 @@ struct ImmersiveView: View {
             _ = model.chordQuality
             _ = model.listen.detectedChord
             _ = model.backing.currentChord
+            _ = model.adjustingCalibration
             rebuildOverlay()
         }
         .task {
             pinchTracker.onError = { model.presentedError = $0 }
-            // Only listen for pinches while a calibration flow is active.
-            for await pinch in pinchTracker.pinchEvents() {
-                switch model.calibration {
-                case .placingNut, .placingTwelfthFret:
-                    model.recordCalibrationPoint(pinch.position, devicePosition: pinch.devicePosition)
-                    // A fresh manual calibration supersedes the stored one.
-                    if case .calibrated(let calibration) = model.calibration {
-                        await persistence.save(calibration)
-                    }
-                case .notCalibrated, .calibrated:
-                    continue
-                }
+            for await event in pinchTracker.pinchEvents() {
+                handle(event)
             }
         }
         .task {
@@ -63,9 +64,76 @@ struct ImmersiveView: View {
         .onDisappear { model.immersiveSpaceOpen = false }
     }
 
+    // MARK: - Pinch handling
+
+    @MainActor
+    private func handle(_ event: HandPinchTracker.PinchEvent) {
+        switch event {
+        case .moved(let position):
+            if model.calibration.isPlacing {
+                showCursor(at: position)
+            } else if model.adjustingCalibration {
+                dragHandle(to: position)
+            }
+
+        case .registered(let position, let devicePosition):
+            cursor.isEnabled = false
+            if model.calibration.isPlacing {
+                model.recordCalibrationPoint(position, devicePosition: devicePosition)
+                if case .calibrated(let calibration) = model.calibration {
+                    Task { await persistence.save(calibration) }
+                }
+            } else if model.adjustingCalibration, activeHandle != nil {
+                activeHandle = nil
+                model.finishAdjustDrag()
+                if case .calibrated(let calibration) = model.calibration {
+                    Task { await persistence.save(calibration) }
+                }
+            }
+
+        case .cancelled:
+            cursor.isEnabled = false
+            if activeHandle != nil {
+                activeHandle = nil
+                model.finishAdjustDrag() // rebuild from wherever it ended up
+            }
+        }
+    }
+
+    @MainActor
+    private func showCursor(at position: SIMD3<Float>) {
+        cursor.position = position
+        cursor.isEnabled = true
+    }
+
+    /// Adjust mode: the first sample grabs the nearest handle (within 5 cm);
+    /// subsequent samples move that calibration point live. The transform
+    /// updates every sample (cheap); the full marker rebuild waits for release.
+    @MainActor
+    private func dragHandle(to position: SIMD3<Float>) {
+        if activeHandle == nil {
+            activeHandle = model.calibrationHandles
+                .map { ($0.handle, simd_distance($0.position, position)) }
+                .filter { $0.1 < 0.05 }
+                .min { $0.1 < $1.1 }?.0
+        }
+        guard let handle = activeHandle else { return }
+
+        showCursor(at: position)
+        model.moveCalibrationPoint(handle, to: position)
+        if case .calibrated(let calibration) = model.calibration,
+           let transform = calibration.transform {
+            overlayAnchor.setTransformMatrix(transform, relativeTo: nil)
+        }
+        refreshHandles()
+    }
+
+    // MARK: - Rendering
+
     @MainActor
     private func rebuildOverlay() {
         overlayAnchor.children.removeAll()
+        refreshHandles()
 
         guard case .calibrated(let calibration) = model.calibration,
               let transform = calibration.transform else {
@@ -104,30 +172,56 @@ struct ImmersiveView: View {
         }
     }
 
-    /// Mid-calibration feedback: once the nut is pinched, a glowing dot
-    /// confirms exactly where it registered while the user lines up the
-    /// 12th-fret pinch.
+    /// Mid-calibration feedback: confirmed points stay visible as glowing
+    /// dots while the user lines up the next pinch.
     @MainActor
     private func showCalibrationFeedback() {
-        guard case .placingTwelfthFret(let nutPoint) = model.calibration else { return }
-
         overlayAnchor.setTransformMatrix(matrix_identity_float4x4, relativeTo: nil)
 
-        var material = UnlitMaterial(color: .orange)
-        material.blending = .transparent(opacity: 0.95)
-        let dot = ModelEntity(
-            mesh: .generateSphere(radius: 0.008),
-            materials: [material]
-        )
-        dot.name = "nutConfirmation"
-        dot.position = nutPoint
+        var confirmed: [SIMD3<Float>] = []
+        switch model.calibration {
+        case .placingTwelfthFret(let nut):
+            confirmed = [nut]
+        case .placingEdge(let nut, let twelfth):
+            confirmed = [nut, twelfth]
+        default:
+            return
+        }
 
-        // Gentle pulse so it reads as "registered, waiting for the next one".
-        let settled = dot.transform
-        var grown = settled
-        grown.scale = SIMD3<Float>(repeating: 1.35)
-        dot.move(to: grown, relativeTo: overlayAnchor, duration: 0.5, timingFunction: .easeInOut)
+        for point in confirmed {
+            let dot = Self.makeDot(radius: 0.008, color: .orange)
+            dot.position = point
+            overlayAnchor.addChild(dot)
+        }
+    }
 
-        overlayAnchor.addChild(dot)
+    /// Adjust-mode grab handles, in world space (helperAnchor is identity).
+    @MainActor
+    private func refreshHandles() {
+        helperAnchor.children
+            .filter { $0.name == "handle" }
+            .forEach { $0.removeFromParent() }
+
+        guard model.adjustingCalibration else { return }
+        for item in model.calibrationHandles {
+            let handle = Self.makeDot(radius: 0.011, color: .cyan, opacity: 0.6)
+            handle.name = "handle"
+            handle.position = item.position
+            helperAnchor.addChild(handle)
+        }
+    }
+
+    // MARK: - Entity factories
+
+    private static func makeCursor() -> Entity {
+        makeDot(radius: 0.005, color: .white, opacity: 0.9)
+    }
+
+    private static func makeDot(
+        radius: Float, color: UIColor, opacity: Float = 0.95
+    ) -> ModelEntity {
+        var material = UnlitMaterial(color: color)
+        material.blending = .transparent(opacity: .init(floatLiteral: opacity))
+        return ModelEntity(mesh: .generateSphere(radius: radius), materials: [material])
     }
 }

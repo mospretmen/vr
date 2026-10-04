@@ -275,6 +275,7 @@ struct ControlPanelView: View {
 
     @ViewBuilder
     private var immersiveControls: some View {
+        @Bindable var model = model
         if !model.immersiveSpaceOpen {
             Button("Start Session") {
                 Task { await openImmersiveSpace(id: SceneID.immersive) }
@@ -289,13 +290,20 @@ struct ControlPanelView: View {
             switch model.calibration {
             case .notCalibrated:
                 Button("Calibrate to My Guitar") { model.startCalibration() }
-            case .placingNut, .placingTwelfthFret:
+            case .placingNut, .placingTwelfthFret, .placingEdge:
                 Button("Cancel Calibration", role: .cancel) {
                     model.cancelCalibration()
                 }
             case .calibrated(let cal):
                 LabeledContent("Scale length",
                                value: String(format: "%.1f\u{2033}", cal.scaleLength / 0.0254))
+                Toggle("Adjust overlay", isOn: $model.adjustingCalibration)
+                if model.adjustingCalibration {
+                    Text("Pinch-hold a cyan handle and drag it until the overlay "
+                         + "sits on your real frets. Release to lock.")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
                 Button("Recalibrate") { model.startCalibration() }
             }
 

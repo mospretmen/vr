@@ -81,6 +81,40 @@ struct FretboardCalibrationTests {
         #expect(abs(simd_length(y) - 1) < 1e-5)
     }
 
+    @Test func edgePointPinsThePlaneExactly() throws {
+        // Board lying flat (surface up). Edge pinch on the high-string side
+        // at the 5th-fret area: +Z in world, slightly along the neck.
+        var threePoint = calibration
+        threePoint.edgePoint = SIMD3<Float>(1.10, 1.0, -0.47)
+        // Deliberately bad head hint — must NOT matter beyond sign checking.
+        threePoint.surfaceNormalHint = simd_normalize(SIMD3<Float>(0.5, 0.7, 0.4))
+
+        let t = try #require(threePoint.transform)
+        let y = SIMD3(t.columns.1.x, t.columns.1.y, t.columns.1.z)
+        let z = SIMD3(t.columns.2.x, t.columns.2.y, t.columns.2.z)
+        // Normal is exactly world-up (plane through the three points).
+        #expect(abs(y.y - 1) < 1e-5)
+        #expect(abs(z.z - 1) < 1e-5) // +Z toward the pinched edge
+    }
+
+    @Test func wrongEdgeSideIsAutoCorrected() throws {
+        // Pinching the LOW-string edge (-Z side) must not flip the board
+        // into the wood: the normal still faces the player.
+        var threePoint = calibration
+        threePoint.edgePoint = SIMD3<Float>(1.10, 1.0, -0.53) // -Z side
+        threePoint.surfaceNormalHint = SIMD3<Float>(0, 1, 0)  // player above
+
+        let t = try #require(threePoint.transform)
+        let y = SIMD3(t.columns.1.x, t.columns.1.y, t.columns.1.z)
+        #expect(y.y > 0.99) // normal still up, not into the guitar
+    }
+
+    @Test func edgePinchOnTheNeckLineIsRejected() {
+        var bad = calibration
+        bad.edgePoint = calibration.nutPoint + SIMD3<Float>(0.1, 0, 0) // on the axis
+        #expect(bad.transform == nil)
+    }
+
     @Test func degenerateCalibrationsAreRejected() {
         let samePoint = FretboardCalibration(
             nutPoint: .zero, twelfthFretPoint: .zero, surfaceNormalHint: SIMD3<Float>(0, 1, 0))

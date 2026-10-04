@@ -28,6 +28,7 @@ enum CalibrationState: Equatable {
     case notCalibrated
     case placingNut
     case placingTwelfthFret(nutPoint: SIMD3<Float>)
+    case placingEdge(nutPoint: SIMD3<Float>, twelfthPoint: SIMD3<Float>)
     case calibrated(FretboardCalibration)
 
     var isCalibrated: Bool {
@@ -35,14 +36,30 @@ enum CalibrationState: Equatable {
         return false
     }
 
+    var isPlacing: Bool {
+        switch self {
+        case .placingNut, .placingTwelfthFret, .placingEdge: return true
+        case .notCalibrated, .calibrated: return false
+        }
+    }
+
     var instruction: String? {
         switch self {
         case .notCalibrated: return nil
-        case .placingNut: return "Pinch at the center of the NUT"
-        case .placingTwelfthFret: return "Now pinch at the center of the 12th FRET"
+        case .placingNut:
+            return "Pinch and HOLD on the center of the NUT, then release"
+        case .placingTwelfthFret:
+            return "Pinch and HOLD on the center of the 12th FRET"
+        case .placingEdge:
+            return "Pinch and HOLD on the board's edge by the THINNEST string"
         case .calibrated: return nil
         }
     }
+}
+
+/// Which calibration point an adjust-mode drag is moving.
+enum CalibrationHandle: Equatable {
+    case nut, twelfth, edge
 }
 
 @MainActor
@@ -374,29 +391,78 @@ final class AppModel {
         case .placingNut:
             calibration = .placingTwelfthFret(nutPoint: point)
         case .placingTwelfthFret(let nutPoint):
+            // Validate the neck length before asking for the edge pinch.
+            let half = simd_distance(nutPoint, point)
+            if half > 0.15 && half < 0.60 {
+                calibration = .placingEdge(nutPoint: nutPoint, twelfthPoint: point)
+            } else {
+                AppLog.calibration.error("""
+                    Implausible neck length rejected: half-scale \
+                    \(half, format: .fixed(precision: 3)) m
+                    """)
+                presentedError = .calibrationImplausible
+                calibration = .placingNut
+            }
+        case .placingEdge(let nutPoint, let twelfthPoint):
             let candidate = FretboardCalibration(
                 nutPoint: nutPoint,
-                twelfthFretPoint: point,
-                // The fretboard roughly faces the player's head while they
-                // look down at the neck to calibrate.
-                surfaceNormalHint: simd_normalize(devicePosition - nutPoint)
+                twelfthFretPoint: twelfthPoint,
+                // Head position still disambiguates which side was pinched.
+                surfaceNormalHint: simd_normalize(devicePosition - nutPoint),
+                edgePoint: point
             )
             if candidate.isPlausible, candidate.transform != nil {
                 calibration = .calibrated(candidate)
                 AppLog.calibration.info("""
-                    Calibrated: scale length \(candidate.scaleLength, format: .fixed(precision: 4)) m
+                    Calibrated (3-point): scale length \
+                    \(candidate.scaleLength, format: .fixed(precision: 4)) m
                     """)
             } else {
-                AppLog.calibration.error("""
-                    Implausible calibration rejected: half-scale distance \
-                    \(simd_distance(nutPoint, point), format: .fixed(precision: 3)) m
-                    """)
+                AppLog.calibration.error("Edge point degenerate; restarting calibration")
                 presentedError = .calibrationImplausible
-                calibration = .placingNut // start over with guidance shown
+                calibration = .placingNut
             }
         case .notCalibrated, .calibrated:
             break
         }
+        overlayDidChange()
+    }
+
+    // MARK: - Overlay adjust mode
+
+    /// When on, the immersive view shows grab handles at the calibration
+    /// points; pinch-dragging one refines the overlay against the real neck.
+    var adjustingCalibration = false
+
+    /// Current world positions of the adjustable handles.
+    var calibrationHandles: [(handle: CalibrationHandle, position: SIMD3<Float>)] {
+        guard case .calibrated(let cal) = calibration else { return [] }
+        var handles: [(handle: CalibrationHandle, position: SIMD3<Float>)] = [
+            (handle: .nut, position: cal.nutPoint),
+            (handle: .twelfth, position: cal.twelfthFretPoint),
+        ]
+        if let edge = cal.edgePoint {
+            handles.append((handle: .edge, position: edge))
+        }
+        return handles
+    }
+
+    /// Move one calibration point (live during an adjust drag). Rebuild is
+    /// debounced by the caller; the transform updates cheaply every sample.
+    func moveCalibrationPoint(_ handle: CalibrationHandle, to point: SIMD3<Float>) {
+        guard case .calibrated(var cal) = calibration else { return }
+        switch handle {
+        case .nut: cal.nutPoint = point
+        case .twelfth: cal.twelfthFretPoint = point
+        case .edge: cal.edgePoint = point
+        }
+        if cal.transform != nil {
+            calibration = .calibrated(cal)
+        }
+    }
+
+    func finishAdjustDrag() {
+        AppLog.calibration.info("Adjust drag committed")
         overlayDidChange()
     }
 }
