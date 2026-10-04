@@ -18,6 +18,8 @@ final class BackingTrackController {
     private(set) var upcoming: ChordEvent?
 
     var loops = true
+    /// Audible chord pads — on by default so a loaded track actually sounds.
+    var padsEnabled = true
     var clickEnabled = false {
         didSet { updateMetronome() }
     }
@@ -26,7 +28,9 @@ final class BackingTrackController {
     private(set) var bpm: Double?
 
     private let metronome = MetronomeEngine()
+    private let pads = ChordPadEngine()
     private var tickTask: Task<Void, Never>?
+    private var lastPadChord: Chord?
 
     func load(_ timeline: ChordTimeline, title: String, bpm: Double? = nil) {
         stop()
@@ -62,6 +66,16 @@ final class BackingTrackController {
                 positionMs = elapsed
                 currentChord = timeline.chord(atMs: elapsed)
                 upcoming = timeline.nextChange(afterMs: elapsed)
+
+                // Sound each chord as the clock enters it.
+                if padsEnabled, let chord = currentChord, chord != lastPadChord {
+                    lastPadChord = chord
+                    let remaining = (timeline.events.first {
+                        $0.startMs <= elapsed && elapsed < $0.endMs
+                    }?.endMs ?? elapsed) - elapsed
+                    pads.play(chord, durationMs: max(remaining, 300))
+                }
+
                 try? await Task.sleep(for: .milliseconds(50))
             }
         }
@@ -77,6 +91,8 @@ final class BackingTrackController {
         tickTask?.cancel()
         tickTask = nil
         isPlaying = false
+        lastPadChord = nil
+        pads.stop()
         updateMetronome()
     }
 

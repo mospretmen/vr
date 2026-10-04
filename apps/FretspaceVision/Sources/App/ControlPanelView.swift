@@ -270,7 +270,9 @@ struct ControlPanelView: View {
     private var listenSection: some View {
         Section(header: Label("Listen", systemImage: "ear")) {
             if model.listen.isListening {
-                LabeledContent("Hearing", value: model.listen.detectedChord?.symbol ?? "—")
+                LabeledContent("Chord", value: model.listen.detectedChord?.symbol ?? "—")
+                LabeledContent("Note", value: model.listen.detectedPitchClass?.name() ?? "—")
+                LabeledContent("Signal", value: "\(Int(model.listen.confidence * 100))%")
                 Button("Stop Listening") {
                     model.listen.stop()
                     model.listenStateDidChange()
@@ -400,12 +402,13 @@ private struct ErrorAlert: ViewModifier {
     }
 }
 
-/// Small wrapper so the metronome toggle gets a proper @Bindable home
+/// Small wrapper so the backing toggles get a proper @Bindable home
 /// (property-wrapper locals don't belong inside result builders).
 private struct MetronomeToggle: View {
     @Bindable var backing: BackingTrackController
 
     var body: some View {
+        Toggle("Chord pads", isOn: $backing.padsEnabled)
         Toggle("Metronome click", isOn: $backing.clickEnabled)
     }
 }

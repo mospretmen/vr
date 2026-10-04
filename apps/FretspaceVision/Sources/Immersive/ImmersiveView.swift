@@ -206,8 +206,10 @@ struct ImmersiveView: View {
                 scale: model.activeScale,
                 litPitchClass: model.listen.detectedPitchClass
             ),
+            // 15 frets keeps the stage board airy; the full neck lives in
+            // the chart panel when needed.
             geometry: FretboardGeometry(stringCount: model.tuning.stringCount,
-                                        fretCount: model.fretCount)
+                                        fretCount: min(model.fretCount, 15))
         )
         stageAnchor.addChild(board)
     }

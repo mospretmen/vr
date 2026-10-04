@@ -71,45 +71,32 @@ enum StageBoardEntity {
         container.name = "boardLines"
         let lineHeight = span * 1.12
 
+        // Hairline frets; only the nut carries visual weight.
         for fret in 0...geometry.fretCount {
             let x = Float(geometry.fretDistance(fret))
             let isNut = fret == 0
             let material = UnlitMaterial(
-                color: UIColor.white.withAlphaComponent(isNut ? 0.9 : 0.32))
+                color: UIColor.white.withAlphaComponent(isNut ? 0.75 : 0.18))
             let bar = ModelEntity(
-                mesh: .generateBox(width: isNut ? 0.0045 : 0.0016,
-                                   height: lineHeight, depth: 0.0008),
+                mesh: .generateBox(width: isNut ? 0.0032 : 0.0009,
+                                   height: lineHeight, depth: 0.0006),
                 materials: [material]
             )
             bar.position = SIMD3<Float>(x, 0, 0)
             container.addChild(bar)
         }
 
+        // Hairline strings.
         for string in 0..<geometry.stringCount {
             let y = Float(geometry.stringZ(string: string, atX: 0))
-            let gauge = 0.0024 - Float(string) * 0.00022
-            let material = UnlitMaterial(color: UIColor.white.withAlphaComponent(0.5))
+            let gauge = 0.0014 - Float(string) * 0.0001
+            let material = UnlitMaterial(color: UIColor.white.withAlphaComponent(0.3))
             let line = ModelEntity(
-                mesh: .generateBox(width: length, height: gauge, depth: 0.0008),
+                mesh: .generateBox(width: length, height: gauge, depth: 0.0006),
                 materials: [material]
             )
-            line.position = SIMD3<Float>(length / 2, y, 0.0005)
+            line.position = SIMD3<Float>(length / 2, y, 0.0004)
             container.addChild(line)
-        }
-
-        // Subtle inlay dots above the board (clear of the note lanes).
-        let inlayMaterial = UnlitMaterial(color: UIColor.white.withAlphaComponent(0.2))
-        for fret in [3, 5, 7, 9, 12, 15, 17, 19, 21] where fret <= geometry.fretCount {
-            let x = Float(geometry.noteX(fret: fret))
-            let count = fret == 12 ? 2 : 1
-            for i in 0..<count {
-                let dot = ModelEntity(mesh: .generateSphere(radius: 0.0032),
-                                      materials: [inlayMaterial])
-                dot.scale = SIMD3<Float>(1, 1, 0.2)
-                dot.position = SIMD3<Float>(x + Float(i) * 0.008 - Float(count - 1) * 0.004,
-                                            span * 0.72, 0.0005)
-                container.addChild(dot)
-            }
         }
         return container
     }
@@ -169,40 +156,39 @@ enum StageBoardEntity {
         for highlight in content.highlights {
             let pc = highlight.note.pitchClass
             let isGuide = content.emphasizeGuideTones && content.guideTones.contains(pc)
-            let isAvoid = content.dimAvoidNotes && content.avoidNotes.contains(pc)
+            // Avoid notes vanish rather than dim — less ink, calmer board.
+            if content.dimAvoidNotes, content.avoidNotes.contains(pc) { continue }
             let isLit = content.litPitchClass == pc
 
-            // Diagram-first palette: strong flat disks, readable text.
+            // Quiet by default; only targets carry weight and text.
             var disk: UIColor
             var textColor: UIColor = .white
             var radius: Float
-            var opacity: Float = 1.0
+            var opacity: Float = 0.95
+            var labeled = false
             switch highlight.role {
             case .chordTone where isGuide:
                 disk = UIColor(red: 1.0, green: 0.78, blue: 0.22, alpha: 1)
                 textColor = .black
-                radius = 0.0145
+                radius = 0.013
+                labeled = true
             case .chordTone(.root):
-                disk = .systemOrange; radius = 0.012
+                disk = .systemOrange; radius = 0.0105; labeled = true
             case .chordTone(.third):
-                disk = .systemCyan; textColor = .black; radius = 0.011
+                disk = .systemCyan; textColor = .black; radius = 0.0095
             case .chordTone(.fifth):
-                disk = .systemGreen; textColor = .black; radius = 0.011
+                disk = .systemGreen; textColor = .black; radius = 0.0095
             case .chordTone:
-                disk = .systemPurple; radius = 0.011
+                disk = .systemPurple; radius = 0.0095
             case .scaleDegree(1):
-                disk = .systemOrange; radius = 0.011
+                disk = .systemOrange; radius = 0.0095; labeled = true
             case .scaleDegree:
-                disk = UIColor(white: 0.32, alpha: 1); radius = 0.0095
+                disk = UIColor(white: 0.55, alpha: 1); radius = 0.0055; opacity = 0.55
             case .exerciseStep(let isCurrent):
-                disk = isCurrent ? .systemMint : UIColor(white: 0.32, alpha: 1)
+                disk = isCurrent ? .systemMint : UIColor(white: 0.5, alpha: 1)
                 textColor = isCurrent ? .black : .white
-                radius = isCurrent ? 0.0145 : 0.0095
-            }
-            if isAvoid {
-                disk = UIColor(white: 0.25, alpha: 1)
-                radius = 0.005
-                opacity = 0.35
+                radius = isCurrent ? 0.013 : 0.006
+                labeled = isCurrent
             }
 
             let xy = panelXY(highlight.position, geometry: geometry)
@@ -226,8 +212,8 @@ enum StageBoardEntity {
             marker.position = SIMD3<Float>(xy.x, xy.y, 0.003)
             container.addChild(marker)
 
-            // Label ON the disk, centered — never floating beside it.
-            if !isAvoid,
+            // Label ON the disk, centered — and only where it earns its ink.
+            if labeled, content.labelStyle != .none,
                let label = OverlayPalette.label(for: highlight, style: content.labelStyle,
                                                 scale: content.scale) {
                 let text = textEntity(label, size: radius * 1.05, color: textColor)

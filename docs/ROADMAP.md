@@ -67,7 +67,8 @@ The wow layer: the app hears what you play.
       dashboard)
 - [ ] StoreKit 2: subscription (track packs + listen mode premium?) —
       pricing TBD
-- [ ] Notation panel upgrade: real staff/tab rendering, possibly MusicXML
+- [ ] Notation panel upgrade: real staff/tab rendering with LIVE played-note
+      highlighting on the score (owner request 2026-10-04), possibly MusicXML
       import
 - [ ] Object-tracking "instant lock" as premium calibration for popular
       guitar models
