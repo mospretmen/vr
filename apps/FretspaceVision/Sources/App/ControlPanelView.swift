@@ -17,6 +17,7 @@ struct ControlPanelView: View {
         NavigationStack {
             Form {
                 modeSection
+                stageSection
                 voicingsSection
                 scaleSection
                 chordSection
@@ -45,6 +46,25 @@ struct ControlPanelView: View {
                 ForEach(DisplayMode.allCases) { Text($0.rawValue).tag($0) }
             }
             .pickerStyle(.segmented)
+        }
+    }
+
+    private var stageSection: some View {
+        @Bindable var model = model
+        return Section {
+            Toggle("Show floating board", isOn: $model.stageBoardEnabled)
+            if model.stageBoardEnabled {
+                Toggle("Guide tones (3rds & 7ths)", isOn: $model.stageGuideTones)
+                Toggle("Dim avoid notes", isOn: $model.stageAvoidDimming)
+            }
+        } header: {
+            Label("Stage Board", systemImage: "rectangle.on.rectangle")
+        } footer: {
+            if model.stageBoardEnabled {
+                Text("The floating fretboard follows the harmony — gold dots are "
+                     + "the current chord's 3rd and 7th: your landing targets. "
+                     + "Load a backing track and it changes with every bar.")
+            }
         }
     }
 

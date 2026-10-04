@@ -13,6 +13,8 @@ struct ImmersiveView: View {
     /// World-space helpers that must survive overlay rebuilds: the live
     /// pinch cursor and the adjust-mode grab handles.
     @State private var helperAnchor = Entity()
+    /// The floating performance fretboard (independent of calibration).
+    @State private var stageAnchor = Entity()
     @State private var cursor = Entity()
     @State private var pinchTracker = HandPinchTracker()
     @State private var persistence = CalibrationPersistence()
@@ -25,8 +27,11 @@ struct ImmersiveView: View {
             cursor = Self.makeCursor()
             cursor.isEnabled = false
             helperAnchor.addChild(cursor)
+            stageAnchor.name = "stageAnchor"
+            stageAnchor.position = StageBoardEntity.defaultPosition
             content.add(overlayAnchor)
             content.add(helperAnchor)
+            content.add(stageAnchor)
             rebuildOverlay()
         } update: { _ in
             // Re-runs when observed model state changes.
@@ -42,6 +47,9 @@ struct ImmersiveView: View {
             _ = model.listen.detectedChord
             _ = model.backing.currentChord
             _ = model.adjustingCalibration
+            _ = model.stageBoardEnabled
+            _ = model.stageGuideTones
+            _ = model.stageAvoidDimming
             rebuildOverlay()
         }
         .task {
@@ -132,6 +140,7 @@ struct ImmersiveView: View {
 
     @MainActor
     private func rebuildOverlay() {
+        rebuildStageBoard()
         overlayAnchor.children.removeAll()
         refreshHandles()
 
@@ -170,6 +179,27 @@ struct ImmersiveView: View {
             )
             overlayAnchor.addChild(aura)
         }
+    }
+
+    /// The floating performance board — rebuilt on harmony or option
+    /// changes, shown regardless of guitar calibration.
+    @MainActor
+    private func rebuildStageBoard() {
+        stageAnchor.children.removeAll()
+        guard model.stageBoardEnabled else { return }
+
+        let board = StageBoardEntity.build(
+            highlights: model.stageHighlights,
+            geometry: FretboardGeometry(stringCount: model.tuning.stringCount,
+                                        fretCount: model.fretCount),
+            guideTones: model.guideTonePitchClasses,
+            avoidNotes: model.avoidPitchClasses,
+            emphasizeGuideTones: model.stageGuideTones,
+            dimAvoidNotes: model.stageAvoidDimming,
+            labelStyle: model.labelStyle,
+            scale: model.activeScale
+        )
+        stageAnchor.addChild(board)
     }
 
     /// Mid-calibration feedback: confirmed points stay visible as glowing

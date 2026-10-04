@@ -170,6 +170,40 @@ final class AppModel {
         }
     }
 
+    // MARK: - Stage board (floating performance fretboard)
+    /// The hero view for playing along: a large diagram-oriented fretboard
+    /// floating in space, synced to the active harmony. Independent of
+    /// guitar calibration entirely.
+    var stageBoardEnabled = true
+    /// Glow the current chord's 3rd & 7th as voice-leading targets.
+    var stageGuideTones = true
+    /// Recess scale notes a semitone above a chord tone (classic avoid notes).
+    var stageAvoidDimming = true
+
+    /// What the stage board renders: the active chord inside the active
+    /// scale — tracks the backing progression automatically via activeChord.
+    var stageHighlights: [FretboardHighlight] {
+        fretboardModel.highlights(for: activeChord, within: activeScale)
+    }
+
+    /// Pitch classes of the voice-leading guide tones (3rd, and 7th if any).
+    var guideTonePitchClasses: Set<PitchClass> {
+        let intervals = activeChord.quality.intervals
+        var tones: Set<PitchClass> = []
+        if intervals.count >= 2 { tones.insert(activeChord.root.transposed(by: intervals[1])) }
+        if intervals.count >= 4 { tones.insert(activeChord.root.transposed(by: intervals[3])) }
+        return tones
+    }
+
+    /// Scale notes sitting a semitone above a chord tone — the classic
+    /// "avoid note" heuristic (e.g. the 4 over a major chord).
+    var avoidPitchClasses: Set<PitchClass> {
+        let chordTones = Set(activeChord.pitchClasses)
+        return Set(activeScale.pitchClasses.filter { pc in
+            !chordTones.contains(pc) && chordTones.contains(pc.transposed(by: -1))
+        })
+    }
+
     // MARK: - Error surface
     /// The one place user-visible failures land; ControlPanelView presents it.
     var presentedError: UserFacingError?
