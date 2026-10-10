@@ -8,6 +8,9 @@ import MusicTheory
 struct HarmonyWheelView: View {
     @State private var selected: HarmonyWheel.Node = HarmonyWheel.node(.majorKey, 0)
     @State private var path: [HarmonyWheel.Node] = [HarmonyWheel.node(.majorKey, 0)]
+    /// The column you harmonically live in — its neighborhood (which holds
+    /// all its diatonic chords) is haloed. Modulation = moving this.
+    @State private var keyCenter: Int = 0
 
     private var moves: [HarmonyWheel.Move] { HarmonyWheel.moves(from: selected) }
 
@@ -49,10 +52,31 @@ struct HarmonyWheelView: View {
     }
 
     private var header: some View {
-        HStack {
+        HStack(spacing: 14) {
             Text("Harmony Compass").font(.title.bold())
+            keyCenterBadge
             Spacer()
             legend
+        }
+    }
+
+    private var keyCenterBadge: some View {
+        HStack(spacing: 8) {
+            Text("Key: \(HarmonyWheel.node(.majorKey, keyCenter).label) · "
+                 + HarmonyWheel.node(.relativeMinor, keyCenter).label)
+                .font(.headline)
+                .padding(.horizontal, 10)
+                .padding(.vertical, 5)
+                .background(.blue.opacity(0.25), in: .capsule)
+            if selected.index != keyCenter,
+               selected.ring == .majorKey || selected.ring == .relativeMinor {
+                Button("Modulate here") {
+                    withAnimation(.easeInOut(duration: 0.4)) {
+                        keyCenter = selected.index
+                    }
+                }
+                .font(.callout)
+            }
         }
     }
 
@@ -97,6 +121,7 @@ struct HarmonyWheelView: View {
     private func wheel(size: CGSize) -> some View {
         let layout = WheelLayout(size: size)
         return Canvas { context, _ in
+            drawKeyCenterHalo(context: context, layout: layout)
             drawRingGuides(context: context, layout: layout)
             drawLattice(context: context, layout: layout)
             drawActiveMoves(context: context, layout: layout)
@@ -117,6 +142,31 @@ struct HarmonyWheelView: View {
             path.append(node)
         } else {
             path = [node] // jumped somewhere unrelated: start a new journey
+        }
+    }
+
+    /// The key center's home territory: a soft wedge over its column and
+    /// the neighbors either side — together they hold every diatonic chord
+    /// of the key (for C: F·Dm | C·Am | G·Em, plus G7 and the dim below).
+    private func drawKeyCenterHalo(context: GraphicsContext, layout: WheelLayout) {
+        let spokeWidth: CGFloat = .pi * 2 / 12
+        let outer = layout.majorRadius + 34
+        let inner = layout.hubRadius - 26
+
+        for offset in -1...1 {
+            let column = ((keyCenter + offset) % 12 + 12) % 12
+            let mid = layout.angle(forSpoke: column)
+            let halfSpan = spokeWidth / 2 * (offset == 0 ? 0.98 : 0.88)
+            var sector = Path()
+            sector.addArc(center: layout.center, radius: outer,
+                          startAngle: .radians(mid - halfSpan),
+                          endAngle: .radians(mid + halfSpan), clockwise: false)
+            sector.addArc(center: layout.center, radius: inner,
+                          startAngle: .radians(mid + halfSpan),
+                          endAngle: .radians(mid - halfSpan), clockwise: true)
+            sector.closeSubpath()
+            let strength = offset == 0 ? 0.10 : 0.05
+            context.fill(sector, with: .color(.blue.opacity(strength)))
         }
     }
 
