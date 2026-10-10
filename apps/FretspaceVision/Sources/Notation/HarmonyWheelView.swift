@@ -53,7 +53,12 @@ struct HarmonyWheelView: View {
 
     private var header: some View {
         HStack(spacing: 14) {
-            Text("Harmony Compass").font(.title.bold())
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Harmony Compass").font(.title.bold())
+                Text(BuildStamp.value)
+                    .font(.caption2.monospaced())
+                    .foregroundStyle(.tertiary)
+            }
             keyCenterBadge
             Spacer()
             legend
