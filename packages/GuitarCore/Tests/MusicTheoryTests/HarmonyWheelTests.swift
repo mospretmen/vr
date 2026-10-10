@@ -98,6 +98,22 @@ struct HarmonyWheelTests {
             && $0.to.chord == Chord(root: .d, quality: .minor) })
     }
 
+    @Test func flatSideSpellsLikeARealCircleOfFifths() {
+        // Columns 7–10 are the flat keys: D♭, A♭, E♭, B♭ — never sharps.
+        #expect(HarmonyWheel.node(.majorKey, 7).label == "D♭")
+        #expect(HarmonyWheel.node(.majorKey, 8).label == "A♭")
+        #expect(HarmonyWheel.node(.majorKey, 9).label == "E♭")
+        #expect(HarmonyWheel.node(.majorKey, 10).label == "B♭")
+        #expect(HarmonyWheel.node(.relativeMinor, 7).label == "B♭m")
+        // F♯ keeps its conventional sharp name.
+        #expect(HarmonyWheel.node(.majorKey, 6).label == "F♯")
+        // Leading-tone functions stay sharp even in flat columns:
+        // B♭'s column carries F♯°7 (resolving to Gm), not G♭°7.
+        #expect(HarmonyWheel.node(.diminished, 10).label == "F♯°7")
+        // And naturals are untouched: B♭'s dominant chip is D7.
+        #expect(HarmonyWheel.node(.dominant, 10).label == "D7")
+    }
+
     @Test func wheelIsFullyConnected() {
         var visited: Set<HarmonyWheel.Node> = []
         var frontier = [HarmonyWheel.node(.majorKey, 0)]

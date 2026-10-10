@@ -60,6 +60,11 @@ public struct Chord: Codable, Sendable, Hashable {
     /// Chord symbol, e.g. "Am7", "F♯°".
     public var symbol: String { "\(root.name())\(quality.symbol)" }
 
+    /// Chord symbol with an explicit spelling, e.g. "B♭" vs "A♯".
+    public func symbol(_ spelling: PitchClass.Spelling) -> String {
+        "\(root.name(spelling))\(quality.symbol)"
+    }
+
     /// The diatonic triads of a scale (one per scale degree), for progressions and exercises.
     public static func diatonicTriads(in scale: Scale) -> [Chord] {
         let pcs = scale.pitchClasses

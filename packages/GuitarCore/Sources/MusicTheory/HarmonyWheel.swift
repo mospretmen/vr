@@ -34,7 +34,17 @@ public enum HarmonyWheel {
         public let chord: Chord
 
         public var id: String { "\(ring.rawValue)-\(index)" }
-        public var label: String { chord.symbol }
+
+        /// Convention-correct label: flat-side KEYS and their relative
+        /// minors spell flat (B♭, E♭, A♭, D♭, B♭m) — F♯ stays sharp by
+        /// convention. Dominants and diminisheds keep sharp spellings,
+        /// which match their leading-tone function (F♯°7 → Gm).
+        public var label: String {
+            let flatSideKeys: Set<PitchClass> = [.cSharp, .gSharp, .dSharp, .aSharp]
+            let wantsFlats = (ring == .majorKey || ring == .relativeMinor)
+                && flatSideKeys.contains(chord.root)
+            return chord.symbol(wantsFlats ? .flats : .sharps)
+        }
     }
 
     /// Chord roots per column: key, key−3 (relative minor), key+4 (the
