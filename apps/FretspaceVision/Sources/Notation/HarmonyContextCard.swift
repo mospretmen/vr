@@ -52,9 +52,9 @@ struct HarmonyContextCard: View {
         case .twoFive:
             return "→ \(to): ii–V — you're the ii; this is your V."
         case .fifthSharpward:
-            return "→ \(to): one fifth sharpward around the circle."
+            return "→ \(to): up a fifth — to the dominant side (its V)."
         case .fifthFlatward:
-            return "→ \(to): one fifth flatward around the circle."
+            return "→ \(to): up a fourth — to the subdominant side (its IV)."
         case .relative:
             return "→ \(to): relative switch — same notes, new home."
         case .passingDim:
