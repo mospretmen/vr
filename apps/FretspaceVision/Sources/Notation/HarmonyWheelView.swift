@@ -515,7 +515,9 @@ private struct WheelLayout {
 
     init(size: CGSize) {
         center = CGPoint(x: size.width / 2, y: size.height / 2)
-        let r = min(size.width, size.height) / 2 - 30
+        // Chips extend ~42pt past the ring line (24pt chip + numeral at
+        // +11 + text height), so the margin must clear all of it.
+        let r = min(size.width, size.height) / 2 - 48
         majorRadius = r
         minorRadius = r // pairs share the outer ring
         dominantRadius = r * 0.62
