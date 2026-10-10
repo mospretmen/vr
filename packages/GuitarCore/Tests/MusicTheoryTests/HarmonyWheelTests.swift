@@ -34,7 +34,7 @@ struct HarmonyWheelTests {
         // G♯°7 → its respelled family mates ✓
         let fromDim = HarmonyWheel.moves(from: HarmonyWheel.node(.diminished, 0))
         let familyHops = fromDim.filter { $0.kind == .dimFamily }.map(\.to)
-        #expect(Set(familyHops.map(\.index)) == [3, 9])
+        #expect(Set(familyHops.map(\.index)) == [3, 6, 9]) // full clique
         #expect(familyHops.allSatisfy {
             Set($0.chord.pitchClasses) == Set(HarmonyWheel.node(.diminished, 0).chord.pitchClasses)
         })

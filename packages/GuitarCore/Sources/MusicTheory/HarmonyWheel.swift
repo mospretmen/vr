@@ -143,7 +143,10 @@ public enum HarmonyWheel {
             add(.resolve, .relativeMinor, i)           // G♯°7 → Am (straight up)
             add(.resolve, .majorKey, i + 3)            // G♯°7 → A (cross-wheel)
             add(.resolve, .dominant, i)                // back up into E7 (7♭9)
-            add(.dimFamily, .diminished, i + 3)        // same notes, respelled
+            // The family is a full clique — all four chips carry the same
+            // four notes, so every member links to all three others.
+            add(.dimFamily, .diminished, i + 3)
+            add(.dimFamily, .diminished, i + 6)
             add(.dimFamily, .diminished, i + 9)
         }
         return moves
