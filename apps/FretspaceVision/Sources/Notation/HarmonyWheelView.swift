@@ -162,13 +162,20 @@ struct HarmonyWheelView: View {
     }
 
     /// Ring-identity chip color: keys blue, relatives indigo, dominants
-    /// amber, diminisheds violet.
-    private func ringColor(_ ring: HarmonyWheel.Ring) -> Color {
-        switch ring {
-        case .majorKey: Color(red: 0.25, green: 0.52, blue: 0.95)
-        case .relativeMinor: Color(red: 0.42, green: 0.36, blue: 0.85)
-        case .dominant: Color(red: 0.92, green: 0.58, blue: 0.18)
-        case .diminished: Color(red: 0.62, green: 0.32, blue: 0.85)
+    /// amber. Diminished chips tint by enharmonic family, so the three
+    /// four-note families read as three threads woven through the inner
+    /// ring.
+    private func chipColor(for node: HarmonyWheel.Node) -> Color {
+        switch node.ring {
+        case .majorKey: return Color(red: 0.25, green: 0.52, blue: 0.95)
+        case .relativeMinor: return Color(red: 0.42, green: 0.36, blue: 0.85)
+        case .dominant: return Color(red: 0.92, green: 0.58, blue: 0.18)
+        case .diminished:
+            switch HarmonyWheel.family(ofDiminishedAt: node.index) {
+            case 0: return Color(red: 0.62, green: 0.30, blue: 0.86)
+            case 1: return Color(red: 0.82, green: 0.30, blue: 0.70)
+            default: return Color(red: 0.48, green: 0.36, blue: 0.95)
+            }
         }
     }
 
@@ -181,7 +188,7 @@ struct HarmonyWheelView: View {
             let radius = layout.chipRadius(for: node.ring)
                 * (isSelected ? 1.25 : 1.0)
 
-            let base = ringColor(node.ring)
+            let base = chipColor(for: node)
             let fill = base.opacity(isSelected ? 1.0 : isDestination ? 0.95 : 0.3)
 
             let rect = CGRect(x: position.x - radius, y: position.y - radius,
@@ -221,32 +228,39 @@ private struct WheelLayout {
         center = CGPoint(x: size.width / 2, y: size.height / 2)
         let r = min(size.width, size.height) / 2 - 30
         majorRadius = r
-        minorRadius = r * 0.76
-        dominantRadius = r * 0.52
-        hubRadius = r * 0.22
+        minorRadius = r // pairs share the outer ring
+        dominantRadius = r * 0.62
+        hubRadius = r * 0.34
     }
 
     func angle(forSpoke index: Int) -> CGFloat {
         -.pi / 2 + CGFloat(index) * (.pi * 2 / 12)
     }
 
+    /// The major sits a nudge counterclockwise of its column's spoke and
+    /// the relative minor a nudge clockwise — side by side on the SAME
+    /// ring, touching distance. Dominant and diminished stack straight
+    /// below on the spoke line.
     func position(of node: HarmonyWheel.Node) -> CGPoint {
+        let pairNudge: CGFloat = .pi * 2 / 12 * 0.21
         switch node.ring {
-        case .majorKey: point(angle: angle(forSpoke: node.index), radius: majorRadius)
-        case .relativeMinor: point(angle: angle(forSpoke: node.index), radius: minorRadius)
-        case .dominant: point(angle: angle(forSpoke: node.index), radius: dominantRadius)
+        case .majorKey:
+            return point(angle: angle(forSpoke: node.index) - pairNudge, radius: majorRadius)
+        case .relativeMinor:
+            return point(angle: angle(forSpoke: node.index) + pairNudge, radius: majorRadius)
+        case .dominant:
+            return point(angle: angle(forSpoke: node.index), radius: dominantRadius)
         case .diminished:
-            point(angle: -.pi / 2 + CGFloat(node.index) * (.pi * 2 / 3) + .pi / 12,
-                  radius: hubRadius)
+            return point(angle: angle(forSpoke: node.index), radius: hubRadius)
         }
     }
 
     func chipRadius(for ring: HarmonyWheel.Ring) -> CGFloat {
         switch ring {
-        case .majorKey: 26
-        case .relativeMinor: 21
+        case .majorKey: 24
+        case .relativeMinor: 20
         case .dominant: 21
-        case .diminished: 24
+        case .diminished: 17
         }
     }
 
@@ -272,13 +286,11 @@ private struct MoveStyle {
     static let ordered: [MoveStyle] = [
         .init(kind: .resolve, color: .green, label: "Resolve"),
         .init(kind: .toDominant, color: .orange, label: "To V7"),
-        .init(kind: .secondaryDominant, color: .pink, label: "V7 of rel."),
+        .init(kind: .relative, color: .yellow, label: "Relative"),
         .init(kind: .fifthSharpward, color: .blue, label: "Fifth ♯"),
         .init(kind: .fifthFlatward, color: .teal, label: "Fifth ♭"),
-        .init(kind: .relative, color: .yellow, label: "Relative"),
-        .init(kind: .leadingTone, color: .mint, label: "Leading tone"),
-        .init(kind: .flatNine, color: .purple, label: "7♭9 ↔ dim"),
-        .init(kind: .dimShift, color: .gray, label: "Dim slide"),
+        .init(kind: .deepen, color: .purple, label: "V7 → dim"),
+        .init(kind: .dimFamily, color: .pink, label: "Dim family"),
     ]
 
     static func style(for kind: HarmonyWheel.MoveKind) -> MoveStyle {

@@ -4,111 +4,93 @@ import Testing
 @Suite("Harmony wheel graph")
 struct HarmonyWheelTests {
     @Test func nodeCensus() {
-        #expect(HarmonyWheel.nodes.count == 39) // 12+12+12+3
-        #expect(HarmonyWheel.spokes.count == 12)
+        #expect(HarmonyWheel.nodes.count == 48) // 4 rings × 12 columns
         #expect(Set(HarmonyWheel.spokes).count == 12)
     }
 
-    @Test func spokesPairKeysWithRelativesAndDominants() {
-        // Spoke 0 = C: relative Am, dominant chip G7.
+    @Test func columnZeroIsTheCanonicalFamily() {
+        // The owner's exact column: C · Am / E7 / G♯°7.
         #expect(HarmonyWheel.node(.majorKey, 0).chord == Chord(root: .c, quality: .major))
         #expect(HarmonyWheel.node(.relativeMinor, 0).chord == Chord(root: .a, quality: .minor))
-        #expect(HarmonyWheel.node(.dominant, 0).chord == Chord(root: .g, quality: .dominant7))
-        // Spoke 4 = E: C#m and B7.
-        #expect(HarmonyWheel.node(.relativeMinor, 4).chord == Chord(root: .cSharp, quality: .minor))
-        #expect(HarmonyWheel.node(.dominant, 4).chord == Chord(root: .b, quality: .dominant7))
+        #expect(HarmonyWheel.node(.dominant, 0).chord == Chord(root: .e, quality: .dominant7))
+        #expect(HarmonyWheel.node(.diminished, 0).chord == Chord(root: .gSharp, quality: .diminished7))
     }
 
-    @Test func movesFromCMajor() {
-        let moves = HarmonyWheel.moves(from: HarmonyWheel.node(.majorKey, 0))
-        let byKind = Dictionary(grouping: moves, by: \.kind)
-
-        #expect(byKind[.toDominant]?.first?.to.chord == Chord(root: .g, quality: .dominant7))
-        // The owner's walk: C straight to E7 (V of the relative minor).
-        #expect(byKind[.secondaryDominant]?.first?.to.chord == Chord(root: .e, quality: .dominant7))
-        #expect(byKind[.fifthSharpward]?.first?.to.chord == Chord(root: .g, quality: .major))
-        #expect(byKind[.fifthFlatward]?.first?.to.chord == Chord(root: .f, quality: .major))
-        #expect(byKind[.relative]?.first?.to.chord == Chord(root: .a, quality: .minor))
+    @Test func theOwnersWalkIsAllSameColumnOrAdjacent() {
+        // C → Am (relative, same column) ✓
+        let fromC = HarmonyWheel.moves(from: HarmonyWheel.node(.majorKey, 0))
+        #expect(fromC.contains { $0.kind == .relative
+            && $0.to.chord == Chord(root: .a, quality: .minor) })
+        // C → E7 (straight down) ✓
+        #expect(fromC.contains { $0.kind == .toDominant
+            && $0.to == HarmonyWheel.node(.dominant, 0) })
+        // E7 → Am (straight up) ✓
+        let fromE7 = HarmonyWheel.moves(from: HarmonyWheel.node(.dominant, 0))
+        #expect(fromE7.contains { $0.kind == .resolve
+            && $0.to == HarmonyWheel.node(.relativeMinor, 0) })
+        // E7 → G♯°7 (straight down) ✓
+        #expect(fromE7.contains { $0.kind == .deepen
+            && $0.to == HarmonyWheel.node(.diminished, 0) })
+        // G♯°7 → its respelled family mates ✓
+        let fromDim = HarmonyWheel.moves(from: HarmonyWheel.node(.diminished, 0))
+        let familyHops = fromDim.filter { $0.kind == .dimFamily }.map(\.to)
+        #expect(Set(familyHops.map(\.index)) == [3, 9])
+        #expect(familyHops.allSatisfy {
+            Set($0.chord.pitchClasses) == Set(HarmonyWheel.node(.diminished, 0).chord.pitchClasses)
+        })
     }
 
-    @Test func dominantResolvesHomeDeceptivelyAndToMinor() {
-        // G7 (spoke 0) resolves to C, to Am (deceptive vi), and to Cm (i).
-        let moves = HarmonyWheel.moves(from: HarmonyWheel.node(.dominant, 0))
-        let targets = Set(moves.filter { $0.kind == .resolve }.map(\.to.chord))
-        #expect(targets == [
-            Chord(root: .c, quality: .major),
-            Chord(root: .a, quality: .minor),
-            Chord(root: .c, quality: .minor),
-        ])
+    @Test func majorsOwnDominantArrivesCrossWheel() {
+        // C's own V7 (G7) lives nine columns away and resolves back home.
+        let fromC = HarmonyWheel.moves(from: HarmonyWheel.node(.majorKey, 0))
+        let ownV7 = fromC.filter { $0.kind == .toDominant }
+            .first { $0.to.chord == Chord(root: .g, quality: .dominant7) }
+        #expect(ownV7?.to.index == 9)
 
-        let hubMove = moves.first { $0.kind == .flatNine }
-        // G7's third is B → the hub containing B (the D°7 family).
-        #expect(hubMove?.to.ring == .diminished)
-        #expect(hubMove?.to.index == HarmonyWheel.hub(containing: .b))
+        let fromG7 = HarmonyWheel.moves(from: HarmonyWheel.node(.dominant, 9))
+        #expect(fromG7.contains { $0.kind == .resolve
+            && $0.to.chord == Chord(root: .c, quality: .major) })
+        #expect(fromG7.contains { $0.kind == .resolve
+            && $0.to.chord == Chord(root: .a, quality: .minor) }) // deceptive
     }
 
-    @Test func e7ResolvesToAMinorPerTheOwnersWalk() {
-        // E7 lives on A's spoke (index 3): targets A, F#m (vi), Am (i).
-        let e7 = HarmonyWheel.node(.dominant, 3)
-        #expect(e7.chord == Chord(root: .e, quality: .dominant7))
-        let targets = Set(HarmonyWheel.moves(from: e7)
-            .filter { $0.kind == .resolve }.map(\.to.chord))
-        #expect(targets.contains(Chord(root: .a, quality: .minor)))
+    @Test func dominantRingCoversAllTwelveDominants() {
+        let roots = Set(HarmonyWheel.nodes.filter { $0.ring == .dominant }.map(\.chord.root))
+        #expect(roots.count == 12)
     }
 
-    @Test func diminishedHubsShiftChromatically() {
-        for hub in 0..<3 {
-            let shifts = HarmonyWheel.moves(from: HarmonyWheel.node(.diminished, hub))
-                .filter { $0.kind == .dimShift }
-            #expect(Set(shifts.map(\.to.index)) == Set([0, 1, 2]).subtracting([hub]))
+    @Test func diminishedResolutionsAndFamilies() {
+        for i in 0..<12 {
+            let dim = HarmonyWheel.node(.diminished, i)
+            let moves = HarmonyWheel.moves(from: dim)
+            // Up into its dominant, up into the minor, across to the major.
+            #expect(moves.contains { $0.kind == .resolve && $0.to == HarmonyWheel.node(.dominant, i) })
+            #expect(moves.contains { $0.kind == .resolve && $0.to == HarmonyWheel.node(.relativeMinor, i) })
+            #expect(moves.contains { $0.kind == .resolve && $0.to == HarmonyWheel.node(.majorKey, (i + 3) % 12) })
+            // Family hops preserve pitch content.
+            #expect(HarmonyWheel.family(ofDiminishedAt: i)
+                    == HarmonyWheel.family(ofDiminishedAt: (i + 3) % 12))
+            #expect(HarmonyWheel.family(ofDiminishedAt: i)
+                    != HarmonyWheel.family(ofDiminishedAt: (i + 1) % 12))
         }
     }
 
-    @Test func relativeMinorEscapesThroughItsOwnDominant() {
-        // Am → E7 (the dominant chip on A major's spoke).
+    @Test func minorsRideTheRimToo() {
+        // Am's rim neighbors are Em (sharpward) and Dm (flatward).
         let moves = HarmonyWheel.moves(from: HarmonyWheel.node(.relativeMinor, 0))
-        let dominant = moves.first { $0.kind == .toDominant }
-        #expect(dominant?.to.chord == Chord(root: .e, quality: .dominant7))
-    }
-
-    @Test func diminishedHubsAreFourWayInterchanges() {
-        for hub in 0..<3 {
-            let moves = HarmonyWheel.moves(from: HarmonyWheel.node(.diminished, hub))
-            let leadingTone = moves.filter { $0.kind == .leadingTone }
-            let flatNine = moves.filter { $0.kind == .flatNine }
-            #expect(leadingTone.count == 4, "hub \(hub) resolves into 4 keys")
-            #expect(flatNine.count == 4, "hub \(hub) trades with 4 dominants")
-
-            // The four destination keys sit a minor third apart.
-            let keyRoots = Set(leadingTone.map(\.to.chord.root.rawValue))
-            #expect(keyRoots.count == 4)
-            let sorted = keyRoots.sorted()
-            #expect(sorted[1] - sorted[0] == 3 || true) // spacing checked below
-            let spacings = zip(sorted, sorted.dropFirst()).map { $1 - $0 }
-            #expect(spacings.allSatisfy { $0 == 3 })
-        }
-    }
-
-    @Test func hubAssignmentPartitionsThePitchClasses() {
-        // Every pitch class lands in exactly one of 3 hubs; members of a
-        // dim7 chord share a hub.
-        for pc in PitchClass.allCases {
-            let hub = HarmonyWheel.hub(containing: pc)
-            #expect(HarmonyWheel.hub(containing: pc.transposed(by: 3)) == hub)
-            #expect(HarmonyWheel.hub(containing: pc.transposed(by: 6)) == hub)
-            #expect(HarmonyWheel.hub(containing: pc.transposed(by: 1)) != hub)
-        }
+        #expect(moves.contains { $0.kind == .fifthSharpward
+            && $0.to.chord == Chord(root: .e, quality: .minor) })
+        #expect(moves.contains { $0.kind == .fifthFlatward
+            && $0.to.chord == Chord(root: .d, quality: .minor) })
     }
 
     @Test func wheelIsFullyConnected() {
-        // From C major you can reach every node by walking moves.
         var visited: Set<HarmonyWheel.Node> = []
         var frontier = [HarmonyWheel.node(.majorKey, 0)]
         while let next = frontier.popLast() {
             guard visited.insert(next).inserted else { continue }
             frontier += HarmonyWheel.moves(from: next).map(\.to)
         }
-        #expect(visited.count == HarmonyWheel.nodes.count,
-                "unreachable: \(Set(HarmonyWheel.nodes).subtracting(visited).map(\.id))")
+        #expect(visited.count == HarmonyWheel.nodes.count)
     }
 }
