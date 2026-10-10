@@ -231,37 +231,75 @@ struct HarmonyWheelView: View {
         }
     }
 
-    /// The onward web from the selected chord: deeper hops draw first so
-    /// nearer futures sit on top; every highlighted edge carries an arrow.
+    /// One rendered stroke per connected PAIR in the onward web. The big
+    /// arrowhead follows harmonic priority — a resolution always owns it
+    /// (G7→C gets the big green head into C even while you stand on C);
+    /// the lesser direction shows as a smaller counter-head in its own
+    /// kind color. One-way streets keep a single head. Deceptive motion
+    /// draws dashed.
     private func drawActiveMoves(context: GraphicsContext, layout: WheelLayout) {
         let appearance: [Int: (opacity: Double, width: CGFloat, head: CGFloat)] = [
             1: (1.0, 4.5, 16),
             2: (0.6, 3.0, 12),
             3: (0.3, 2.0, 8),
         ]
+        func priority(_ kind: HarmonyWheel.MoveKind) -> Int {
+            switch kind {
+            case .resolve: 3
+            case .deceptive: 2
+            default: 1
+            }
+        }
+
+        // Group graded moves by unordered pair; keep the shallowest depth.
+        struct PairInfo {
+            var forward: HarmonyWheel.Move
+            var backward: HarmonyWheel.Move?
+            var depth: Int
+        }
+        var pairs: [String: PairInfo] = [:]
+        for (move, depth) in gradedMoves {
+            let key = [move.from.id, move.to.id].sorted().joined(separator: "|")
+            if var info = pairs[key] {
+                info.depth = min(info.depth, depth)
+                if move.to.id == info.forward.from.id, info.backward == nil {
+                    info.backward = move
+                } else if priority(move.kind) > priority(info.forward.kind) {
+                    info.backward = info.forward
+                    info.forward = move
+                }
+                pairs[key] = info
+            } else {
+                pairs[key] = PairInfo(forward: move, backward: nil, depth: depth)
+            }
+        }
+        // Promote: the higher-priority direction owns the big head.
+        for (key, info) in pairs {
+            if let back = info.backward, priority(back.kind) > priority(info.forward.kind) {
+                pairs[key] = PairInfo(forward: back, backward: info.forward, depth: info.depth)
+            }
+        }
+
         let ctx = edgeContext(context, layout: layout)
-        for (move, depth) in gradedMoves.sorted(by: { $0.depth > $1.depth }) {
-            guard let look = appearance[depth] else { continue }
-            let color = moveColor(move).opacity(look.opacity)
+        for info in pairs.values.sorted(by: { $0.depth > $1.depth }) {
+            guard let look = appearance[info.depth] else { continue }
+            let move = info.forward
+            let mainColor = moveColor(move).opacity(look.opacity)
             let g = edgeGeometry(from: move.from, to: move.to, layout: layout)
 
-            var path = Path()
-            path.move(to: g.start)
-            path.addQuadCurve(to: g.end, control: g.control)
-            ctx.stroke(path, with: .color(color),
-                       style: StrokeStyle(lineWidth: look.width, lineCap: .round))
+            var strokeStyle = StrokeStyle(lineWidth: look.width, lineCap: .round)
+            if move.kind == .deceptive { strokeStyle.dash = [9, 7] }
+            ctx.stroke(g.path, with: .color(mainColor), style: strokeStyle)
 
-            // Destination arrowhead, docked at the chip border.
-            arrowhead(context: context, tip: g.end,
-                      angle: atan2(g.end.y - g.control.y, g.end.x - g.control.x),
-                      size: look.head, color: color)
+            // Big head: the primary (most-resolved) direction of travel.
+            arrowhead(context: context, tip: g.end, angle: g.endAngle,
+                      size: look.head, color: mainColor)
 
-            // Two-way streets grow a counter-head at the source border, so
-            // the stroke reads ⇄; one-way motions stay a single →.
-            if HarmonyWheel.isTwoWay(move) {
-                arrowhead(context: context, tip: g.start,
-                          angle: atan2(g.start.y - g.control.y, g.start.x - g.control.x),
-                          size: look.head * 0.85, color: color)
+            // Smaller counter-head in the lesser direction's own color.
+            if let back = info.backward {
+                let backColor = moveColor(back).opacity(look.opacity)
+                arrowhead(context: context, tip: g.start, angle: g.startBackAngle,
+                          size: look.head * 0.7, color: backColor)
             }
         }
     }
@@ -286,34 +324,74 @@ struct HarmonyWheelView: View {
                        y: mid.y + (layout.center.y - mid.y) * pull)
     }
 
-    /// An edge's drawable geometry: endpoints pulled back from the chip
-    /// CENTERS to the chip BORDERS (plus a hair of air), so strokes and
-    /// arrowheads dock visibly at the rim instead of vanishing underneath.
+    /// Edge geometry trimmed along the ACTUAL curve: endpoints land where
+    /// the bowed line truly crosses each chip's border, and arrowhead
+    /// angles come from the curve's real tangents — so heads always sit
+    /// exactly on the stroke.
+    private struct EdgeGeometry {
+        let path: Path
+        let start: CGPoint
+        let startBackAngle: CGFloat // pointing back into the source chip
+        let end: CGPoint
+        let endAngle: CGFloat       // direction of travel at the destination
+    }
+
     private func edgeGeometry(
         from: HarmonyWheel.Node, to: HarmonyWheel.Node, layout: WheelLayout
-    ) -> (start: CGPoint, end: CGPoint, control: CGPoint) {
-        let a = layout.position(of: from)
-        let b = layout.position(of: to)
-        let control = controlPoint(from: a, to: b, layout: layout)
+    ) -> EdgeGeometry {
+        let p0 = layout.position(of: from)
+        let p1 = layout.position(of: to)
+        let c = controlPoint(from: p0, to: p1, layout: layout)
 
-        func pulled(_ point: CGPoint, toward: CGPoint, by distance: CGFloat) -> CGPoint {
-            let dx = toward.x - point.x, dy = toward.y - point.y
-            let length = max(hypot(dx, dy), 0.001)
-            return CGPoint(x: point.x + dx / length * distance,
-                           y: point.y + dy / length * distance)
+        func point(_ t: CGFloat) -> CGPoint {
+            let u = 1 - t
+            return CGPoint(x: u * u * p0.x + 2 * u * t * c.x + t * t * p1.x,
+                           y: u * u * p0.y + 2 * u * t * c.y + t * t * p1.y)
         }
-        let start = pulled(a, toward: control, by: layout.chipRadius(for: from.ring) + 3)
-        let end = pulled(b, toward: control, by: layout.chipRadius(for: to.ring) + 3)
-        return (start, end, control)
+        func tangentAngle(_ t: CGFloat) -> CGFloat {
+            let dx = 2 * (1 - t) * (c.x - p0.x) + 2 * t * (p1.x - c.x)
+            let dy = 2 * (1 - t) * (c.y - p0.y) + 2 * t * (p1.y - c.y)
+            return atan2(dy, dx)
+        }
+
+        let rFrom = layout.chipRadius(for: from.ring) + 3
+        let rTo = layout.chipRadius(for: to.ring) + 3
+        let samples = 64
+        var t0: CGFloat = 0
+        for i in 0...samples {
+            let t = CGFloat(i) / CGFloat(samples)
+            if hypot(point(t).x - p0.x, point(t).y - p0.y) >= rFrom { t0 = t; break }
+            t0 = t
+        }
+        var t1: CGFloat = 1
+        for i in stride(from: samples, through: 0, by: -1) {
+            let t = CGFloat(i) / CGFloat(samples)
+            if hypot(point(t).x - p1.x, point(t).y - p1.y) >= rTo { t1 = t; break }
+            t1 = t
+        }
+        // Short edges (touching pair chips): keep a visible middle stub.
+        t0 = min(t0, 0.42)
+        t1 = max(t1, 0.58)
+
+        var path = Path()
+        path.move(to: point(t0))
+        let steps = 16
+        for i in 1...steps {
+            path.addLine(to: point(t0 + (t1 - t0) * CGFloat(i) / CGFloat(steps)))
+        }
+
+        return EdgeGeometry(
+            path: path,
+            start: point(t0),
+            startBackAngle: tangentAngle(t0) + .pi,
+            end: point(t1),
+            endAngle: tangentAngle(t1)
+        )
     }
 
     private func curve(from: HarmonyWheel.Node, to: HarmonyWheel.Node,
                        layout: WheelLayout) -> Path {
-        let g = edgeGeometry(from: from, to: to, layout: layout)
-        var path = Path()
-        path.move(to: g.start)
-        path.addQuadCurve(to: g.end, control: g.control)
-        return path
+        edgeGeometry(from: from, to: to, layout: layout).path
     }
 
     /// Ring-identity chip color: keys blue, relatives indigo, dominants
@@ -440,6 +518,7 @@ private struct MoveStyle {
 
     static let ordered: [MoveStyle] = [
         .init(kind: .resolve, color: .green, label: "Resolve"),
+        .init(kind: .deceptive, color: Color.green.opacity(0.7), label: "Deceptive (dashed)"),
         .init(kind: .toDominant, color: .orange, label: "To V7"),
         .init(kind: .relative, color: Color.white.opacity(0.65), label: "Relative"),
         .init(kind: .twoFive, color: .mint, label: "ii–V"),

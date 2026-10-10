@@ -50,8 +50,8 @@ struct HarmonyWheelTests {
         let fromG7 = HarmonyWheel.moves(from: HarmonyWheel.node(.dominant, 9))
         #expect(fromG7.contains { $0.kind == .resolve
             && $0.to.chord == Chord(root: .c, quality: .major) })
-        #expect(fromG7.contains { $0.kind == .resolve
-            && $0.to.chord == Chord(root: .a, quality: .minor) }) // deceptive
+        #expect(fromG7.contains { $0.kind == .deceptive
+            && $0.to.chord == Chord(root: .a, quality: .minor) })
     }
 
     @Test func dominantRingCoversAllTwelveDominants() {
@@ -136,7 +136,7 @@ struct HarmonyWheelTests {
                          toChord: Chord(root: .e, quality: .dominant7))!
         #expect(!HarmonyWheel.isTwoWay(cToE7))
         // One-way: the deceptive resolution G7 → Am.
-        let g7toAm = move(.dominant, 9, .resolve,
+        let g7toAm = move(.dominant, 9, .deceptive,
                           toChord: Chord(root: .a, quality: .minor))!
         #expect(!HarmonyWheel.isTwoWay(g7toAm))
         // One-way: the ii–V jump (G7 doesn't resolve to Dm).

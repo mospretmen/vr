@@ -77,7 +77,8 @@ public enum HarmonyWheel {
     // MARK: - Moves
 
     public enum MoveKind: String, Codable, Sendable, Hashable {
-        case resolve            // V7 → i / I / vi · dim7 → its resolutions
+        case resolve            // V7 → i / I · dim7 → its resolutions
+        case deceptive          // V7 → vi of its target (deceptive cadence)
         case toDominant         // a key (major or minor) → a V7 that serves it
         case fifthSharpward     // along the outer rim, clockwise
         case fifthFlatward      // along the outer rim, counterclockwise
@@ -135,7 +136,7 @@ public enum HarmonyWheel {
         case .dominant:
             add(.resolve, .relativeMinor, i)           // E7 → Am (straight up)
             add(.resolve, .majorKey, i + 3)            // E7 → A (cross-wheel)
-            add(.resolve, .relativeMinor, i + 3)       // E7 → F♯m (deceptive)
+            add(.deceptive, .relativeMinor, i + 3)     // E7 → F♯m (V → vi)
             add(.deepen, .diminished, i)               // E7 → G♯°7 (straight down)
 
         case .diminished:
