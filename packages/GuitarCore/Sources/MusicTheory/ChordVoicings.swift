@@ -61,6 +61,47 @@ public enum ChordVoicings {
         return best.keys.sorted().prefix(limit).compactMap { best[$0]?.voicing }
     }
 
+    /// Shell voicings for seventh chords: root + the two guide tones (3rd
+    /// and 7th), nothing else — the jazz comper's skeleton. Both classic
+    /// layouts per bass string: R–7–3 (7th closer to the root) and R–3–7.
+    public static func shells(
+        for chord: Chord, tuning: Tuning = .standard, maxFret: Int = 12
+    ) -> [Voicing] {
+        guard chord.quality.intervals.count >= 4 else { return [] }
+        let board = FretboardModel(tuning: tuning)
+        let third = chord.root.transposed(by: chord.quality.intervals[1])
+        let seventh = chord.root.transposed(by: chord.quality.intervals[3])
+        let stringCount = tuning.stringCount
+
+        var shells: [Voicing] = []
+        for bass in 0...1 {   // root on the 6th or 5th string
+            for rootFret in 0...maxFret {
+                let rootPos = FretPosition(string: bass, fret: rootFret)
+                guard board.note(at: rootPos).pitchClass == chord.root else { continue }
+                // Skip strings: guide tones sit on bass+2 and bass+3.
+                for upper in [[seventh, third], [third, seventh]] {
+                    var frets = [Int?](repeating: nil, count: stringCount)
+                    frets[bass] = rootFret
+                    var ok = true
+                    for (offset, pc) in zip([2, 3], upper) {
+                        let string = bass + offset
+                        guard string < stringCount,
+                              let fret = (0...(maxFret + 3)).first(where: { f in
+                                  board.note(at: FretPosition(string: string, fret: f))
+                                      .pitchClass == pc && abs(f - rootFret) <= 3
+                              }) else { ok = false; break }
+                        frets[string] = fret
+                    }
+                    if ok { shells.append(Voicing(frets: frets)) }
+                }
+            }
+        }
+        // Dedupe and keep them ordered up the neck.
+        var seen = Set<Voicing>()
+        return shells.filter { seen.insert($0).inserted }
+                     .sorted { $0.neckPosition < $1.neckPosition }
+    }
+
     // MARK: - Voicing search internals
 
     /// Root + the quality's defining colors must sound; the plain perfect

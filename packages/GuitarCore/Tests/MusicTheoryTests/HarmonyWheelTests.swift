@@ -209,6 +209,25 @@ struct HarmonyWheelTests {
         #expect(g7.first == Scale(root: .g, type: .mixolydian))
         #expect(g7.map(\.type).contains(.lydianDominant))
 
+        #expect(cmTypes.contains(.phrygian))
+        #expect(g7.map(\.type).contains(.altered))
+        let halfDim = ChordScales.suggestions(for: Chord(root: .b, quality: .minor7b5))
+        #expect(halfDim.map(\.type) == [.locrian, .locrianNatural2])
+        // The FIRST suggestion is the chord's home scale and contains every
+        // chord tone (the old augmented suggestion violated this); later
+        // ones are tension colors that must still contain the root.
+        for quality in ChordQuality.all {
+            let chord = Chord(root: .c, quality: quality)
+            let suggestions = ChordScales.suggestions(for: chord)
+            for pc in chord.pitchClasses {
+                #expect(suggestions.first?.contains(pc) == true,
+                        "home scale of \(chord.symbol) missing \(pc.name())")
+            }
+            for scale in suggestions {
+                #expect(scale.contains(chord.root))
+            }
+        }
+
         let dim = ChordScales.suggestions(for: Chord(root: .gSharp, quality: .diminished7))
         #expect(dim == [Scale(root: .gSharp, type: .wholeHalfDiminished)])
         // The whole-half scale actually contains its chord.
@@ -229,13 +248,36 @@ struct HarmonyWheelTests {
 
 @Suite("Chord voicings and triads")
 struct ChordVoicingTests {
+    @Test func shellVoicingsAreRootAndGuideTones() {
+        let c7 = Chord(root: .c, quality: .dominant7)
+        let shells = ChordVoicings.shells(for: c7)
+        #expect(!shells.isEmpty)
+        // The classic low-E shell: C at 8, B♭ on the D string, E on the G.
+        #expect(shells.contains(Voicing(frets: [8, nil, 8, 9, nil, nil])))
+        let board = FretboardModel()
+        for shell in shells {
+            let pcs = shell.positions.map { board.note(at: $0).pitchClass }
+            #expect(Set(pcs) == [.c, .e, .aSharp], "root + guide tones only")
+            #expect(pcs.first == .c, "root in the bass")
+            #expect(shell.positions.count == 3)
+        }
+        // Triads have no shells.
+        #expect(ChordVoicings.shells(for: Chord(root: .c, quality: .major)).isEmpty)
+    }
+
     @Test func keysReachTheirSubstituteDominantDirectly() {
         // In the key of C, the tritone sub of G7 is D♭7 — visible from C itself.
         let c = HarmonyWheel.node(.majorKey, 0)
         let cSubs = HarmonyWheel.moves(from: c).filter { $0.kind == .tritoneSub }
         #expect(cSubs.map(\.to.chord) == [Chord(root: .cSharp, quality: .dominant7)])
-        // And it is one-way: D♭7 resolves on, it doesn't walk back to C.
-        #expect(cSubs.first.map { HarmonyWheel.isTwoWay($0) } == false)
+        // And it is two-way: C departs onto the sub, and the sub carries a
+        // resolution arrow back home (D♭7 → C, half-step down) — same
+        // pattern as C ⇄ G7.
+        #expect(cSubs.first.map { HarmonyWheel.isTwoWay($0) } == true)
+        let dFlat7 = cSubs[0].to
+        let home = HarmonyWheel.moves(from: dFlat7)
+            .filter { $0.kind == .tritoneSub && $0.to.ring == .majorKey }
+        #expect(home.map(\.to.id) == [c.id])
         // Am's V7 is E7, so Am reaches B♭7.
         let am = HarmonyWheel.node(.relativeMinor, 0)
         let amSubs = HarmonyWheel.moves(from: am).filter { $0.kind == .tritoneSub }
@@ -244,7 +286,8 @@ struct ChordVoicingTests {
 
     @Test func tritoneSubstitutionsRunStraightAcross() {
         let e7 = HarmonyWheel.node(.dominant, 0) // E7 in the C column
-        let subs = HarmonyWheel.moves(from: e7).filter { $0.kind == .tritoneSub }
+        let subs = HarmonyWheel.moves(from: e7)
+            .filter { $0.kind == .tritoneSub && $0.to.ring == .dominant }
         #expect(subs.count == 1)
         #expect(subs.first?.to.chord == Chord(root: .aSharp, quality: .dominant7),
                 "E7's tritone sub is B♭7")

@@ -9,6 +9,7 @@ struct ChordDetailView: View {
 
     private enum Mode: String, CaseIterable, Identifiable {
         case grips = "Grips"
+        case shells = "Shells"
         case triads = "Triads"
         case drop2 = "Drop-2"
         var id: String { rawValue }
@@ -16,6 +17,7 @@ struct ChordDetailView: View {
 
     @State private var mode: Mode = .grips
     @State private var gripIndex = 0
+    @State private var shellIndex = 0
     @State private var stringSetIndex = 0
     @State private var labelStyle: LabelStyle = .degrees
     @State private var pads = ChordPadEngine()
@@ -24,7 +26,10 @@ struct ChordDetailView: View {
     private var grips: [Voicing] { ChordVoicings.voicings(for: chord) }
     private var hasSeventh: Bool { chord.quality.intervals.count >= 4 }
 
-    private var modes: [Mode] { hasSeventh ? [.grips, .triads, .drop2] : [.grips, .triads] }
+    private var modes: [Mode] {
+        hasSeventh ? [.grips, .shells, .triads, .drop2] : [.grips, .triads]
+    }
+    private var shellVoicings: [Voicing] { ChordVoicings.shells(for: chord) }
 
     private var triadSets: [[Int]] { TriadVoicings.stringSets }
     private var drop2Sets: [[Int]] { SeventhVoicings.stringSets }
@@ -81,24 +86,28 @@ struct ChordDetailView: View {
     @ViewBuilder
     private var shapeControls: some View {
         switch mode {
-        case .grips:
+        case .grips, .shells:
+            let shapes = mode == .grips ? grips : shellVoicings
+            let selection = mode == .grips ? gripIndex : shellIndex
             HStack(spacing: 8) {
-                ForEach(Array(grips.enumerated()), id: \.offset) { index, grip in
+                ForEach(Array(shapes.enumerated()), id: \.offset) { index, grip in
                     Button {
-                        gripIndex = index
+                        if mode == .grips { gripIndex = index } else { shellIndex = index }
                         pads.playRun(grip.positions.map { board.note(at: $0) })
                     } label: {
                         Text(grip.positionLabel)
                             .font(.caption)
                             .padding(.horizontal, 10).padding(.vertical, 5)
-                            .background(index == gripIndex ? .blue.opacity(0.45)
+                            .background(index == selection ? .blue.opacity(0.45)
                                                            : .white.opacity(0.1),
                                         in: .capsule)
                     }
                     .buttonStyle(.plain)
                 }
                 Spacer()
-                Text("Tap a grip to hear it").font(.caption2).foregroundStyle(.tertiary)
+                Text(mode == .shells ? "Root + 3rd + 7th — the comping skeleton"
+                                     : "Tap a grip to hear it")
+                    .font(.caption2).foregroundStyle(.tertiary)
             }
         case .triads, .drop2:
             HStack(spacing: 8) {
@@ -135,9 +144,11 @@ struct ChordDetailView: View {
     /// together so the same chord is visible climbing the neck.
     private var currentInversions: [InversionShape] {
         switch mode {
-        case .grips:
-            guard grips.indices.contains(gripIndex) else { return [] }
-            let grip = grips[gripIndex]
+        case .grips, .shells:
+            let shapes = mode == .grips ? grips : shellVoicings
+            let index = mode == .grips ? gripIndex : shellIndex
+            guard shapes.indices.contains(index) else { return [] }
+            let grip = shapes[index]
             return [InversionShape(shape: grip.positions,
                                    label: grip.positionLabel,
                                    notes: grip.positions.map { board.note(at: $0) })]
@@ -168,7 +179,10 @@ struct ChordDetailView: View {
     }
 
     private var shapeConnections: [[FretPosition]] {
-        mode == .grips ? [] : currentInversions.map(\.shape)
+        switch mode {
+        case .grips: return []
+        case .shells, .triads, .drop2: return currentInversions.map(\.shape)
+        }
     }
 
     /// Guitarist numbering: string 6 is the low E.

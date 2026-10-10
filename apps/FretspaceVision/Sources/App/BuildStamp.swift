@@ -2,5 +2,5 @@
 /// never doubt about which build is being reviewed. Update the value in
 /// the same commit as the change it ships.
 enum BuildStamp {
-    static let value = "v21 · tritone sub visible from the key"
+    static let value = "v22 · subs resolve home, modes, shells, guide tones"
 }

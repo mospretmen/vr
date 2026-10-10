@@ -9,21 +9,21 @@ public enum ChordScales {
         case .major7:
             types = [.major, .lydian, .majorPentatonic]
         case .minor:
-            types = [.naturalMinor, .dorian, .harmonicMinor, .melodicMinor,
-                     .minorPentatonic, .blues]
+            types = [.naturalMinor, .dorian, .phrygian, .harmonicMinor,
+                     .melodicMinor, .minorPentatonic, .blues]
         case .minor7:
-            types = [.dorian, .naturalMinor, .minorPentatonic, .blues]
+            types = [.dorian, .naturalMinor, .phrygian, .minorPentatonic, .blues]
         case .dominant7:
-            types = [.mixolydian, .lydianDominant, .phrygianDominant,
+            types = [.mixolydian, .lydianDominant, .altered, .phrygianDominant,
                      .bebopDominant, .blues]
         case .minor7b5:
-            types = [.locrian]
+            types = [.locrian, .locrianNatural2]
         case .diminished, .diminished7:
             types = [.wholeHalfDiminished]
         case .augmented:
-            types = [.melodicMinor] // #5 lives in melodic minor's 3rd mode
+            types = [.wholeTone, .lydianAugmented]
         case .sus2, .sus4:
-            types = [.mixolydian, .major, .majorPentatonic]
+            types = [.mixolydian, .major]
         default:
             types = [.major]
         }

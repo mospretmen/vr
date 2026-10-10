@@ -37,6 +37,14 @@ public struct ScaleType: Codable, Sendable, Hashable {
     public static let bebopDominant = ScaleType(name: "Bebop Dominant", intervals: [0, 2, 4, 5, 7, 9, 10, 11])
     /// The symmetric scale over fully-diminished chords (eight notes).
     public static let wholeHalfDiminished = ScaleType(name: "Whole-Half Diminished", intervals: [0, 2, 3, 5, 6, 8, 9, 11])
+    /// 7th mode of melodic minor — every altered tension over a dominant.
+    public static let altered = ScaleType(name: "Altered", intervals: [0, 1, 3, 4, 6, 8, 10])
+    /// Six evenly-spaced whole steps — the augmented/dreamlike color.
+    public static let wholeTone = ScaleType(name: "Whole Tone", intervals: [0, 2, 4, 6, 8, 10])
+    /// 3rd mode of melodic minor — the maj7♯5 / augmented-major color.
+    public static let lydianAugmented = ScaleType(name: "Lydian Augmented", intervals: [0, 2, 4, 6, 8, 9, 11])
+    /// 6th mode of melodic minor — locrian with a usable natural 2.
+    public static let locrianNatural2 = ScaleType(name: "Locrian ♮2", intervals: [0, 2, 3, 5, 6, 8, 10])
 
     /// The catalog shown in pickers, in display order.
     public static let all: [ScaleType] = [
@@ -44,7 +52,7 @@ public struct ScaleType: Codable, Sendable, Hashable {
         .majorPentatonic, .minorPentatonic, .blues,
         .harmonicMinor, .melodicMinor,
         .phrygianDominant, .lydianDominant, .bebopDominant,
-        .wholeHalfDiminished,
+        .wholeHalfDiminished, .altered, .wholeTone, .lydianAugmented, .locrianNatural2,
     ]
 }
 

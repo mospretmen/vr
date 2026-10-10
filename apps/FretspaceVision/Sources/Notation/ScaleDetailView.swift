@@ -9,17 +9,28 @@ struct ScaleDetailView: View {
 
     @State private var labelStyle: LabelStyle = .degrees
     @State private var boxIndex: Int? = nil
+    @State private var guideTonesOnly = false
     @State private var pads = ChordPadEngine()
 
     private var board: FretboardModel { FretboardModel() }
 
     private var highlights: [FretboardHighlight] {
+        var all: [FretboardHighlight]
         if let boxIndex,
            board.boxStartFrets(for: scale).indices.contains(boxIndex) {
-            return board.positionBox(
+            all = board.positionBox(
                 for: scale, startingAt: board.boxStartFrets(for: scale)[boxIndex])
+        } else {
+            all = board.highlights(for: scale)
         }
-        return board.highlights(for: scale)
+        if guideTonesOnly {
+            // Guide tones: every 3rd and 7th, with roots kept as anchors.
+            let guide: Set<Int> = [0, 3, 4, 10, 11]
+            all = all.filter {
+                guide.contains(scale.root.semitones(to: $0.note.pitchClass))
+            }
+        }
+        return all
     }
 
     var body: some View {
@@ -65,6 +76,9 @@ struct ScaleDetailView: View {
                     }
                 }
                 .pickerStyle(.menu)
+                Toggle("Guide tones", isOn: $guideTonesOnly)
+                    .toggleStyle(.button)
+                    .font(.caption)
                 Spacer()
             }
 
@@ -103,6 +117,10 @@ enum ScaleLore {
         case .lydianDominant: return "Mixolydian with a ♯4 — the hip altered-but-not-too-altered dominant color."
         case .bebopDominant: return "Mixolydian plus a passing major 7 — eight notes that keep chord tones on the beat."
         case .wholeHalfDiminished: return "The symmetric scale for °7 chords — repeats every minor third, like the chord itself."
+        case .altered: return "Every tension at once (♭9 ♯9 ♯11 ♭13) — maximum pull, for the V7 right before it resolves."
+        case .wholeTone: return "Six equal whole steps — weightless and unresolved; the augmented chord's home."
+        case .lydianAugmented: return "Lydian with a ♯5 — the shimmering maj7♯5 color from melodic minor."
+        case .locrianNatural2: return "Locrian with a usable natural 2 — the melodic-minor answer for m7♭5 chords."
         default: return "A color worth exploring — play it over its chord and listen."
         }
     }
