@@ -94,8 +94,27 @@ struct HarmonyWheelView: View {
             }
             keyCenterBadge
             Spacer()
+            utilityBar
             legend
         }
+    }
+
+    /// Everything that used to live on the main menu, one tap away.
+    private var utilityBar: some View {
+        HStack(spacing: 10) {
+            Button {
+                openWindow(id: SceneID.notation)
+            } label: {
+                Label("Fretboard", systemImage: "rectangle.grid.1x2")
+            }
+            Button {
+                openWindow(id: SceneID.controlPanel)
+            } label: {
+                Label("Controls", systemImage: "slider.horizontal.3")
+            }
+        }
+        .buttonStyle(.bordered)
+        .font(.callout)
     }
 
     private var keyCenterBadge: some View {

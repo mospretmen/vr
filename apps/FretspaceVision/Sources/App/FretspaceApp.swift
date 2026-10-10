@@ -6,6 +6,14 @@ struct FretspaceApp: App {
     @State private var model = AppModel()
 
     var body: some Scene {
+        // The Harmony Compass is the app: it launches first, and every
+        // other window originates from it.
+        WindowGroup(id: SceneID.harmony) {
+            HarmonyWheelView()
+                .environment(model)
+        }
+        .defaultSize(width: 1180, height: 820)
+
         WindowGroup(id: SceneID.controlPanel) {
             ControlPanelView()
                 .environment(model)
@@ -17,11 +25,6 @@ struct FretspaceApp: App {
                 .environment(model)
         }
         .defaultSize(width: 700, height: 420)
-
-        WindowGroup(id: SceneID.harmony) {
-            HarmonyWheelView()
-        }
-        .defaultSize(width: 1180, height: 820)
 
         WindowGroup(id: SceneID.scaleDetail, for: Scale.self) { $scale in
             if let scale {
