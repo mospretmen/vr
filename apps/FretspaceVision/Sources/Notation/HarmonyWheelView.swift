@@ -100,15 +100,6 @@ struct HarmonyWheelView: View {
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)
                 .background(.blue.opacity(0.25), in: .capsule)
-            if selected.index != keyCenter,
-               selected.ring == .majorKey || selected.ring == .relativeMinor {
-                Button("Modulate here") {
-                    withAnimation(.easeInOut(duration: 0.4)) {
-                        keyCenter = selected.index
-                    }
-                }
-                .font(.callout)
-            }
         }
     }
 
