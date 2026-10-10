@@ -1,4 +1,5 @@
 import SwiftUI
+import MusicTheory
 
 @main
 struct FretspaceApp: App {
@@ -22,6 +23,13 @@ struct FretspaceApp: App {
         }
         .defaultSize(width: 1180, height: 820)
 
+        WindowGroup(id: SceneID.scaleDetail, for: Scale.self) { $scale in
+            if let scale {
+                ScaleDetailView(scale: scale)
+            }
+        }
+        .defaultSize(width: 860, height: 700)
+
         ImmersiveSpace(id: SceneID.immersive) {
             ImmersiveView()
                 .environment(model)
@@ -34,5 +42,6 @@ enum SceneID {
     static let controlPanel = "controlPanel"
     static let notation = "notation"
     static let harmony = "harmonyWheel"
+    static let scaleDetail = "scaleDetail"
     static let immersive = "fretboardSpace"
 }

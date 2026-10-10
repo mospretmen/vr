@@ -197,10 +197,37 @@ struct FretboardDiagram: View {
             let rect = CGRect(x: inset, y: inset,
                               width: size.width - inset * 2,
                               height: size.height - inset * 2)
-            let fretWidth = rect.width / CGFloat(fretCount)
             let stringGap = rect.height / CGFloat(max(stringCount - 1, 1))
 
-            func x(fret: Int) -> CGFloat { rect.minX + CGFloat(fret) * fretWidth }
+            // Real equal-temperament fret spacing, normalized to the panel.
+            let geo = FretboardGeometry(fretCount: fretCount)
+            let span = geo.fretDistance(fretCount)
+            func x(fret: Int) -> CGFloat {
+                rect.minX + rect.width * CGFloat(geo.fretDistance(fret) / span)
+            }
+            func noteCX(_ fret: Int) -> CGFloat {
+                fret == 0 ? rect.minX - 16
+                          : rect.minX + rect.width * CGFloat(geo.noteX(fret: fret) / span)
+            }
+
+            // Wood neck: layered warm gradient with a rounded edge.
+            let board = rect.insetBy(dx: -6, dy: -12)
+            context.fill(
+                Path(roundedRect: board, cornerRadius: 8),
+                with: .linearGradient(
+                    Gradient(colors: [
+                        Color(red: 0.26, green: 0.15, blue: 0.09),
+                        Color(red: 0.36, green: 0.22, blue: 0.13),
+                        Color(red: 0.30, green: 0.18, blue: 0.11),
+                    ]),
+                    startPoint: CGPoint(x: board.minX, y: board.minY),
+                    endPoint: CGPoint(x: board.minX, y: board.maxY))
+            )
+
+            // Bone nut.
+            let nut = CGRect(x: rect.minX - 5, y: board.minY, width: 7, height: board.height)
+            context.fill(Path(roundedRect: nut, cornerRadius: 2),
+                         with: .color(Color(red: 0.93, green: 0.90, blue: 0.82)))
             // String 0 (lowest pitch) at the bottom; mirrored for lefties to
             // match the flipped spatial overlay.
             func y(string: Int) -> CGFloat {
@@ -208,40 +235,47 @@ struct FretboardDiagram: View {
                            : rect.maxY - CGFloat(string) * stringGap
             }
 
-            // Frets
-            for fret in 0...fretCount {
-                var line = Path()
-                line.move(to: CGPoint(x: x(fret: fret), y: rect.minY))
-                line.addLine(to: CGPoint(x: x(fret: fret), y: rect.maxY))
-                context.stroke(line, with: .color(.white.opacity(fret == 0 ? 0.9 : 0.3)),
-                               lineWidth: fret == 0 ? 3 : 1)
+            // Metal frets: light bar with a darker shadow edge.
+            for fret in 1...fretCount {
+                let fx = x(fret: fret)
+                var shadow = Path()
+                shadow.move(to: CGPoint(x: fx + 1.4, y: board.minY + 3))
+                shadow.addLine(to: CGPoint(x: fx + 1.4, y: board.maxY - 3))
+                context.stroke(shadow, with: .color(.black.opacity(0.45)), lineWidth: 1.6)
+                var wire = Path()
+                wire.move(to: CGPoint(x: fx, y: board.minY + 3))
+                wire.addLine(to: CGPoint(x: fx, y: board.maxY - 3))
+                context.stroke(wire, with: .color(Color(red: 0.78, green: 0.78, blue: 0.80)),
+                               lineWidth: 2.2)
             }
 
-            // Inlay markers
+            // Pearl inlays.
             for fret in [3, 5, 7, 9, 12, 15] where fret <= fretCount {
-                let cx = x(fret: fret) - fretWidth / 2
+                let cx = noteCX(fret)
                 let count = fret == 12 ? 2 : 1
                 for i in 0..<count {
                     let cy = rect.midY + (count == 2 ? (CGFloat(i) * 2 - 1) * rect.height / 5 : 0)
-                    let dot = Path(ellipseIn: CGRect(x: cx - 4, y: cy - 4, width: 8, height: 8))
-                    context.fill(dot, with: .color(.white.opacity(0.15)))
+                    let dot = Path(ellipseIn: CGRect(x: cx - 5, y: cy - 5, width: 10, height: 10))
+                    context.fill(dot, with: .color(Color(red: 0.88, green: 0.86, blue: 0.80).opacity(0.55)))
                 }
             }
 
-            // Strings
+            // Strings: steel-toned, gauged thicker toward the low string.
             for string in 0..<stringCount {
+                let sy = y(string: string)
+                let gauge = 3.0 - CGFloat(string) * 0.38
                 var line = Path()
-                line.move(to: CGPoint(x: rect.minX, y: y(string: string)))
-                line.addLine(to: CGPoint(x: rect.maxX, y: y(string: string)))
-                context.stroke(line, with: .color(.white.opacity(0.4)), lineWidth: 1)
+                line.move(to: CGPoint(x: rect.minX - 5, y: sy))
+                line.addLine(to: CGPoint(x: rect.maxX, y: sy))
+                context.stroke(line, with: .color(.black.opacity(0.35)),
+                               lineWidth: gauge + 1)
+                context.stroke(line, with: .color(Color(red: 0.82, green: 0.80, blue: 0.74)),
+                               lineWidth: max(gauge, 0.9))
             }
 
             // Marker center, shared by connections and highlights.
             func center(_ position: FretPosition) -> CGPoint {
-                let cx = position.fret == 0
-                    ? rect.minX - 14
-                    : x(fret: position.fret) - fretWidth / 2
-                return CGPoint(x: cx, y: y(string: position.string))
+                CGPoint(x: noteCX(position.fret), y: y(string: position.string))
             }
 
             // Shape connections (triad voicings) under the markers.
@@ -258,9 +292,7 @@ struct FretboardDiagram: View {
 
             // Highlights
             for h in highlights where h.position.fret <= fretCount {
-                let cx = h.position.fret == 0
-                    ? rect.minX - 14 // open strings sit left of the nut
-                    : x(fret: h.position.fret) - fretWidth / 2
+                let cx = noteCX(h.position.fret)
                 let cy = y(string: h.position.string)
                 let radius: CGFloat = CGFloat(OverlayPalette.radius(for: h.role)) * 2200
                 let circle = Path(ellipseIn: CGRect(x: cx - radius, y: cy - radius,

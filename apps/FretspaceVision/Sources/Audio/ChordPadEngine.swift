@@ -30,6 +30,47 @@ final class ChordPadEngine {
         if !player.isPlaying { player.play() }
     }
 
+    /// Play a scale as an ascending run (one octave plus the top root),
+    /// one gentle tone per step. Buffers queue sequentially on the player.
+    func playScale(_ scale: Scale, noteMs: Int = 280) {
+        guard ensureRunning() else { return }
+        player.stop()
+        player.play()
+        var midiNotes = scale.pitchClasses.map { Note($0, octave: 4).midi }
+        // Keep the run ascending even when pitch classes wrap past B.
+        for i in 1..<midiNotes.count where midiNotes[i] <= midiNotes[i - 1] {
+            midiNotes[i] += 12
+        }
+        midiNotes.append(midiNotes[0] + 12)
+        for midi in midiNotes {
+            if let buffer = Self.toneBuffer(midi: midi,
+                                            seconds: Double(noteMs) / 1000.0,
+                                            sampleRate: sampleRate, format: format) {
+                player.scheduleBuffer(buffer, at: nil)
+            }
+        }
+    }
+
+    private static func toneBuffer(
+        midi: Int, seconds: Double, sampleRate: Double, format: AVAudioFormat
+    ) -> AVAudioPCMBuffer? {
+        let frames = AVAudioFrameCount(sampleRate * seconds)
+        guard frames > 0,
+              let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frames),
+              let samples = buffer.floatChannelData?[0] else { return nil }
+        buffer.frameLength = frames
+        let f = 440.0 * pow(2.0, (Double(midi) - 69.0) / 12.0)
+        for frame in 0..<Int(frames) {
+            let t = Double(frame) / sampleRate
+            let attack = min(t / 0.01, 1.0)
+            let release = min((seconds - t) / 0.08, 1.0)
+            var v = sin(2 * .pi * f * t) + 0.3 * sin(2 * .pi * f * 2 * t)
+            v *= 0.24 * attack * max(release, 0)
+            samples[frame] = Float(v)
+        }
+        return buffer
+    }
+
     func stop() {
         player.stop()
         engine.stop()

@@ -195,6 +195,27 @@ struct HarmonyWheelTests {
         #expect(numeral(.diminished, .fSharp, .diminished7) == "vii°7/V")
     }
 
+    @Test func chordScaleSuggestionsAreIdiomatic() {
+        let cm = ChordScales.suggestions(for: Chord(root: .c, quality: .minor))
+        let cmTypes = cm.map(\.type)
+        #expect(cm.allSatisfy { $0.root == .c })
+        #expect(cmTypes.contains(.naturalMinor))
+        #expect(cmTypes.contains(.harmonicMinor))
+        #expect(cmTypes.contains(.melodicMinor))
+        #expect(cmTypes.contains(.dorian))
+        #expect(cmTypes.contains(.minorPentatonic))
+
+        let g7 = ChordScales.suggestions(for: Chord(root: .g, quality: .dominant7))
+        #expect(g7.first == Scale(root: .g, type: .mixolydian))
+        #expect(g7.map(\.type).contains(.lydianDominant))
+
+        let dim = ChordScales.suggestions(for: Chord(root: .gSharp, quality: .diminished7))
+        #expect(dim == [Scale(root: .gSharp, type: .wholeHalfDiminished)])
+        // The whole-half scale actually contains its chord.
+        let chord = Chord(root: .gSharp, quality: .diminished7)
+        #expect(chord.pitchClasses.allSatisfy { dim[0].contains($0) })
+    }
+
     @Test func wheelIsFullyConnected() {
         var visited: Set<HarmonyWheel.Node> = []
         var frontier = [HarmonyWheel.node(.majorKey, 0)]

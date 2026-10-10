@@ -6,6 +6,7 @@ import MusicTheory
 /// arrows from the selected chord. Tap a chord to stand on it; tap a lit
 /// destination to travel — the breadcrumb below becomes your progression.
 struct HarmonyWheelView: View {
+    @Environment(\.openWindow) private var openWindow
     @State private var selected: HarmonyWheel.Node = HarmonyWheel.node(.majorKey, 0)
     @State private var path: [HarmonyWheel.Node] = [HarmonyWheel.node(.majorKey, 0)]
     /// The column you harmonically live in — its neighborhood (which holds
@@ -67,7 +68,10 @@ struct HarmonyWheelView: View {
                     wheel(size: proxy.size)
                 }
                 HarmonyContextCard(selected: selected, moves: moves,
-                                   moveColor: { self.moveColor($0) })
+                                   moveColor: { self.moveColor($0) },
+                                   onSelectScale: { scale in
+                                       openWindow(id: SceneID.scaleDetail, value: scale)
+                                   })
             }
             breadcrumb
         }
@@ -168,6 +172,11 @@ struct HarmonyWheelView: View {
         let isDestination = moves.contains { $0.to == node }
         selected = node
         pads.play(node.chord, durationMs: 1400)
+        // Degrees re-reference to whatever key you stand on; dominants and
+        // diminisheds are transitional and keep the current frame.
+        if node.ring == .majorKey || node.ring == .relativeMinor {
+            withAnimation(.easeInOut(duration: 0.3)) { keyCenter = node.index }
+        }
         if isDestination {
             path.append(node)
         } else {

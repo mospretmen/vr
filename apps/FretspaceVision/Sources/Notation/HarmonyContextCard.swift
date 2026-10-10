@@ -7,6 +7,7 @@ struct HarmonyContextCard: View {
     let selected: HarmonyWheel.Node
     let moves: [HarmonyWheel.Move]
     let moveColor: (HarmonyWheel.Move) -> Color
+    let onSelectScale: (Scale) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -16,6 +17,10 @@ struct HarmonyContextCard: View {
             Text(selected.label)
                 .font(.title2.bold())
                 .frame(maxWidth: .infinity)
+            Divider()
+            Text("Scales to play").font(.caption.bold()).foregroundStyle(.secondary)
+            FlowChips(scales: ChordScales.suggestions(for: selected.chord),
+                      onTap: onSelectScale)
             Divider()
             ScrollView {
                 VStack(alignment: .leading, spacing: 9) {
@@ -130,6 +135,33 @@ struct MiniStaff: View {
                     )
                 }
                 x += 24
+            }
+        }
+    }
+}
+
+
+/// Compact tappable scale chips, two per row.
+struct FlowChips: View {
+    let scales: [Scale]
+    let onTap: (Scale) -> Void
+
+    var body: some View {
+        LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible())],
+                  alignment: .leading, spacing: 6) {
+            ForEach(Array(scales.enumerated()), id: \.offset) { _, scale in
+                Button {
+                    onTap(scale)
+                } label: {
+                    Text(scale.type.name)
+                        .font(.caption)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.7)
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 5)
+                        .background(.blue.opacity(0.22), in: .capsule)
+                }
+                .buttonStyle(.plain)
             }
         }
     }

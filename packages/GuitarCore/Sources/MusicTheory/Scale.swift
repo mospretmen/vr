@@ -35,6 +35,8 @@ public struct ScaleType: Codable, Sendable, Hashable {
     public static let lydianDominant = ScaleType(name: "Lydian Dominant", intervals: [0, 2, 4, 6, 7, 9, 10])
     /// Mixolydian plus the chromatic passing major 7 (eight notes).
     public static let bebopDominant = ScaleType(name: "Bebop Dominant", intervals: [0, 2, 4, 5, 7, 9, 10, 11])
+    /// The symmetric scale over fully-diminished chords (eight notes).
+    public static let wholeHalfDiminished = ScaleType(name: "Whole-Half Diminished", intervals: [0, 2, 3, 5, 6, 8, 9, 11])
 
     /// The catalog shown in pickers, in display order.
     public static let all: [ScaleType] = [
@@ -42,6 +44,7 @@ public struct ScaleType: Codable, Sendable, Hashable {
         .majorPentatonic, .minorPentatonic, .blues,
         .harmonicMinor, .melodicMinor,
         .phrygianDominant, .lydianDominant, .bebopDominant,
+        .wholeHalfDiminished,
     ]
 }
 
