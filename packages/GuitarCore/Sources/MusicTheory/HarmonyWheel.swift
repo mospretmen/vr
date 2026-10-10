@@ -98,6 +98,65 @@ public enum HarmonyWheel {
         }
     }
 
+    /// Functional numerals when a MINOR key is the reference frame —
+    /// "stand on Cm and the wheel reads in C minor": Cm → i, G7 → V7,
+    /// E♭ → III, A♭ → VI, D♭ → ♭II (the Neapolitan).
+    public static func romanNumeral(for node: Node, inMinorKey tonic: PitchClass) -> String {
+        let interval = tonic.semitones(to: node.chord.root)
+        switch node.ring {
+        case .majorKey:
+            return minorFrameMajor(interval)
+        case .relativeMinor:
+            return minorFrameMinor(interval)
+        case .dominant:
+            if interval == 7 { return "V7" }
+            let target = tonic.semitones(to: node.chord.root.transposed(by: 5))
+            return "V7/" + minorFrameDegree(target)
+        case .diminished:
+            if interval == 11 { return "vii°7" }
+            let target = tonic.semitones(to: node.chord.root.transposed(by: 1))
+            return "vii°7/" + minorFrameDegree(target)
+        }
+    }
+
+    /// Major chords heard against a minor tonic (natural/harmonic blend).
+    private static func minorFrameMajor(_ interval: Int) -> String {
+        switch ((interval % 12) + 12) % 12 {
+        case 0: "I"      // picardy
+        case 1: "♭II"    // Neapolitan
+        case 3: "III"
+        case 5: "IV"     // dorian borrow
+        case 7: "V"
+        case 8: "VI"
+        case 10: "VII"
+        default: majorNumeral(interval)
+        }
+    }
+
+    /// Minor chords heard against a minor tonic.
+    private static func minorFrameMinor(_ interval: Int) -> String {
+        switch ((interval % 12) + 12) % 12 {
+        case 0: "i"
+        case 2: "ii"
+        case 5: "iv"
+        case 7: "v"
+        default: minorNumeral(interval)
+        }
+    }
+
+    private static func minorFrameDegree(_ interval: Int) -> String {
+        switch ((interval % 12) + 12) % 12 {
+        case 0: "i"
+        case 2: "ii°"
+        case 3: "III"
+        case 5: "iv"
+        case 7: "V"
+        case 8: "VI"
+        case 10: "VII"
+        default: majorNumeral(interval)
+        }
+    }
+
     /// Numeral for the diatonic chord on a scale step (case shows quality);
     /// non-diatonic steps are flat-prefixed uppercase.
     private static func degreeNumeral(_ interval: Int) -> String {

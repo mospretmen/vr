@@ -9,6 +9,7 @@ struct HarmonyContextCard: View {
     let moveColor: (HarmonyWheel.Move) -> Color
     let onSelectScale: (Scale) -> Void
     let onShowVoicings: () -> Void
+    let onHearChord: (Chord) -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -32,6 +33,7 @@ struct HarmonyContextCard: View {
             Text("Scales to play").font(.caption.bold()).foregroundStyle(.secondary)
             FlowChips(scales: ChordScales.suggestions(for: selected.chord),
                       onTap: onSelectScale)
+            AlterationChips(chord: selected.chord, onHear: onHearChord)
             Divider()
             ScrollView {
                 VStack(alignment: .leading, spacing: 9) {
@@ -182,6 +184,49 @@ struct FlowChips: View {
                         .background(.blue.opacity(0.22), in: .capsule)
                 }
                 .buttonStyle(.plain)
+            }
+        }
+    }
+}
+
+
+/// Context-correct alterations for the selected chord: tap to hear one,
+/// and the why + covering scale appears beneath.
+struct AlterationChips: View {
+    let chord: Chord
+    let onHear: (Chord) -> Void
+    @State private var picked: ChordAlteration?
+
+    var body: some View {
+        let options = ChordAlterations.options(for: chord)
+        if !options.isEmpty {
+            Text("Alterations").font(.caption.bold()).foregroundStyle(.secondary)
+            LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()),
+                                GridItem(.flexible())],
+                      alignment: .leading, spacing: 6) {
+                ForEach(options, id: \.label) { option in
+                    Button {
+                        picked = option
+                        onHear(option.chord)
+                    } label: {
+                        Text(option.label)
+                            .font(.caption)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.6)
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 5)
+                            .background(picked?.label == option.label
+                                            ? .orange.opacity(0.4) : .white.opacity(0.1),
+                                        in: .capsule)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+            if let picked {
+                Text("\(picked.hint) · \(picked.scale.name)")
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
             }
         }
     }

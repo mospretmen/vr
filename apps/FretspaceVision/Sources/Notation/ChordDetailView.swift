@@ -18,12 +18,25 @@ struct ChordDetailView: View {
     @State private var mode: Mode = .grips
     @State private var gripIndex = 0
     @State private var shellIndex = 0
+    @State private var bass: ChordTone = .root
     @State private var stringSetIndex = 0
     @State private var labelStyle: LabelStyle = .degrees
     @State private var pads = ChordPadEngine()
 
     private var board: FretboardModel { FretboardModel() }
-    private var grips: [Voicing] { ChordVoicings.voicings(for: chord) }
+    private var grips: [Voicing] { ChordVoicings.voicings(for: chord, bass: bass) }
+    private var bassChoices: [ChordTone] {
+        hasSeventh ? [.root, .third, .fifth, .seventh] : [.root, .third, .fifth]
+    }
+    private func bassLabel(_ tone: ChordTone) -> String {
+        switch tone {
+        case .root: "Root"
+        case .third: "/3rd"
+        case .fifth: "/5th"
+        case .seventh: "/7th"
+        case .extended: "/ext"
+        }
+    }
     private var hasSeventh: Bool { chord.quality.intervals.count >= 4 }
 
     private var modes: [Mode] {
@@ -90,6 +103,14 @@ struct ChordDetailView: View {
             let shapes = mode == .grips ? grips : shellVoicings
             let selection = mode == .grips ? gripIndex : shellIndex
             HStack(spacing: 8) {
+                if mode == .grips {
+                    Picker("Bass", selection: $bass) {
+                        ForEach(bassChoices, id: \.self) { Text(bassLabel($0)).tag($0) }
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 260)
+                    .onChange(of: bass) { gripIndex = 0 }
+                }
                 ForEach(Array(shapes.enumerated()), id: \.offset) { index, grip in
                     Button {
                         if mode == .grips { gripIndex = index } else { shellIndex = index }

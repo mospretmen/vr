@@ -121,6 +121,10 @@ enum ScaleLore {
         case .wholeTone: return "Six equal whole steps — weightless and unresolved; the augmented chord's home."
         case .lydianAugmented: return "Lydian with a ♯5 — the shimmering maj7♯5 color from melodic minor."
         case .locrianNatural2: return "Locrian with a usable natural 2 — the melodic-minor answer for m7♭5 chords."
+        case .halfWholeDiminished: return "The ♭9 dominant sound — symmetric tension that resolves anywhere a minor third apart."
+        case .augmentedScale: return "Minor third + half step, repeating — six notes of pure augmented mystery."
+        case .hungarianMinor: return "Harmonic minor with a ♯4 — Gypsy fire, two augmented seconds of drama."
+        case .doubleHarmonic: return "The Byzantine major — exotic and ceremonial, flamenco's darker cousin."
         default: return "A color worth exploring — play it over its chord and listen."
         }
     }

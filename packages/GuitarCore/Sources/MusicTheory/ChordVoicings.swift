@@ -31,11 +31,15 @@ public enum ChordVoicings {
     /// the bass, every defining tone present (the plain 5th may drop from
     /// 7th chords, as players do), and a fretting span ≤ 3.
     public static func voicings(
-        for chord: Chord, tuning: Tuning = .standard, limit: Int = 6
+        for chord: Chord, tuning: Tuning = .standard, limit: Int = 6,
+        bass: ChordTone = .root
     ) -> [Voicing] {
         let board = FretboardModel(tuning: tuning)
         let pcs = Set(chord.pitchClasses)
         let required = requiredTones(of: chord)
+        let intervals = chord.quality.intervals
+        let bassIndex = min(bass.rawValue, intervals.count - 1)
+        let bassPC = chord.root.transposed(by: intervals[bassIndex])
         let stringCount = tuning.stringCount
 
         var best: [Int: (score: Int, voicing: Voicing)] = [:] // by neck position
@@ -54,7 +58,7 @@ public enum ChordVoicings {
                 return frets
             }
             enumerate(candidates, upTo: stringCount) { frets in
-                evaluate(frets, chord: chord, board: board,
+                evaluate(frets, chord: chord, board: board, bassPC: bassPC,
                          pcs: pcs, required: required, into: &best)
             }
         }
@@ -131,7 +135,7 @@ public enum ChordVoicings {
     }
 
     private static func evaluate(
-        _ frets: [Int?], chord: Chord, board: FretboardModel,
+        _ frets: [Int?], chord: Chord, board: FretboardModel, bassPC: PitchClass,
         pcs: Set<PitchClass>, required: Set<PitchClass>,
         into best: inout [Int: (score: Int, voicing: Voicing)]
     ) {
@@ -142,8 +146,8 @@ public enum ChordVoicings {
         // Sounded strings must be one contiguous block (no interior mutes).
         let strings = sounded.map(\.string)
         guard strings.last! - strings.first! == strings.count - 1 else { return }
-        // Root in the bass.
-        guard board.note(at: sounded[0]).pitchClass == chord.root else { return }
+        // The chosen chord tone in the bass (root by default).
+        guard board.note(at: sounded[0]).pitchClass == bassPC else { return }
         // Every defining tone present.
         let covered = Set(sounded.map { board.note(at: $0).pitchClass })
         guard covered.isSuperset(of: required) else { return }

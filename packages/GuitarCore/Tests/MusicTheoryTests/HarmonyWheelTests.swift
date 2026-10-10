@@ -248,6 +248,63 @@ struct HarmonyWheelTests {
 
 @Suite("Chord voicings and triads")
 struct ChordVoicingTests {
+    @Test func minorKeyFrameReadsFromTheMinorTonic() {
+        // Stand on Cm (relative minor of E♭, column 9): the wheel reads in C minor.
+        let tonic = PitchClass.c
+        #expect(HarmonyWheel.romanNumeral(
+            for: HarmonyWheel.node(.relativeMinor, 9), inMinorKey: tonic) == "i")
+        #expect(HarmonyWheel.romanNumeral(
+            for: HarmonyWheel.node(.majorKey, 9), inMinorKey: tonic) == "III")
+        // G7 sits in the E♭ column (root = D♯+4 = G): the V7 of C minor.
+        #expect(HarmonyWheel.romanNumeral(
+            for: HarmonyWheel.node(.dominant, 9), inMinorKey: tonic) == "V7")
+        // A♭ major (column 8) is VI; B°7 (column 9's dim: D♯+8 = B) is vii°7.
+        #expect(HarmonyWheel.romanNumeral(
+            for: HarmonyWheel.node(.majorKey, 8), inMinorKey: tonic) == "VI")
+        #expect(HarmonyWheel.romanNumeral(
+            for: HarmonyWheel.node(.diminished, 9), inMinorKey: tonic) == "vii°7")
+        // The Neapolitan: D♭ major against C minor.
+        #expect(HarmonyWheel.romanNumeral(
+            for: HarmonyWheel.node(.majorKey, 7), inMinorKey: tonic) == "♭II")
+    }
+
+    @Test func alterationsAreCoveredByTheirScales() {
+        for node in HarmonyWheel.nodes {
+            for alteration in ChordAlterations.options(for: node.chord) {
+                let scale = Scale(root: node.chord.root, type: alteration.scale)
+                for pc in alteration.chord.pitchClasses {
+                    #expect(scale.contains(pc),
+                            "\(alteration.label): \(scale.name) missing \(pc.name())")
+                }
+                // The alteration keeps the chord's root and 3rd (or sus tone).
+                #expect(alteration.chord.root == node.chord.root)
+                #expect(alteration.chord.pitchClasses.contains(
+                    node.chord.pitchClasses[1]))
+            }
+        }
+        // Dominants carry the full tension menu; dims stay bare.
+        let g7 = Chord(root: .g, quality: .dominant7)
+        #expect(ChordAlterations.options(for: g7).count == 6)
+        let dim = Chord(root: .gSharp, quality: .diminished7)
+        #expect(ChordAlterations.options(for: dim).isEmpty)
+    }
+
+    @Test func inversionGripsPutTheChosenToneInTheBass() {
+        let c = Chord(root: .c, quality: .major)
+        let board = FretboardModel()
+        let overE = ChordVoicings.voicings(for: c, bass: .third)
+        #expect(!overE.isEmpty)
+        #expect(overE.contains(Voicing(frets: [0, 3, 2, 0, 1, 0])),
+                "six-string C/E with the open low E in the bass")
+        for voicing in overE {
+            #expect(board.note(at: voicing.positions[0]).pitchClass == .e)
+        }
+        let overG = ChordVoicings.voicings(for: c, bass: .fifth)
+        for voicing in overG {
+            #expect(board.note(at: voicing.positions[0]).pitchClass == .g)
+        }
+    }
+
     @Test func shellVoicingsAreRootAndGuideTones() {
         let c7 = Chord(root: .c, quality: .dominant7)
         let shells = ChordVoicings.shells(for: c7)

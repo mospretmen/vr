@@ -5,23 +5,23 @@ public enum ChordScales {
         let types: [ScaleType]
         switch chord.quality {
         case .major:
-            types = [.major, .lydian, .majorPentatonic, .mixolydian]
+            types = [.major, .lydian, .majorPentatonic, .mixolydian, .doubleHarmonic]
         case .major7:
             types = [.major, .lydian, .majorPentatonic]
         case .minor:
             types = [.naturalMinor, .dorian, .phrygian, .harmonicMinor,
-                     .melodicMinor, .minorPentatonic, .blues]
+                     .melodicMinor, .minorPentatonic, .blues, .hungarianMinor]
         case .minor7:
             types = [.dorian, .naturalMinor, .phrygian, .minorPentatonic, .blues]
         case .dominant7:
-            types = [.mixolydian, .lydianDominant, .altered, .phrygianDominant,
-                     .bebopDominant, .blues]
+            types = [.mixolydian, .lydianDominant, .altered, .halfWholeDiminished,
+                     .phrygianDominant, .bebopDominant, .blues]
         case .minor7b5:
             types = [.locrian, .locrianNatural2]
         case .diminished, .diminished7:
             types = [.wholeHalfDiminished]
         case .augmented:
-            types = [.wholeTone, .lydianAugmented]
+            types = [.wholeTone, .lydianAugmented, .augmentedScale]
         case .sus2, .sus4:
             types = [.mixolydian, .major]
         default:

@@ -45,6 +45,14 @@ public struct ScaleType: Codable, Sendable, Hashable {
     public static let lydianAugmented = ScaleType(name: "Lydian Augmented", intervals: [0, 2, 4, 6, 8, 9, 11])
     /// 6th mode of melodic minor — locrian with a usable natural 2.
     public static let locrianNatural2 = ScaleType(name: "Locrian ♮2", intervals: [0, 2, 3, 5, 6, 8, 10])
+    /// The other symmetric diminished scale — ♭9 color over dominants.
+    public static let halfWholeDiminished = ScaleType(name: "Half-Whole Diminished", intervals: [0, 1, 3, 4, 6, 7, 9, 10])
+    /// Alternating minor third / half step — six notes, pure augmented color.
+    public static let augmentedScale = ScaleType(name: "Augmented Scale", intervals: [0, 3, 4, 7, 8, 11])
+    /// Harmonic minor with a raised 4 — the Gypsy/Hungarian sound.
+    public static let hungarianMinor = ScaleType(name: "Hungarian Minor", intervals: [0, 2, 3, 6, 7, 8, 11])
+    /// Two augmented seconds — the Byzantine/double-harmonic major.
+    public static let doubleHarmonic = ScaleType(name: "Double Harmonic", intervals: [0, 1, 4, 5, 7, 8, 11])
 
     /// The catalog shown in pickers, in display order.
     public static let all: [ScaleType] = [
@@ -53,6 +61,7 @@ public struct ScaleType: Codable, Sendable, Hashable {
         .harmonicMinor, .melodicMinor,
         .phrygianDominant, .lydianDominant, .bebopDominant,
         .wholeHalfDiminished, .altered, .wholeTone, .lydianAugmented, .locrianNatural2,
+        .halfWholeDiminished, .augmentedScale, .hungarianMinor, .doubleHarmonic,
     ]
 }
 

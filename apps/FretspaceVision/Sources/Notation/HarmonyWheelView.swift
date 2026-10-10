@@ -12,6 +12,7 @@ struct HarmonyWheelView: View {
     /// The column you harmonically live in — its neighborhood (which holds
     /// all its diatonic chords) is haloed. Modulation = moving this.
     @State private var keyCenter: Int = 0
+    @State private var keyIsMinor = false
     /// Tap a chord, hear the chord — same synth as the backing pads.
     @State private var pads = ChordPadEngine()
 
@@ -75,7 +76,8 @@ struct HarmonyWheelView: View {
                                    onShowVoicings: {
                                        openWindow(id: SceneID.chordDetail,
                                                   value: selected.chord)
-                                   })
+                                   },
+                                   onHearChord: { pads.play($0, durationMs: 1400) })
             }
             breadcrumb
         }
@@ -98,8 +100,9 @@ struct HarmonyWheelView: View {
 
     private var keyCenterBadge: some View {
         HStack(spacing: 8) {
-            Text("Key: \(HarmonyWheel.node(.majorKey, keyCenter).label) · "
-                 + HarmonyWheel.node(.relativeMinor, keyCenter).label)
+            Text(keyIsMinor
+                 ? "Key: \(HarmonyWheel.node(.relativeMinor, keyCenter).label) · rel. \(HarmonyWheel.node(.majorKey, keyCenter).label)"
+                 : "Key: \(HarmonyWheel.node(.majorKey, keyCenter).label) · rel. \(HarmonyWheel.node(.relativeMinor, keyCenter).label)")
                 .font(.headline)
                 .padding(.horizontal, 10)
                 .padding(.vertical, 5)
@@ -170,7 +173,10 @@ struct HarmonyWheelView: View {
         // Degrees re-reference to whatever key you stand on; dominants and
         // diminisheds are transitional and keep the current frame.
         if node.ring == .majorKey || node.ring == .relativeMinor {
-            withAnimation(.easeInOut(duration: 0.3)) { keyCenter = node.index }
+            withAnimation(.easeInOut(duration: 0.3)) {
+                keyCenter = node.index
+                keyIsMinor = node.ring == .relativeMinor
+            }
         }
         if isDestination {
             path.append(node)
@@ -474,8 +480,12 @@ struct HarmonyWheelView: View {
 
             // Roman-numeral function relative to the key center, floated
             // just outside the chip along its radial.
-            let numeral = HarmonyWheel.romanNumeral(
-                for: node, inKey: HarmonyWheel.spokes[keyCenter])
+            let numeral = keyIsMinor
+                ? HarmonyWheel.romanNumeral(
+                    for: node,
+                    inMinorKey: HarmonyWheel.spokes[keyCenter].transposed(by: -3))
+                : HarmonyWheel.romanNumeral(
+                    for: node, inKey: HarmonyWheel.spokes[keyCenter])
             let dx = position.x - layout.center.x
             let dy = position.y - layout.center.y
             let dist = max(hypot(dx, dy), 0.001)
