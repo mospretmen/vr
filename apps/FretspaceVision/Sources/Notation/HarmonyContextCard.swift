@@ -9,29 +9,34 @@ struct HarmonyContextCard: View {
     let moveColor: (HarmonyWheel.Move) -> Color
 
     var body: some View {
-        HStack(alignment: .top, spacing: 18) {
-            VStack(spacing: 4) {
-                MiniStaff(chord: selected.chord, label: selected.label)
-                    .frame(width: 150, height: 86)
-                Text(selected.label).font(.headline)
-            }
+        VStack(alignment: .leading, spacing: 12) {
+            MiniStaff(chord: selected.chord, label: selected.label)
+                .frame(height: 92)
+                .frame(maxWidth: .infinity)
+            Text(selected.label)
+                .font(.title2.bold())
+                .frame(maxWidth: .infinity)
+            Divider()
             ScrollView {
-                VStack(alignment: .leading, spacing: 5) {
+                VStack(alignment: .leading, spacing: 9) {
                     ForEach(Array(moves.enumerated()), id: \.offset) { _, move in
-                        HStack(spacing: 6) {
-                            Circle().fill(moveColor(move)).frame(width: 8, height: 8)
+                        HStack(alignment: .firstTextBaseline, spacing: 7) {
+                            Circle().fill(moveColor(move)).frame(width: 9, height: 9)
                             Text(Self.describe(move))
                                 .font(.callout)
                                 .foregroundStyle(.primary.opacity(0.9))
+                                .fixedSize(horizontal: false, vertical: true)
                         }
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
             }
+            Spacer(minLength: 0)
         }
-        .padding(14)
+        .padding(16)
         .background(.thinMaterial, in: .rect(cornerRadius: 14))
-        .frame(height: 130)
+        .frame(width: 300)
+        .frame(maxHeight: .infinity)
     }
 
     /// Plain-English meaning of a pathway, for the player not the theorist.

@@ -20,7 +20,7 @@ struct FretspaceApp: App {
         WindowGroup(id: SceneID.harmony) {
             HarmonyWheelView()
         }
-        .defaultSize(width: 780, height: 840)
+        .defaultSize(width: 1180, height: 820)
 
         ImmersiveSpace(id: SceneID.immersive) {
             ImmersiveView()

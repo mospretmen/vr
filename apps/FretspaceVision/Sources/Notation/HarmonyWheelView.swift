@@ -62,11 +62,13 @@ struct HarmonyWheelView: View {
     var body: some View {
         VStack(spacing: 12) {
             header
-            GeometryReader { proxy in
-                wheel(size: proxy.size)
+            HStack(alignment: .top, spacing: 14) {
+                GeometryReader { proxy in
+                    wheel(size: proxy.size)
+                }
+                HarmonyContextCard(selected: selected, moves: moves,
+                                   moveColor: { self.moveColor($0) })
             }
-            HarmonyContextCard(selected: selected, moves: moves,
-                               moveColor: { self.moveColor($0) })
             breadcrumb
         }
         .padding(20)
