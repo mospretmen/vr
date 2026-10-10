@@ -87,10 +87,10 @@ struct HarmonyWheelView: View {
 
     private var legend: some View {
         HStack(spacing: 10) {
-            ForEach(MoveStyle.ordered, id: \.kind) { style in
+            ForEach(Array(MoveStyle.legendRows.enumerated()), id: \.offset) { _, row in
                 HStack(spacing: 3) {
-                    Circle().fill(style.color).frame(width: 8, height: 8)
-                    Text(style.label).font(.caption2)
+                    Circle().fill(row.color).frame(width: 8, height: 8)
+                    Text(row.label).font(.caption2)
                 }
             }
             Text("· → one-way · ⇄ returns").font(.caption2)
@@ -185,19 +185,48 @@ struct HarmonyWheelView: View {
         }
     }
 
-    /// Every pathway in the wheel, always visible — thin, kind-colored, no
-    /// arrowheads. Mirror-image pairs draw once.
+    /// A clip that excludes every chip disk, so pathway strokes never draw
+    /// across chords they merely pass by (their own endpoints dock at the
+    /// borders, outside the holes).
+    private func edgeContext(_ context: GraphicsContext, layout: WheelLayout) -> GraphicsContext {
+        var clipped = context
+        var holes = Path()
+        holes.addRect(CGRect(x: -10_000, y: -10_000, width: 20_000, height: 20_000))
+        for node in HarmonyWheel.nodes {
+            let p = layout.position(of: node)
+            let r = layout.chipRadius(for: node.ring) + 1.5
+            holes.addEllipse(in: CGRect(x: p.x - r, y: p.y - r, width: r * 2, height: r * 2))
+        }
+        clipped.clip(to: holes, style: FillStyle(eoFill: true))
+        return clipped
+    }
+
+    /// The color a move draws in: diminished pathways inherit their
+    /// family's chip tint (three colored threads through the center);
+    /// everything else uses its kind color.
+    private func moveColor(_ move: HarmonyWheel.Move) -> Color {
+        switch move.kind {
+        case .dimFamily:
+            return chipColor(for: move.from)
+        case .deepen:
+            return chipColor(for: move.to)
+        default:
+            return MoveStyle.style(for: move.kind).color
+        }
+    }
+
+    /// Every pathway, always visible — but NEUTRAL until relevant: a quiet
+    /// gray web. Color belongs to the selected chord's onward moves.
     private func drawLattice(context: GraphicsContext, layout: WheelLayout) {
+        let ctx = edgeContext(context, layout: layout)
         var drawn = Set<String>()
         for move in HarmonyWheel.allMoves {
             let pairKey = [move.from.id, move.to.id].sorted().joined(separator: "|")
-                + move.kind.rawValue
             guard drawn.insert(pairKey).inserted else { continue }
-            let style = MoveStyle.style(for: move.kind)
-            context.stroke(
+            ctx.stroke(
                 curve(from: move.from, to: move.to, layout: layout),
-                with: .color(style.color.opacity(0.16)),
-                style: StrokeStyle(lineWidth: 1.2, lineCap: .round)
+                with: .color(.white.opacity(0.10)),
+                style: StrokeStyle(lineWidth: 1.1, lineCap: .round)
             )
         }
     }
@@ -210,17 +239,17 @@ struct HarmonyWheelView: View {
             2: (0.6, 3.0, 12),
             3: (0.3, 2.0, 8),
         ]
+        let ctx = edgeContext(context, layout: layout)
         for (move, depth) in gradedMoves.sorted(by: { $0.depth > $1.depth }) {
             guard let look = appearance[depth] else { continue }
-            let style = MoveStyle.style(for: move.kind)
-            let color = style.color.opacity(look.opacity)
+            let color = moveColor(move).opacity(look.opacity)
             let g = edgeGeometry(from: move.from, to: move.to, layout: layout)
 
             var path = Path()
             path.move(to: g.start)
             path.addQuadCurve(to: g.end, control: g.control)
-            context.stroke(path, with: .color(color),
-                           style: StrokeStyle(lineWidth: look.width, lineCap: .round))
+            ctx.stroke(path, with: .color(color),
+                       style: StrokeStyle(lineWidth: look.width, lineCap: .round))
 
             // Destination arrowhead, docked at the chip border.
             arrowhead(context: context, tip: g.end,
@@ -412,13 +441,25 @@ private struct MoveStyle {
     static let ordered: [MoveStyle] = [
         .init(kind: .resolve, color: .green, label: "Resolve"),
         .init(kind: .toDominant, color: .orange, label: "To V7"),
-        .init(kind: .relative, color: .yellow, label: "Relative"),
+        .init(kind: .relative, color: Color.white.opacity(0.65), label: "Relative"),
         .init(kind: .twoFive, color: .mint, label: "ii–V"),
-        .init(kind: .fifthSharpward, color: .blue, label: "Fifth ♯"),
-        .init(kind: .fifthFlatward, color: .teal, label: "Fifth ♭"),
-        .init(kind: .deepen, color: .purple, label: "V7 → dim"),
-        .init(kind: .dimFamily, color: .pink, label: "Dim family"),
+        .init(kind: .fifthSharpward, color: .blue, label: "Fifths"),
+        .init(kind: .fifthFlatward, color: .blue, label: "Fifths"),
+        // deepen/dimFamily inherit the diminished family's chip tint at
+        // draw time; these are only legend fallbacks.
+        .init(kind: .deepen, color: .purple, label: "Dim paths"),
+        .init(kind: .dimFamily, color: .purple, label: "Dim paths"),
     ]
+
+    /// Legend rows (deduped — fifths share a color, dim paths share a row).
+    static let legendRows: [(color: Color, label: String)] = {
+        var rows: [(Color, String)] = []
+        var seen = Set<String>()
+        for style in ordered where seen.insert(style.label).inserted {
+            rows.append((style.color, style.label))
+        }
+        return rows
+    }()
 
     static func style(for kind: HarmonyWheel.MoveKind) -> MoveStyle {
         ordered.first { $0.kind == kind } ?? ordered[0]
