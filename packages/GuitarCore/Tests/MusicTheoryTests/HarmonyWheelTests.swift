@@ -402,6 +402,18 @@ struct ChordVoicingTests {
         #expect(amSubs.map(\.to.chord) == [Chord(root: .aSharp, quality: .dominant7)])
     }
 
+    @Test func dominantsChainAroundTheCircle() {
+        // E7 → A7 → D7 → … : resolve down a fifth, stay dominant.
+        let e7 = HarmonyWheel.node(.dominant, 0)
+        let down = HarmonyWheel.moves(from: e7)
+            .filter { $0.kind == .fifthFlatward && $0.to.ring == .dominant }
+        #expect(down.map(\.to.chord) == [Chord(root: .a, quality: .dominant7)])
+        let up = HarmonyWheel.moves(from: e7)
+            .filter { $0.kind == .fifthSharpward && $0.to.ring == .dominant }
+        #expect(up.map(\.to.chord) == [Chord(root: .b, quality: .dominant7)])
+        #expect(down.first.map { HarmonyWheel.isTwoWay($0) } == true)
+    }
+
     @Test func tritoneSubstitutionsRunStraightAcross() {
         let e7 = HarmonyWheel.node(.dominant, 0) // E7 in the C column
         let subs = HarmonyWheel.moves(from: e7)

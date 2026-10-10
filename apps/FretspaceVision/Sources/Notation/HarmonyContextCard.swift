@@ -77,8 +77,14 @@ struct HarmonyContextCard: View {
         case .twoFive:
             return "→ \(to): ii–V — you're the ii; this is your V."
         case .fifthSharpward:
+            if move.from.ring == .dominant && move.to.ring == .dominant {
+                return "→ \(to): back up the chain — the V7 of your V7."
+            }
             return "→ \(to): up a fifth — to the dominant side (its V)."
         case .fifthFlatward:
+            if move.from.ring == .dominant && move.to.ring == .dominant {
+                return "→ \(to): the dominant chain — resolve down a fifth, stay dominant."
+            }
             return "→ \(to): up a fourth — to the subdominant side (its IV)."
         case .relative:
             return "→ \(to): relative switch — same notes, new home."

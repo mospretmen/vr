@@ -256,6 +256,8 @@ public enum HarmonyWheel {
             add(.deceptive, .relativeMinor, i + 3)     // E7 → F♯m (V → vi)
             add(.deepen, .diminished, i)               // E7 → G♯°7 (straight down)
             add(.tritoneSub, .dominant, i + 6)         // E7 ↔ B♭7 (straight across)
+            add(.fifthFlatward, .dominant, i + 11)     // E7 → A7 (the dominant chain)
+            add(.fifthSharpward, .dominant, i + 1)     // E7 → B7 (V7 of my V7)
             add(.tritoneSub, .majorKey, i + 9)         // as a sub: E7 → E♭ (half-step down)
             add(.tritoneSub, .relativeMinor, i + 6)    // as a sub: E7 → E♭m (half-step down)
 
