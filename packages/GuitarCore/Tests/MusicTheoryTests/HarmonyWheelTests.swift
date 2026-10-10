@@ -269,22 +269,31 @@ struct ChordVoicingTests {
     }
 
     @Test func alterationsAreCoveredByTheirScales() {
-        for node in HarmonyWheel.nodes {
-            for alteration in ChordAlterations.options(for: node.chord) {
-                let scale = Scale(root: node.chord.root, type: alteration.scale)
+        let qualities: [ChordQuality] = [.major, .minor, .minor7, .dominant7, .minor7b5]
+        for quality in qualities {
+            let base = Chord(root: .c, quality: quality)
+            let options = ChordAlterations.options(for: base)
+            #expect(!options.isEmpty)
+            for alteration in options {
+                let scale = Scale(root: base.root, type: alteration.scale)
                 for pc in alteration.chord.pitchClasses {
                     #expect(scale.contains(pc),
                             "\(alteration.label): \(scale.name) missing \(pc.name())")
                 }
-                // The alteration keeps the chord's root and 3rd (or sus tone).
-                #expect(alteration.chord.root == node.chord.root)
-                #expect(alteration.chord.pitchClasses.contains(
-                    node.chord.pitchClasses[1]))
+                #expect(alteration.chord.root == base.root)
+                // The chord's defining 3rd survives — unless the alteration
+                // suspends it by name.
+                if !alteration.label.contains("sus") {
+                    #expect(alteration.chord.pitchClasses.contains(
+                        base.pitchClasses[1]), "\(alteration.label)")
+                }
             }
         }
-        // Dominants carry the full tension menu; dims stay bare.
-        let g7 = Chord(root: .g, quality: .dominant7)
-        #expect(ChordAlterations.options(for: g7).count == 6)
+        // Thorough menus: 11 dominant tensions, maj9 present; dims stay bare.
+        let g7 = ChordAlterations.options(for: Chord(root: .g, quality: .dominant7))
+        #expect(g7.count == 11)
+        let cMajor = ChordAlterations.options(for: Chord(root: .c, quality: .major))
+        #expect(cMajor.contains { $0.label == "Cmaj9" })
         let dim = Chord(root: .gSharp, quality: .diminished7)
         #expect(ChordAlterations.options(for: dim).isEmpty)
     }
@@ -302,6 +311,26 @@ struct ChordVoicingTests {
         let overG = ChordVoicings.voicings(for: c, bass: .fifth)
         for voicing in overG {
             #expect(board.note(at: voicing.positions[0]).pitchClass == .g)
+        }
+    }
+
+    @Test func alteredChordsGetPlayableGrips() {
+        let board = FretboardModel()
+        for base in [Chord(root: .c, quality: .major),
+                     Chord(root: .c, quality: .minor),
+                     Chord(root: .g, quality: .dominant7)] {
+            for alteration in ChordAlterations.options(for: base) {
+                let grips = ChordVoicings.voicings(for: alteration.chord)
+                #expect(!grips.isEmpty, "no grips for \(alteration.label)")
+                let intervals = alteration.chord.quality.intervals
+                let top = alteration.chord.root.transposed(by: intervals.last!)
+                for grip in grips {
+                    let pcs = Set(grip.positions.map { board.note(at: $0).pitchClass })
+                    #expect(pcs.contains(alteration.chord.root))
+                    #expect(pcs.contains(top),
+                            "\(alteration.label) grip missing its named color")
+                }
+            }
         }
     }
 

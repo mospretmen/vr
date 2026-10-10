@@ -108,13 +108,22 @@ public enum ChordVoicings {
 
     // MARK: - Voicing search internals
 
-    /// Root + the quality's defining colors must sound; the plain perfect
-    /// 5th may drop from 4-note chords. Altered 5ths always stay.
+    /// Root + the quality's defining colors must sound. The plain perfect
+    /// 5th may drop from 4+ note chords (altered 5ths always stay), and on
+    /// extended chords (9/11/13) the inner extensions are optional too —
+    /// a grip keeps root, 3rd, 7th, and the named top color, as players do.
     private static func requiredTones(of chord: Chord) -> Set<PitchClass> {
+        let intervals = chord.quality.intervals
+        var keep: Set<Int>
+        if intervals.count <= 3 {
+            keep = Set(intervals.indices)
+        } else {
+            keep = [0, 1, 3, intervals.count - 1]
+            if intervals.count > 2 && intervals[2] != 7 { keep.insert(2) }
+        }
         var required: Set<PitchClass> = []
-        for (index, interval) in chord.quality.intervals.enumerated() {
-            if index == 2 && interval == 7 && chord.quality.intervals.count > 3 { continue }
-            required.insert(chord.root.transposed(by: interval))
+        for index in keep where index < intervals.count {
+            required.insert(chord.root.transposed(by: intervals[index]))
         }
         return required
     }

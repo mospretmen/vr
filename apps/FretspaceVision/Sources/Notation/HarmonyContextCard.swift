@@ -10,13 +10,18 @@ struct HarmonyContextCard: View {
     let onSelectScale: (Scale) -> Void
     let onShowVoicings: () -> Void
     let onHearChord: (Chord) -> Void
+    let onOpenChord: (Chord) -> Void
+    @State private var pickedAlteration: ChordAlteration?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
-            MiniStaff(chord: selected.chord, label: selected.label)
+            // The staff and title follow a tapped alteration, so you see
+            // exactly the stack you're hearing.
+            MiniStaff(chord: pickedAlteration?.chord ?? selected.chord,
+                      label: pickedAlteration?.label ?? selected.label)
                 .frame(height: 92)
                 .frame(maxWidth: .infinity)
-            Text(selected.label)
+            Text(pickedAlteration?.label ?? selected.label)
                 .font(.title2.bold())
                 .frame(maxWidth: .infinity)
             Divider()
@@ -33,7 +38,8 @@ struct HarmonyContextCard: View {
             Text("Scales to play").font(.caption.bold()).foregroundStyle(.secondary)
             FlowChips(scales: ChordScales.suggestions(for: selected.chord),
                       onTap: onSelectScale)
-            AlterationChips(chord: selected.chord, onHear: onHearChord)
+            AlterationChips(chord: selected.chord, picked: $pickedAlteration,
+                            onHear: onHearChord, onOpenChord: onOpenChord)
             Divider()
             ScrollView {
                 VStack(alignment: .leading, spacing: 9) {
@@ -51,6 +57,7 @@ struct HarmonyContextCard: View {
             }
             Spacer(minLength: 0)
         }
+        .onChange(of: selected) { pickedAlteration = nil }
         .padding(16)
         .background(.thinMaterial, in: .rect(cornerRadius: 14))
         .frame(width: 300)
@@ -194,8 +201,9 @@ struct FlowChips: View {
 /// and the why + covering scale appears beneath.
 struct AlterationChips: View {
     let chord: Chord
+    @Binding var picked: ChordAlteration?
     let onHear: (Chord) -> Void
-    @State private var picked: ChordAlteration?
+    let onOpenChord: (Chord) -> Void
 
     var body: some View {
         let options = ChordAlterations.options(for: chord)
@@ -227,6 +235,17 @@ struct AlterationChips: View {
                     .font(.caption2)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
+                Button {
+                    onOpenChord(picked.chord)
+                } label: {
+                    Label("Grips & inversions for \(picked.label)",
+                          systemImage: "hand.raised.fingers.spread")
+                        .font(.caption.bold())
+                        .frame(maxWidth: .infinity)
+                        .padding(.vertical, 6)
+                        .background(.orange.opacity(0.3), in: .capsule)
+                }
+                .buttonStyle(.plain)
             }
         }
     }

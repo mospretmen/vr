@@ -77,7 +77,10 @@ struct HarmonyWheelView: View {
                                        openWindow(id: SceneID.chordDetail,
                                                   value: selected.chord)
                                    },
-                                   onHearChord: { pads.play($0, durationMs: 1400) })
+                                   onHearChord: { pads.play($0, durationMs: 1400) },
+                                   onOpenChord: { chord in
+                                       openWindow(id: SceneID.chordDetail, value: chord)
+                                   })
             }
             breadcrumb
         }
@@ -102,11 +105,6 @@ struct HarmonyWheelView: View {
     /// Everything that used to live on the main menu, one tap away.
     private var utilityBar: some View {
         HStack(spacing: 10) {
-            Button {
-                openWindow(id: SceneID.notation)
-            } label: {
-                Label("Fretboard", systemImage: "rectangle.grid.1x2")
-            }
             Button {
                 openWindow(id: SceneID.controlPanel)
             } label: {
