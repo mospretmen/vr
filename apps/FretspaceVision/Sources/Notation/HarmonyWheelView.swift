@@ -206,36 +206,32 @@ struct HarmonyWheelView: View {
     /// nearer futures sit on top; every highlighted edge carries an arrow.
     private func drawActiveMoves(context: GraphicsContext, layout: WheelLayout) {
         let appearance: [Int: (opacity: Double, width: CGFloat, head: CGFloat)] = [
-            1: (0.95, 3.0, 11),
-            2: (0.55, 2.0, 8),
-            3: (0.28, 1.5, 6),
+            1: (1.0, 4.5, 16),
+            2: (0.6, 3.0, 12),
+            3: (0.3, 2.0, 8),
         ]
         for (move, depth) in gradedMoves.sorted(by: { $0.depth > $1.depth }) {
             guard let look = appearance[depth] else { continue }
             let style = MoveStyle.style(for: move.kind)
             let color = style.color.opacity(look.opacity)
-            let path = curve(from: move.from, to: move.to, layout: layout)
+            let g = edgeGeometry(from: move.from, to: move.to, layout: layout)
+
+            var path = Path()
+            path.move(to: g.start)
+            path.addQuadCurve(to: g.end, control: g.control)
             context.stroke(path, with: .color(color),
                            style: StrokeStyle(lineWidth: look.width, lineCap: .round))
 
-            let from = layout.position(of: move.from)
-            let to = layout.position(of: move.to)
-            let control = controlPoint(from: from, to: to, layout: layout)
-
-            // Destination arrowhead — every move shows where it goes.
-            arrowhead(context: context, tip: to,
-                      angle: atan2(to.y - control.y, to.x - control.x),
+            // Destination arrowhead, docked at the chip border.
+            arrowhead(context: context, tip: g.end,
+                      angle: atan2(g.end.y - g.control.y, g.end.x - g.control.x),
                       size: look.head, color: color)
 
-            // Two-way streets grow a counter-head near the source, so the
-            // stroke reads ⇄; one-way motions (deceptive resolutions,
-            // key → secondary dominant, ii–V) stay a single →.
+            // Two-way streets grow a counter-head at the source border, so
+            // the stroke reads ⇄; one-way motions stay a single →.
             if HarmonyWheel.isTwoWay(move) {
-                let backAngle = atan2(from.y - control.y, from.x - control.x)
-                let offset: CGFloat = look.head + 6
-                let tip = CGPoint(x: from.x - offset * cos(backAngle),
-                                  y: from.y - offset * sin(backAngle))
-                arrowhead(context: context, tip: tip, angle: backAngle,
+                arrowhead(context: context, tip: g.start,
+                          angle: atan2(g.start.y - g.control.y, g.start.x - g.control.x),
                           size: look.head * 0.85, color: color)
             }
         }
@@ -261,13 +257,33 @@ struct HarmonyWheelView: View {
                        y: mid.y + (layout.center.y - mid.y) * pull)
     }
 
-    private func curve(from: HarmonyWheel.Node, to: HarmonyWheel.Node,
-                       layout: WheelLayout) -> Path {
+    /// An edge's drawable geometry: endpoints pulled back from the chip
+    /// CENTERS to the chip BORDERS (plus a hair of air), so strokes and
+    /// arrowheads dock visibly at the rim instead of vanishing underneath.
+    private func edgeGeometry(
+        from: HarmonyWheel.Node, to: HarmonyWheel.Node, layout: WheelLayout
+    ) -> (start: CGPoint, end: CGPoint, control: CGPoint) {
         let a = layout.position(of: from)
         let b = layout.position(of: to)
+        let control = controlPoint(from: a, to: b, layout: layout)
+
+        func pulled(_ point: CGPoint, toward: CGPoint, by distance: CGFloat) -> CGPoint {
+            let dx = toward.x - point.x, dy = toward.y - point.y
+            let length = max(hypot(dx, dy), 0.001)
+            return CGPoint(x: point.x + dx / length * distance,
+                           y: point.y + dy / length * distance)
+        }
+        let start = pulled(a, toward: control, by: layout.chipRadius(for: from.ring) + 3)
+        let end = pulled(b, toward: control, by: layout.chipRadius(for: to.ring) + 3)
+        return (start, end, control)
+    }
+
+    private func curve(from: HarmonyWheel.Node, to: HarmonyWheel.Node,
+                       layout: WheelLayout) -> Path {
+        let g = edgeGeometry(from: from, to: to, layout: layout)
         var path = Path()
-        path.move(to: a)
-        path.addQuadCurve(to: b, control: controlPoint(from: a, to: b, layout: layout))
+        path.move(to: g.start)
+        path.addQuadCurve(to: g.end, control: g.control)
         return path
     }
 
