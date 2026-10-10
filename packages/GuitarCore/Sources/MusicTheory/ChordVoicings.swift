@@ -167,7 +167,20 @@ public enum ChordVoicings {
 
         let voicing = Voicing(frets: frets)
         let missingColor = pcs.subtracting(covered).count
-        let score = missingColor * 10 - sounded.count * 2 + span
+        // Players keep 3rds/7ths/extensions out of the mud: on 4+ note
+        // chords, color tones below A2 cost dearly (the bass is exempt —
+        // it IS the chosen inversion).
+        var lowColor = 0
+        if chord.quality.intervals.count >= 4 {
+            for position in sounded.dropFirst() {
+                let note = board.note(at: position)
+                if note.midi < 45, note.pitchClass != chord.root,
+                   chord.tone(of: note.pitchClass) != .fifth {
+                    lowColor += 3
+                }
+            }
+        }
+        let score = missingColor * 10 - sounded.count * 2 + span + lowColor
         let position = voicing.neckPosition
         if let current = best[position], current.score <= score { return }
         best[position] = (score, voicing)

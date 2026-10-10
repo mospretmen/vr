@@ -15,7 +15,7 @@ public enum ChordScales {
             types = [.dorian, .naturalMinor, .phrygian, .minorPentatonic, .blues]
         case .dominant7:
             types = [.mixolydian, .lydianDominant, .altered, .halfWholeDiminished,
-                     .phrygianDominant, .bebopDominant, .blues]
+                     .wholeTone, .phrygianDominant, .bebopDominant, .blues]
         case .minor7b5:
             types = [.locrian, .locrianNatural2]
         case .diminished, .diminished7:

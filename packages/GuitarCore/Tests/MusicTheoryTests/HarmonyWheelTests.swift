@@ -269,7 +269,9 @@ struct ChordVoicingTests {
     }
 
     @Test func alterationsAreCoveredByTheirScales() {
-        let qualities: [ChordQuality] = [.major, .minor, .minor7, .dominant7, .minor7b5]
+        let qualities: [ChordQuality] = [.major, .major7, .minor, .minor7,
+                                         .dominant7, .minor7b5, .diminished7,
+                                         .augmented, .sus4]
         for quality in qualities {
             let base = Chord(root: .c, quality: quality)
             let options = ChordAlterations.options(for: base)
@@ -289,13 +291,14 @@ struct ChordVoicingTests {
                 }
             }
         }
-        // Thorough menus: 11 dominant tensions, maj9 present; dims stay bare.
+        // Thorough menus: 19 dominant tensions; the basics are all present.
         let g7 = ChordAlterations.options(for: Chord(root: .g, quality: .dominant7))
-        #expect(g7.count == 11)
+        #expect(g7.count == 19)
         let cMajor = ChordAlterations.options(for: Chord(root: .c, quality: .major))
         #expect(cMajor.contains { $0.label == "Cmaj9" })
-        let dim = Chord(root: .gSharp, quality: .diminished7)
-        #expect(ChordAlterations.options(for: dim).isEmpty)
+        #expect(cMajor.contains { $0.label == "Cmaj7♯5" })
+        let dim = ChordAlterations.options(for: Chord(root: .gSharp, quality: .diminished7))
+        #expect(dim.count == 1)
     }
 
     @Test func inversionGripsPutTheChosenToneInTheBass() {
@@ -324,11 +327,16 @@ struct ChordVoicingTests {
                 #expect(!grips.isEmpty, "no grips for \(alteration.label)")
                 let intervals = alteration.chord.quality.intervals
                 let top = alteration.chord.root.transposed(by: intervals.last!)
+                let third = alteration.chord.root.transposed(
+                    by: alteration.chord.quality.intervals[1])
                 for grip in grips {
                     let pcs = Set(grip.positions.map { board.note(at: $0).pitchClass })
                     #expect(pcs.contains(alteration.chord.root))
                     #expect(pcs.contains(top),
                             "\(alteration.label) grip missing its named color")
+                    // The defining 3rd (or sus tone) is never dropped.
+                    #expect(pcs.contains(third),
+                            "\(alteration.label) grip missing its 3rd")
                 }
             }
         }

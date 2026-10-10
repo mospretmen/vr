@@ -174,10 +174,14 @@ struct ScaleStaff: View {
                 let positionsAboveBottomLine = CGFloat(step - 2)
                 let y = staffTop + 4 * lineGap - positionsAboveBottomLine * lineGap / 2
 
-                if step <= 0 {
+                var ledgerSteps: [Int] = []
+                if step <= 0 { ledgerSteps = Array(stride(from: 0, through: step, by: -2)) }
+                if step >= 12 { ledgerSteps = Array(stride(from: 12, through: step, by: 2)) }
+                for ledgerStep in ledgerSteps {
+                    let ly = staffTop + 4 * lineGap - CGFloat(ledgerStep - 2) * lineGap / 2
                     var ledger = Path()
-                    ledger.move(to: CGPoint(x: x - 8, y: y))
-                    ledger.addLine(to: CGPoint(x: x + 8, y: y))
+                    ledger.move(to: CGPoint(x: x - 8, y: ly))
+                    ledger.addLine(to: CGPoint(x: x + 8, y: ly))
                     context.stroke(ledger, with: .color(.white.opacity(0.55)), lineWidth: 1)
                 }
                 let head = Path(ellipseIn: CGRect(x: x - 5.5, y: y - 4, width: 11, height: 8))

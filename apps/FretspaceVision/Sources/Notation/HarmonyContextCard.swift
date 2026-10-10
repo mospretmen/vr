@@ -145,11 +145,16 @@ struct MiniStaff: View {
                 let positionsAboveBottomLine = CGFloat(step - 2)
                 let y = staffTop + 4 * lineGap - positionsAboveBottomLine * lineGap / 2
 
-                // Ledger line for middle C.
-                if step == 0 || step == 14 {
+                // Ledger lines: every line position between the staff and
+                // the note (middle C below, A5/C6/… above).
+                var ledgerSteps: [Int] = []
+                if step <= 0 { ledgerSteps = Array(stride(from: 0, through: step, by: -2)) }
+                if step >= 12 { ledgerSteps = Array(stride(from: 12, through: step, by: 2)) }
+                for ledgerStep in ledgerSteps {
+                    let ly = staffTop + 4 * lineGap - CGFloat(ledgerStep - 2) * lineGap / 2
                     var ledger = Path()
-                    ledger.move(to: CGPoint(x: x - 9, y: y))
-                    ledger.addLine(to: CGPoint(x: x + 9, y: y))
+                    ledger.move(to: CGPoint(x: x - 9, y: ly))
+                    ledger.addLine(to: CGPoint(x: x + 9, y: ly))
                     context.stroke(ledger, with: .color(.white.opacity(0.55)), lineWidth: 1)
                 }
 
@@ -205,14 +210,28 @@ struct AlterationChips: View {
     let onHear: (Chord) -> Void
     let onOpenChord: (Chord) -> Void
 
+    @State private var expanded = false
+
     var body: some View {
         let options = ChordAlterations.options(for: chord)
+        let shown = expanded ? options : Array(options.prefix(6))
         if !options.isEmpty {
-            Text("Alterations").font(.caption.bold()).foregroundStyle(.secondary)
+            HStack {
+                Text("Alterations").font(.caption.bold()).foregroundStyle(.secondary)
+                Spacer()
+                if options.count > 6 {
+                    Button(expanded ? "Fewer" : "All \(options.count)…") {
+                        expanded.toggle()
+                    }
+                    .font(.caption2)
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.blue)
+                }
+            }
             LazyVGrid(columns: [GridItem(.flexible()), GridItem(.flexible()),
                                 GridItem(.flexible())],
                       alignment: .leading, spacing: 6) {
-                ForEach(options, id: \.label) { option in
+                ForEach(shown, id: \.label) { option in
                     Button {
                         picked = option
                         onHear(option.chord)

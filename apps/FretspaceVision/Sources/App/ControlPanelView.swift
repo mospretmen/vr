@@ -16,15 +16,12 @@ struct ControlPanelView: View {
     var body: some View {
         NavigationStack {
             Form {
-                modeSection
+                // The Harmony Compass is the main navigation now; this
+                // panel keeps only what the compass can't do — the physical
+                // guitar (AR overlay, calibration, handedness, tuning), the
+                // stage board, and listening.
                 stageSection
-                voicingsSection
-                scaleSection
-                chordSection
-                displaySection
                 guitarSection
-                backingSection
-                exerciseSection
                 listenSection
                 panelFooterSection
             }
@@ -290,8 +287,6 @@ struct ControlPanelView: View {
 
     private var panelFooterSection: some View {
         Section {
-            Button("Open Harmony Compass") { openWindow(id: SceneID.harmony) }
-                .font(.headline)
             Button("Open Notation Panel") { openWindow(id: SceneID.notation) }
         } footer: {
             let summary = model.practiceLog.summary
