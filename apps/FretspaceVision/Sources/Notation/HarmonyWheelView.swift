@@ -88,6 +88,7 @@ struct HarmonyWheelView: View {
                     Text(style.label).font(.caption2)
                 }
             }
+            Text("· → one-way · ⇄ returns").font(.caption2)
         }
         .foregroundStyle(.secondary)
     }
@@ -207,23 +208,44 @@ struct HarmonyWheelView: View {
         for (move, depth) in gradedMoves.sorted(by: { $0.depth > $1.depth }) {
             guard let look = appearance[depth] else { continue }
             let style = MoveStyle.style(for: move.kind)
+            let color = style.color.opacity(look.opacity)
             let path = curve(from: move.from, to: move.to, layout: layout)
-            context.stroke(path, with: .color(style.color.opacity(look.opacity)),
+            context.stroke(path, with: .color(color),
                            style: StrokeStyle(lineWidth: look.width, lineCap: .round))
 
+            let from = layout.position(of: move.from)
             let to = layout.position(of: move.to)
-            let control = controlPoint(from: layout.position(of: move.from),
-                                       to: to, layout: layout)
-            let angle = atan2(to.y - control.y, to.x - control.x)
-            var head = Path()
-            head.move(to: to)
-            head.addLine(to: CGPoint(x: to.x - look.head * cos(angle - 0.4),
-                                     y: to.y - look.head * sin(angle - 0.4)))
-            head.addLine(to: CGPoint(x: to.x - look.head * cos(angle + 0.4),
-                                     y: to.y - look.head * sin(angle + 0.4)))
-            head.closeSubpath()
-            context.fill(head, with: .color(style.color.opacity(look.opacity)))
+            let control = controlPoint(from: from, to: to, layout: layout)
+
+            // Destination arrowhead — every move shows where it goes.
+            arrowhead(context: context, tip: to,
+                      angle: atan2(to.y - control.y, to.x - control.x),
+                      size: look.head, color: color)
+
+            // Two-way streets grow a counter-head near the source, so the
+            // stroke reads ⇄; one-way motions (deceptive resolutions,
+            // key → secondary dominant, ii–V) stay a single →.
+            if HarmonyWheel.isTwoWay(move) {
+                let backAngle = atan2(from.y - control.y, from.x - control.x)
+                let offset: CGFloat = look.head + 6
+                let tip = CGPoint(x: from.x - offset * cos(backAngle),
+                                  y: from.y - offset * sin(backAngle))
+                arrowhead(context: context, tip: tip, angle: backAngle,
+                          size: look.head * 0.85, color: color)
+            }
         }
+    }
+
+    private func arrowhead(context: GraphicsContext, tip: CGPoint,
+                           angle: CGFloat, size: CGFloat, color: Color) {
+        var head = Path()
+        head.move(to: tip)
+        head.addLine(to: CGPoint(x: tip.x - size * cos(angle - 0.4),
+                                 y: tip.y - size * sin(angle - 0.4)))
+        head.addLine(to: CGPoint(x: tip.x - size * cos(angle + 0.4),
+                                 y: tip.y - size * sin(angle + 0.4)))
+        head.closeSubpath()
+        context.fill(head, with: .color(color))
     }
 
     private func controlPoint(from: CGPoint, to: CGPoint, layout: WheelLayout) -> CGPoint {

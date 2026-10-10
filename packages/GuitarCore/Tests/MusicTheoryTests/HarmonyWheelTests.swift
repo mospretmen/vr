@@ -114,6 +114,40 @@ struct HarmonyWheelTests {
         #expect(HarmonyWheel.node(.dominant, 10).label == "D7")
     }
 
+    @Test func oneWayStreetsAreKnown() {
+        func move(_ fromRing: HarmonyWheel.Ring, _ fromIdx: Int,
+                  _ kind: HarmonyWheel.MoveKind,
+                  toChord: Chord) -> HarmonyWheel.Move? {
+            HarmonyWheel.moves(from: HarmonyWheel.node(fromRing, fromIdx))
+                .first { $0.kind == kind && $0.to.chord == toChord }
+        }
+
+        // Two-way: E7 ⇄ Am (resolve down ↔ toDominant up).
+        let e7toAm = move(.dominant, 0, .resolve,
+                          toChord: Chord(root: .a, quality: .minor))!
+        #expect(HarmonyWheel.isTwoWay(e7toAm))
+        // Two-way: relative pair, rim fifths.
+        let cToAm = move(.majorKey, 0, .relative,
+                         toChord: Chord(root: .a, quality: .minor))!
+        #expect(HarmonyWheel.isTwoWay(cToAm))
+
+        // One-way: C → E7 (E7 never resolves back to C).
+        let cToE7 = move(.majorKey, 0, .toDominant,
+                         toChord: Chord(root: .e, quality: .dominant7))!
+        #expect(!HarmonyWheel.isTwoWay(cToE7))
+        // One-way: the deceptive resolution G7 → Am.
+        let g7toAm = move(.dominant, 9, .resolve,
+                          toChord: Chord(root: .a, quality: .minor))!
+        #expect(!HarmonyWheel.isTwoWay(g7toAm))
+        // One-way: the ii–V jump (G7 doesn't resolve to Dm).
+        let dmCol = HarmonyWheel.nodes.first {
+            $0.ring == .relativeMinor && $0.chord.root == .d
+        }!.index
+        let dmToG7 = move(.relativeMinor, dmCol, .twoFive,
+                          toChord: Chord(root: .g, quality: .dominant7))!
+        #expect(!HarmonyWheel.isTwoWay(dmToG7))
+    }
+
     @Test func wheelIsFullyConnected() {
         var visited: Set<HarmonyWheel.Node> = []
         var frontier = [HarmonyWheel.node(.majorKey, 0)]

@@ -97,6 +97,17 @@ public enum HarmonyWheel {
     /// pathway rendering.
     public static let allMoves: [Move] = nodes.flatMap { moves(from: $0) }
 
+    private static let directedEdges: Set<String> =
+        Set(allMoves.map { $0.from.id + ">" + $0.to.id })
+
+    /// Whether the connection a move travels is a two-way street: true when
+    /// any move (of any kind) also runs in the opposite direction. E7 ⇄ Am
+    /// is two-way (resolve down, toDominant back up); G7 → Am (deceptive)
+    /// and C → E7 are one-way — the harmony doesn't walk backward there.
+    public static func isTwoWay(_ move: Move) -> Bool {
+        directedEdges.contains(move.to.id + ">" + move.from.id)
+    }
+
     /// Every legal departure from a node.
     public static func moves(from node: Node) -> [Move] {
         var moves: [Move] = []
