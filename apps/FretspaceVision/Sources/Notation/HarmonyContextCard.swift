@@ -76,7 +76,10 @@ struct HarmonyContextCard: View {
         case .passingDim:
             return "→ \(to): chromatic walk-up through the passing dim."
         case .tritoneSub:
-            return "→ \(to): tritone sub — same 3rd & 7th, slides down a half-step into the same home."
+            if move.from.ring == .dominant {
+                return "→ \(to): tritone sub — same 3rd & 7th, slides down a half-step into the same home."
+            }
+            return "→ \(to): sub of your V7 (♭II7) — slides down a half-step back home."
         case .deepen:
             return "→ \(to): darken into the 7♭9 diminished."
         case .dimFamily:

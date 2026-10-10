@@ -229,6 +229,19 @@ struct HarmonyWheelTests {
 
 @Suite("Chord voicings and triads")
 struct ChordVoicingTests {
+    @Test func keysReachTheirSubstituteDominantDirectly() {
+        // In the key of C, the tritone sub of G7 is D♭7 — visible from C itself.
+        let c = HarmonyWheel.node(.majorKey, 0)
+        let cSubs = HarmonyWheel.moves(from: c).filter { $0.kind == .tritoneSub }
+        #expect(cSubs.map(\.to.chord) == [Chord(root: .cSharp, quality: .dominant7)])
+        // And it is one-way: D♭7 resolves on, it doesn't walk back to C.
+        #expect(cSubs.first.map { HarmonyWheel.isTwoWay($0) } == false)
+        // Am's V7 is E7, so Am reaches B♭7.
+        let am = HarmonyWheel.node(.relativeMinor, 0)
+        let amSubs = HarmonyWheel.moves(from: am).filter { $0.kind == .tritoneSub }
+        #expect(amSubs.map(\.to.chord) == [Chord(root: .aSharp, quality: .dominant7)])
+    }
+
     @Test func tritoneSubstitutionsRunStraightAcross() {
         let e7 = HarmonyWheel.node(.dominant, 0) // E7 in the C column
         let subs = HarmonyWheel.moves(from: e7).filter { $0.kind == .tritoneSub }
