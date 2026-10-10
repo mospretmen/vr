@@ -67,13 +67,15 @@ public enum HarmonyWheel {
     // MARK: - Moves
 
     public enum MoveKind: String, Codable, Sendable, Hashable {
-        case resolve          // V7 → its I (forward: tension released)
-        case toDominant       // key → its own V7 (depart / tonicize)
-        case fifthSharpward   // key → neighbor clockwise (adds a sharp)
-        case fifthFlatward    // key → neighbor counterclockwise
-        case relative         // major ↔ relative minor (same spoke)
-        case leadingTone      // dim7 hub → key a half-step above a hub root
-        case flatNine         // dominant ↔ dim hub (7♭9 equivalence)
+        case resolve            // V7 → I, vi (deceptive), or i (minor home)
+        case toDominant         // key → its own V7 (depart / tonicize)
+        case secondaryDominant  // major → V7 of its relative minor (C → E7)
+        case fifthSharpward     // key → neighbor clockwise (adds a sharp)
+        case fifthFlatward      // key → neighbor counterclockwise
+        case relative           // major ↔ relative minor (same spoke)
+        case leadingTone        // dim7 hub → key a half-step above a hub root
+        case flatNine           // dominant ↔ dim hub (7♭9 equivalence)
+        case dimShift           // dim hub ↔ dim hub (chromatic planing)
     }
 
     public struct Move: Codable, Sendable, Hashable {
@@ -81,6 +83,10 @@ public enum HarmonyWheel {
         public let from: Node
         public let to: Node
     }
+
+    /// The complete lattice — every move from every node, for always-on
+    /// pathway rendering.
+    public static let allMoves: [Move] = nodes.flatMap { moves(from: $0) }
 
     /// Every legal departure from a node — the arrows the UI draws when the
     /// player stands on that chord.
@@ -94,6 +100,8 @@ public enum HarmonyWheel {
         case .majorKey:
             let i = node.index
             add(.toDominant, to: Self.node(.dominant, i))
+            // V7 of the relative minor (C → E7): three spokes sharpward.
+            add(.secondaryDominant, to: Self.node(.dominant, (i + 3) % 12))
             add(.fifthSharpward, to: Self.node(.majorKey, (i + 1) % 12))
             add(.fifthFlatward, to: Self.node(.majorKey, (i + 11) % 12))
             add(.relative, to: Self.node(.relativeMinor, i))
@@ -111,13 +119,19 @@ public enum HarmonyWheel {
         case .dominant:
             let i = node.index
             add(.resolve, to: Self.node(.majorKey, i))
-            // Deceptive-adjacent: resolve into the relative minor instead.
+            // Deceptive: resolve into the target key's relative minor (vi).
             add(.resolve, to: Self.node(.relativeMinor, i))
+            // Minor home: V → i (E7 → Am). The minor with the same tonic as
+            // this chip's major target lives three spokes sharpward.
+            add(.resolve, to: Self.node(.relativeMinor, (i + 9) % 12))
             // 7♭9 ↔ diminished: the dim7 on this dominant's third.
             let third = node.chord.root.transposed(by: 4)
             add(.flatNine, to: Self.node(.diminished, hub(containing: third)))
 
         case .diminished:
+            // Chromatic planing: slide to either of the other two families.
+            add(.dimShift, to: Self.node(.diminished, (node.index + 1) % 3))
+            add(.dimShift, to: Self.node(.diminished, (node.index + 2) % 3))
             // Each hub root is a leading tone: resolves up a half-step.
             let roots = (0..<4).map { node.chord.root.transposed(by: 3 * $0) }
             for root in roots {

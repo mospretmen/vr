@@ -72,7 +72,8 @@ struct HarmonyWheelView: View {
         let layout = WheelLayout(size: size)
         return Canvas { context, _ in
             drawRingGuides(context: context, layout: layout)
-            drawMoveArrows(context: context, layout: layout)
+            drawLattice(context: context, layout: layout)
+            drawActiveMoves(context: context, layout: layout)
             drawNodes(context: context, layout: layout)
         }
         .gesture(
@@ -102,34 +103,72 @@ struct HarmonyWheelView: View {
         }
     }
 
-    private func drawMoveArrows(context: GraphicsContext, layout: WheelLayout) {
-        for move in moves {
-            let from = layout.position(of: move.from)
-            let to = layout.position(of: move.to)
+    /// Every pathway in the wheel, always visible — thin, kind-colored, no
+    /// arrowheads. Mirror-image pairs draw once.
+    private func drawLattice(context: GraphicsContext, layout: WheelLayout) {
+        var drawn = Set<String>()
+        for move in HarmonyWheel.allMoves {
+            let pairKey = [move.from.id, move.to.id].sorted().joined(separator: "|")
+                + move.kind.rawValue
+            guard drawn.insert(pairKey).inserted else { continue }
             let style = MoveStyle.style(for: move.kind)
+            context.stroke(
+                curve(from: move.from, to: move.to, layout: layout),
+                with: .color(style.color.opacity(0.16)),
+                style: StrokeStyle(lineWidth: 1.2, lineCap: .round)
+            )
+        }
+    }
 
-            var path = Path()
-            path.move(to: from)
-            // Bow the line toward the wheel center for an orbital feel.
-            let mid = CGPoint(x: (from.x + to.x) / 2, y: (from.y + to.y) / 2)
-            let pull: CGFloat = 0.22
-            let control = CGPoint(x: mid.x + (layout.center.x - mid.x) * pull,
-                                  y: mid.y + (layout.center.y - mid.y) * pull)
-            path.addQuadCurve(to: to, control: control)
-            context.stroke(path, with: .color(style.color.opacity(0.85)),
-                           style: StrokeStyle(lineWidth: 2.5, lineCap: .round))
+    /// The selected chord's departures, blazing on top with arrowheads.
+    private func drawActiveMoves(context: GraphicsContext, layout: WheelLayout) {
+        for move in moves {
+            let style = MoveStyle.style(for: move.kind)
+            let path = curve(from: move.from, to: move.to, layout: layout)
+            context.stroke(path, with: .color(style.color.opacity(0.95)),
+                           style: StrokeStyle(lineWidth: 3, lineCap: .round))
 
-            // Arrowhead at the destination.
+            let to = layout.position(of: move.to)
+            let control = controlPoint(from: layout.position(of: move.from),
+                                       to: to, layout: layout)
             let angle = atan2(to.y - control.y, to.x - control.x)
             var head = Path()
-            let tip = to
-            head.move(to: tip)
-            head.addLine(to: CGPoint(x: tip.x - 10 * cos(angle - 0.4),
-                                     y: tip.y - 10 * sin(angle - 0.4)))
-            head.addLine(to: CGPoint(x: tip.x - 10 * cos(angle + 0.4),
-                                     y: tip.y - 10 * sin(angle + 0.4)))
+            head.move(to: to)
+            head.addLine(to: CGPoint(x: to.x - 11 * cos(angle - 0.4),
+                                     y: to.y - 11 * sin(angle - 0.4)))
+            head.addLine(to: CGPoint(x: to.x - 11 * cos(angle + 0.4),
+                                     y: to.y - 11 * sin(angle + 0.4)))
             head.closeSubpath()
             context.fill(head, with: .color(style.color))
+        }
+    }
+
+    private func controlPoint(from: CGPoint, to: CGPoint, layout: WheelLayout) -> CGPoint {
+        // Bow the line toward the wheel center for an orbital feel.
+        let mid = CGPoint(x: (from.x + to.x) / 2, y: (from.y + to.y) / 2)
+        let pull: CGFloat = 0.22
+        return CGPoint(x: mid.x + (layout.center.x - mid.x) * pull,
+                       y: mid.y + (layout.center.y - mid.y) * pull)
+    }
+
+    private func curve(from: HarmonyWheel.Node, to: HarmonyWheel.Node,
+                       layout: WheelLayout) -> Path {
+        let a = layout.position(of: from)
+        let b = layout.position(of: to)
+        var path = Path()
+        path.move(to: a)
+        path.addQuadCurve(to: b, control: controlPoint(from: a, to: b, layout: layout))
+        return path
+    }
+
+    /// Ring-identity chip color: keys blue, relatives indigo, dominants
+    /// amber, diminisheds violet.
+    private func ringColor(_ ring: HarmonyWheel.Ring) -> Color {
+        switch ring {
+        case .majorKey: Color(red: 0.25, green: 0.52, blue: 0.95)
+        case .relativeMinor: Color(red: 0.42, green: 0.36, blue: 0.85)
+        case .dominant: Color(red: 0.92, green: 0.58, blue: 0.18)
+        case .diminished: Color(red: 0.62, green: 0.32, blue: 0.85)
         }
     }
 
@@ -142,22 +181,26 @@ struct HarmonyWheelView: View {
             let radius = layout.chipRadius(for: node.ring)
                 * (isSelected ? 1.25 : 1.0)
 
-            let fill: Color = isSelected ? .orange
-                : isDestination ? Color.white.opacity(0.95)
-                : Color.white.opacity(0.14)
-            let textColor: Color = (isSelected || isDestination) ? .black : .white.opacity(0.75)
+            let base = ringColor(node.ring)
+            let fill = base.opacity(isSelected ? 1.0 : isDestination ? 0.95 : 0.3)
 
             let rect = CGRect(x: position.x - radius, y: position.y - radius,
                               width: radius * 2, height: radius * 2)
             context.fill(Path(ellipseIn: rect), with: .color(fill))
-            if isDestination {
+            if isSelected {
+                context.stroke(Path(ellipseIn: rect.insetBy(dx: -3, dy: -3)),
+                               with: .color(.white), lineWidth: 3)
+            } else if isDestination {
                 context.stroke(Path(ellipseIn: rect.insetBy(dx: -2.5, dy: -2.5)),
-                               with: .color(.orange.opacity(0.8)), lineWidth: 2)
+                               with: .color(.white.opacity(0.9)), lineWidth: 2)
             }
             context.draw(
                 Text(node.label)
-                    .font(.system(size: radius * 0.62, weight: .semibold, design: .rounded))
-                    .foregroundStyle(textColor),
+                    .font(.system(size: radius * 0.62,
+                                  weight: (isSelected || isDestination) ? .bold : .medium,
+                                  design: .rounded))
+                    .foregroundStyle(.white.opacity(
+                        isSelected || isDestination ? 1.0 : 0.75)),
                 at: position
             )
         }
@@ -229,11 +272,13 @@ private struct MoveStyle {
     static let ordered: [MoveStyle] = [
         .init(kind: .resolve, color: .green, label: "Resolve"),
         .init(kind: .toDominant, color: .orange, label: "To V7"),
+        .init(kind: .secondaryDominant, color: .pink, label: "V7 of rel."),
         .init(kind: .fifthSharpward, color: .blue, label: "Fifth ♯"),
         .init(kind: .fifthFlatward, color: .teal, label: "Fifth ♭"),
         .init(kind: .relative, color: .yellow, label: "Relative"),
         .init(kind: .leadingTone, color: .mint, label: "Leading tone"),
         .init(kind: .flatNine, color: .purple, label: "7♭9 ↔ dim"),
+        .init(kind: .dimShift, color: .gray, label: "Dim slide"),
     ]
 
     static func style(for kind: HarmonyWheel.MoveKind) -> MoveStyle {

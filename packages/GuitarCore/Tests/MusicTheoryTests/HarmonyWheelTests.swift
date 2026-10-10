@@ -24,21 +24,44 @@ struct HarmonyWheelTests {
         let byKind = Dictionary(grouping: moves, by: \.kind)
 
         #expect(byKind[.toDominant]?.first?.to.chord == Chord(root: .g, quality: .dominant7))
+        // The owner's walk: C straight to E7 (V of the relative minor).
+        #expect(byKind[.secondaryDominant]?.first?.to.chord == Chord(root: .e, quality: .dominant7))
         #expect(byKind[.fifthSharpward]?.first?.to.chord == Chord(root: .g, quality: .major))
         #expect(byKind[.fifthFlatward]?.first?.to.chord == Chord(root: .f, quality: .major))
         #expect(byKind[.relative]?.first?.to.chord == Chord(root: .a, quality: .minor))
     }
 
-    @Test func dominantResolvesHomeAndDeceptively() {
-        // G7 (spoke 0) resolves to C and to Am, and trades with a dim hub.
+    @Test func dominantResolvesHomeDeceptivelyAndToMinor() {
+        // G7 (spoke 0) resolves to C, to Am (deceptive vi), and to Cm (i).
         let moves = HarmonyWheel.moves(from: HarmonyWheel.node(.dominant, 0))
         let targets = Set(moves.filter { $0.kind == .resolve }.map(\.to.chord))
-        #expect(targets == [Chord(root: .c, quality: .major), Chord(root: .a, quality: .minor)])
+        #expect(targets == [
+            Chord(root: .c, quality: .major),
+            Chord(root: .a, quality: .minor),
+            Chord(root: .c, quality: .minor),
+        ])
 
         let hubMove = moves.first { $0.kind == .flatNine }
         // G7's third is B → the hub containing B (the D°7 family).
         #expect(hubMove?.to.ring == .diminished)
         #expect(hubMove?.to.index == HarmonyWheel.hub(containing: .b))
+    }
+
+    @Test func e7ResolvesToAMinorPerTheOwnersWalk() {
+        // E7 lives on A's spoke (index 3): targets A, F#m (vi), Am (i).
+        let e7 = HarmonyWheel.node(.dominant, 3)
+        #expect(e7.chord == Chord(root: .e, quality: .dominant7))
+        let targets = Set(HarmonyWheel.moves(from: e7)
+            .filter { $0.kind == .resolve }.map(\.to.chord))
+        #expect(targets.contains(Chord(root: .a, quality: .minor)))
+    }
+
+    @Test func diminishedHubsShiftChromatically() {
+        for hub in 0..<3 {
+            let shifts = HarmonyWheel.moves(from: HarmonyWheel.node(.diminished, hub))
+                .filter { $0.kind == .dimShift }
+            #expect(Set(shifts.map(\.to.index)) == Set([0, 1, 2]).subtracting([hub]))
+        }
     }
 
     @Test func relativeMinorEscapesThroughItsOwnDominant() {
