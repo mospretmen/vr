@@ -51,6 +51,20 @@ final class ChordPadEngine {
         }
     }
 
+    /// Arpeggiate exact sounding notes (a grip or triad shape, bottom to top).
+    func playRun(_ notes: [Note], noteMs: Int = 240) {
+        guard ensureRunning() else { return }
+        player.stop()
+        player.play()
+        for note in notes {
+            if let buffer = Self.toneBuffer(midi: note.midi,
+                                            seconds: Double(noteMs) / 1000.0,
+                                            sampleRate: sampleRate, format: format) {
+                player.scheduleBuffer(buffer, at: nil)
+            }
+        }
+    }
+
     private static func toneBuffer(
         midi: Int, seconds: Double, sampleRate: Double, format: AVAudioFormat
     ) -> AVAudioPCMBuffer? {

@@ -28,7 +28,14 @@ struct FretspaceApp: App {
                 ScaleDetailView(scale: scale)
             }
         }
-        .defaultSize(width: 860, height: 700)
+        .defaultSize(width: 1040, height: 560)
+
+        WindowGroup(id: SceneID.chordDetail, for: Chord.self) { $chord in
+            if let chord {
+                ChordDetailView(chord: chord)
+            }
+        }
+        .defaultSize(width: 1040, height: 560)
 
         ImmersiveSpace(id: SceneID.immersive) {
             ImmersiveView()
@@ -43,5 +50,6 @@ enum SceneID {
     static let notation = "notation"
     static let harmony = "harmonyWheel"
     static let scaleDetail = "scaleDetail"
+    static let chordDetail = "chordDetail"
     static let immersive = "fretboardSpace"
 }

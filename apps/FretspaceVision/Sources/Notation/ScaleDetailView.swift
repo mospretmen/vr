@@ -75,7 +75,9 @@ struct ScaleDetailView: View {
                 labelStyle: labelStyle,
                 scale: scale
             )
-            .frame(maxHeight: .infinity)
+            // A real neck's proportions — never stretched by the window.
+            .aspectRatio(5.6, contentMode: .fit)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
         .padding(22)
     }

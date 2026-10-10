@@ -8,6 +8,7 @@ struct HarmonyContextCard: View {
     let moves: [HarmonyWheel.Move]
     let moveColor: (HarmonyWheel.Move) -> Color
     let onSelectScale: (Scale) -> Void
+    let onShowVoicings: () -> Void
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -18,6 +19,16 @@ struct HarmonyContextCard: View {
                 .font(.title2.bold())
                 .frame(maxWidth: .infinity)
             Divider()
+            Button {
+                onShowVoicings()
+            } label: {
+                Label("Voicings & triads on the fretboard", systemImage: "hand.raised.fingers.spread")
+                    .font(.caption.bold())
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 7)
+                    .background(.orange.opacity(0.3), in: .capsule)
+            }
+            .buttonStyle(.plain)
             Text("Scales to play").font(.caption.bold()).foregroundStyle(.secondary)
             FlowChips(scales: ChordScales.suggestions(for: selected.chord),
                       onTap: onSelectScale)
@@ -64,6 +75,8 @@ struct HarmonyContextCard: View {
             return "→ \(to): relative switch — same notes, new home."
         case .passingDim:
             return "→ \(to): chromatic walk-up through the passing dim."
+        case .tritoneSub:
+            return "→ \(to): tritone sub — same 3rd & 7th, slides down a half-step into the same home."
         case .deepen:
             return "→ \(to): darken into the 7♭9 diminished."
         case .dimFamily:

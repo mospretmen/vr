@@ -226,3 +226,51 @@ struct HarmonyWheelTests {
         #expect(visited.count == HarmonyWheel.nodes.count)
     }
 }
+
+@Suite("Chord voicings and triads")
+struct ChordVoicingTests {
+    @Test func tritoneSubstitutionsRunStraightAcross() {
+        let e7 = HarmonyWheel.node(.dominant, 0) // E7 in the C column
+        let subs = HarmonyWheel.moves(from: e7).filter { $0.kind == .tritoneSub }
+        #expect(subs.count == 1)
+        #expect(subs.first?.to.chord == Chord(root: .aSharp, quality: .dominant7),
+                "E7's tritone sub is B♭7")
+        #expect(subs.first.map { HarmonyWheel.isTwoWay($0) } == true)
+        // The sub's root sits a half-step above the original's resolution
+        // target: E7 → A, and B♭7 slides down into that same A.
+        let e7Target = HarmonyWheel.moves(from: e7)
+            .first { $0.kind == .resolve && $0.to.ring == .majorKey }!.to
+        #expect(subs[0].to.chord.root == e7Target.chord.root.transposed(by: 1))
+    }
+
+    @Test func openGripsMatchTheClassics() {
+        let c = ChordVoicings.voicings(for: Chord(root: .c, quality: .major))
+        #expect(c.contains(Voicing(frets: [nil, 3, 2, 0, 1, 0])), "open C grip")
+        let e = ChordVoicings.voicings(for: Chord(root: .e, quality: .major))
+        #expect(e.contains(Voicing(frets: [0, 2, 2, 1, 0, 0])), "open E grip")
+        let am = ChordVoicings.voicings(for: Chord(root: .a, quality: .minor))
+        #expect(am.contains(Voicing(frets: [nil, 0, 2, 2, 1, 0])), "open Am grip")
+    }
+
+    @Test func everyVoicingIsPlayableAndCorrect() {
+        let board = FretboardModel()
+        for node in HarmonyWheel.nodes {
+            for voicing in ChordVoicings.voicings(for: node.chord) {
+                let sounded = voicing.positions
+                #expect(sounded.count >= 4)
+                #expect(board.note(at: sounded[0]).pitchClass == node.chord.root,
+                        "root in the bass for \(node.chord.symbol)")
+                let fretted = sounded.map(\.fret).filter { $0 > 0 }
+                if let lo = fretted.min(), let hi = fretted.max() {
+                    #expect(hi - lo <= 3, "span for \(node.chord.symbol)")
+                }
+                for position in sounded {
+                    #expect(node.chord.contains(board.note(at: position).pitchClass))
+                }
+            }
+            #expect(!ChordVoicings.voicings(for: node.chord).isEmpty,
+                    "no voicings for \(node.chord.symbol)")
+        }
+    }
+
+}

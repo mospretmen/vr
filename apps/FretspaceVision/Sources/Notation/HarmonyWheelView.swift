@@ -71,6 +71,10 @@ struct HarmonyWheelView: View {
                                    moveColor: { self.moveColor($0) },
                                    onSelectScale: { scale in
                                        openWindow(id: SceneID.scaleDetail, value: scale)
+                                   },
+                                   onShowVoicings: {
+                                       openWindow(id: SceneID.chordDetail,
+                                                  value: selected.chord)
                                    })
             }
             breadcrumb
@@ -564,6 +568,7 @@ private struct MoveStyle {
         .init(kind: .toDominant, color: .orange, label: "To V7"),
         .init(kind: .relative, color: Color.white.opacity(0.65), label: "Relative"),
         .init(kind: .twoFive, color: .mint, label: "ii–V"),
+        .init(kind: .tritoneSub, color: .pink, label: "Tritone sub"),
         .init(kind: .fifthSharpward, color: .blue, label: "Fifths"),
         .init(kind: .fifthFlatward, color: .blue, label: "Fifths"),
         // deepen/dimFamily inherit the diminished family's chip tint at
