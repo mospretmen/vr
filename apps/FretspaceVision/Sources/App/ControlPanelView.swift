@@ -21,7 +21,6 @@ struct ControlPanelView: View {
                 // guitar (AR overlay, calibration, handedness, tuning), the
                 // stage board, and listening.
                 stageSection
-                guitarSection
                 listenSection
                 panelFooterSection
             }
@@ -49,24 +48,24 @@ struct ControlPanelView: View {
     private var stageSection: some View {
         @Bindable var model = model
         return Section {
-            Picker("Board", selection: $model.boardPlacement) {
-                ForEach(AppModel.BoardPlacement.allCases) { Text($0.rawValue).tag($0) }
-            }
-            .pickerStyle(.segmented)
-            if model.boardPlacement == .floating {
+            if !model.immersiveSpaceOpen {
+                Button("Start Stage Session") {
+                    model.boardPlacement = .floating
+                    Task { await openImmersiveSpace(id: SceneID.immersive) }
+                }
+            } else {
                 Toggle("Guide tones (3rds & 7ths)", isOn: $model.stageGuideTones)
                 Toggle("Dim avoid notes", isOn: $model.stageAvoidDimming)
+                Button("End Stage Session", role: .destructive) {
+                    Task { await dismissImmersiveSpace() }
+                }
             }
         } header: {
-            Label("Fretboard", systemImage: "rectangle.on.rectangle")
+            Label("Stage Board", systemImage: "rectangle.on.rectangle")
         } footer: {
-            if model.boardPlacement == .floating {
-                Text("The floating board follows the harmony — gold disks are the "
-                     + "current chord's 3rd and 7th: your landing targets. With "
-                     + "Listen on, the note you play glows cyan.")
-            } else {
-                Text("On-guitar mode needs a parked guitar and calibration below.")
-            }
+            Text("A floating fretboard in the room that follows the harmony — "
+                 + "gold disks are the current chord's 3rd and 7th: your landing "
+                 + "targets. With Listen on, the note you play glows cyan.")
         }
     }
 
@@ -210,12 +209,6 @@ struct ControlPanelView: View {
         }
     }
 
-    private var guitarSection: some View {
-        Section(header: Label("Guitar", systemImage: "guitars")) {
-            immersiveControls
-        }
-    }
-
     private var backingSection: some View {
         Section(header: Label("Backing Track", systemImage: "metronome")) {
             if let timeline = model.backing.timeline {
@@ -298,45 +291,6 @@ struct ControlPanelView: View {
     }
 
     @ViewBuilder
-    private var immersiveControls: some View {
-        @Bindable var model = model
-        if !model.immersiveSpaceOpen {
-            Button("Start Session") {
-                Task { await openImmersiveSpace(id: SceneID.immersive) }
-            }
-        } else {
-            if let instruction = model.calibration.instruction {
-                Label(instruction, systemImage: "hand.pinch")
-                    .font(.headline)
-                    .foregroundStyle(.orange)
-            }
-
-            switch model.calibration {
-            case .notCalibrated:
-                Button("Calibrate to My Guitar") { model.startCalibration() }
-            case .placingNut, .placingTwelfthFret, .placingEdge:
-                Button("Cancel Calibration", role: .cancel) {
-                    model.cancelCalibration()
-                }
-            case .calibrated(let cal):
-                LabeledContent("Scale length",
-                               value: String(format: "%.1f\u{2033}", cal.scaleLength / 0.0254))
-                Toggle("Adjust overlay", isOn: $model.adjustingCalibration)
-                if model.adjustingCalibration {
-                    Text("Pinch-hold a cyan handle and drag it until the overlay "
-                         + "sits on your real frets. Release to lock.")
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                }
-                Button("Recalibrate") { model.startCalibration() }
-            }
-
-            Button("End Session", role: .destructive) {
-                Task { await dismissImmersiveSpace() }
-            }
-        }
-    }
-
     // MARK: - Helpers
 
     private static func formatted(_ interval: TimeInterval) -> String {

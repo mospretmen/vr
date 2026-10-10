@@ -8,10 +8,14 @@ final name TBD before App Store submission.
 
 - **Native visionOS** (Swift 6, SwiftUI, RealityKit, ARKit). WebXR was ruled
   out: no passthrough-camera access, no object tracking, no App Store listing.
-- **Manual two-point calibration** for v1 guitar targeting: user pinches at the
-  nut center, then the 12th-fret center. The 12th fret is half the scale
-  length, so this also recovers the instrument's true scale length. ARKit
-  object tracking is a possible later premium upgrade, not v1.
+- **On-guitar anchoring is SCRAPPED (owner decision 2026-10-10).** The
+  two-point calibration overlay never anchored reliably to the physical
+  guitar. The immersive mode is the floating Stage Board only; calibration
+  UI was removed from the control panel (FretboardCalibration math stays in
+  GuitarCore for a possible object-tracking future, but build no UI on it).
+- **The Harmony Compass is the main screen** (v25+): the app launches into
+  it and all navigation originates there (scales, voicings, alterations,
+  detail windows). The control panel is a slim utility window.
 - **MVP = practice/visualization mode** (scales, chords, triads on the
   overlay + 2D chart panel). Backing-track sync and live mic chord detection
   are later phases — see docs/ROADMAP.md.

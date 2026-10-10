@@ -188,6 +188,7 @@ struct FretboardDiagram: View {
     let labelStyle: LabelStyle
     var leftHanded = false
     var scale: Scale? = nil
+    var chord: Chord? = nil
     var connections: [[FretPosition]] = []
     var emphasizeAlterations = false
 
@@ -300,7 +301,8 @@ struct FretboardDiagram: View {
                 context.fill(circle, with: .color(OverlayPalette.color(
                     for: h, scale: scale, emphasizeAlterations: emphasizeAlterations)))
 
-                if let label = OverlayPalette.label(for: h, style: labelStyle, scale: scale) {
+                if let label = OverlayPalette.label(for: h, style: labelStyle,
+                                                    scale: scale, chord: chord) {
                     context.draw(
                         Text(label).font(.system(size: 9, weight: .bold)).foregroundStyle(.black),
                         at: CGPoint(x: cx, y: cy)

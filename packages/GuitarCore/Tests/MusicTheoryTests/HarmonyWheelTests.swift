@@ -317,6 +317,30 @@ struct ChordVoicingTests {
         }
     }
 
+    @Test func chordDegreeLabelsSpellTrueQualities() {
+        let dim7 = Chord(root: .c, quality: .diminished7)
+        #expect(dim7.degreeLabel(of: .c) == "R")
+        #expect(dim7.degreeLabel(of: .dSharp) == "♭3")
+        #expect(dim7.degreeLabel(of: .fSharp) == "♭5")
+        #expect(dim7.degreeLabel(of: .a) == "♭♭7")
+        let g7 = Chord(root: .g, quality: .dominant7)
+        #expect(g7.degreeLabel(of: .b) == "3")
+        #expect(g7.degreeLabel(of: .f) == "♭7")
+        // Extended chords match their tensions by pitch class (mod 12).
+        let maj9 = Chord(root: .c, quality: ChordQuality(
+            name: "maj9", symbol: "maj9", intervals: [0, 4, 7, 11, 14]))
+        #expect(maj9.tone(of: .d) == .extended)
+        #expect(maj9.degreeLabel(of: .d) == "9")
+        let m6 = Chord(root: .c, quality: ChordQuality(
+            name: "m6", symbol: "m6", intervals: [0, 3, 7, 9]))
+        #expect(m6.degreeLabel(of: .a) == "6")
+        let alt = Chord(root: .c, quality: ChordQuality(
+            name: "7alt", symbol: "7alt", intervals: [0, 4, 10, 13, 15, 20]))
+        #expect(alt.degreeLabel(of: .cSharp) == "♭9")
+        #expect(alt.degreeLabel(of: .dSharp) == "♯9")
+        #expect(alt.degreeLabel(of: .gSharp) == "♭13")
+    }
+
     @Test func alteredChordsGetPlayableGrips() {
         let board = FretboardModel()
         for base in [Chord(root: .c, quality: .major),

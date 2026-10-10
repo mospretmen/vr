@@ -55,7 +55,8 @@ enum OverlayPalette {
     static func label(
         for highlight: FretboardHighlight,
         style: LabelStyle,
-        scale: Scale? = nil
+        scale: Scale? = nil,
+        chord: Chord? = nil
     ) -> String? {
         switch style {
         case .none:
@@ -72,6 +73,12 @@ enum OverlayPalette {
                 }
                 return "\(d)"
             case .chordTone(let tone):
+                // With the chord known, print the true quality (♭3, ♭5,
+                // ♭♭7, ♯9…) exactly as a chord book would.
+                if let chord,
+                   let spelled = chord.degreeLabel(of: highlight.note.pitchClass) {
+                    return spelled
+                }
                 switch tone {
                 case .root: return "R"
                 case .third: return "3"

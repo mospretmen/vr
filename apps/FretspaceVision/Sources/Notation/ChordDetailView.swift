@@ -57,6 +57,7 @@ struct ChordDetailView: View {
                 stringCount: 6,
                 fretCount: 15,
                 labelStyle: labelStyle,
+                chord: chord,
                 connections: shapeConnections
             )
             // A real neck's proportions — never stretched by the window.

@@ -52,9 +52,52 @@ public struct Chord: Codable, Sendable, Hashable {
     }
 
     /// The chord tone role of `pitchClass` within this chord (root, third, fifth, seventh…), or nil.
+    /// Roles classify by interval VALUE, not stack position, so chords
+    /// without a 5th (7♯9…) and extended tensions all land correctly.
     public func tone(of pitchClass: PitchClass) -> ChordTone? {
-        guard let index = quality.intervals.firstIndex(of: root.semitones(to: pitchClass)) else { return nil }
-        return ChordTone(index: index)
+        guard let interval = matchedInterval(of: pitchClass) else { return nil }
+        switch interval {
+        case 0: return .root
+        case 2...5: return .third      // sus2/♭3/3/sus4
+        case 6...8: return .fifth      // ♭5/5/♯5
+        case 9...11: return .seventh   // 6 or ♭♭7/♭7/7
+        default: return .extended      // 9ths, 11ths, 13ths
+        }
+    }
+
+    /// The quality's interval that sounds this pitch class (extended
+    /// intervals above the octave match by pitch class), or nil.
+    private func matchedInterval(of pitchClass: PitchClass) -> Int? {
+        let distance = root.semitones(to: pitchClass)
+        return quality.intervals.first { ($0 % 12 + 12) % 12 == distance }
+    }
+
+    /// The spelled degree of `pitchClass` within this chord — the label a
+    /// chord book prints: R, ♭3, 3, ♭5, 5, ♯5, 6, ♭♭7, ♭7, 7, ♭9, 9, ♯9,
+    /// 11, ♯11, ♭13, 13 — or nil if the pitch class isn't a chord tone.
+    public func degreeLabel(of pitchClass: PitchClass) -> String? {
+        guard let interval = matchedInterval(of: pitchClass) else { return nil }
+        switch interval {
+        case 0: return "R"
+        case 2: return "2"
+        case 3: return "♭3"
+        case 4: return "3"
+        case 5: return "4"
+        case 6: return "♭5"
+        case 7: return "5"
+        case 8: return "♯5"
+        case 9: return quality.intervals.contains(6) ? "♭♭7" : "6"
+        case 10: return "♭7"
+        case 11: return "7"
+        case 13: return "♭9"
+        case 14: return "9"
+        case 15: return "♯9"
+        case 17: return "11"
+        case 18: return "♯11"
+        case 20: return "♭13"
+        case 21: return "13"
+        default: return nil
+        }
     }
 
     /// Chord symbol, e.g. "Am7", "F♯°".
