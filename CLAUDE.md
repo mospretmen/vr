@@ -78,6 +78,14 @@ final name TBD before App Store submission.
   apps/FretspaceVision. Keep derived data and build logs in the repo's
   gitignored `.derived-data/`; screenshots in `captures/`. Never write
   outside the working directory without asking the owner first.
+- **Device deploys via AppleScript — ALWAYS stop before run.** If a
+  previous debug session is still attached, `run` silently queues behind a
+  "Replace 'FretspaceVision'?" sheet and the status reads "not yet
+  started" forever (this shipped v1 three times while we thought v2/v3
+  were live). Sequence:
+  `tell application "Xcode" to stop workspace document "FretspaceVision.xcodeproj"`,
+  delay 2, then `run ...`. If status stays "not yet started", inspect for
+  sheets via System Events and click "Replace".
 - **CI builds the real app**: the "visionOS app (simulator build)" job
   compiles the full app against the visionOS SDK on every push — it is the
   required gate. `swiftc -parse` locally is only a fast pre-flight.
