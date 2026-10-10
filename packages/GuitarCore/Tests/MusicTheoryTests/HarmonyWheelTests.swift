@@ -89,6 +89,30 @@ struct HarmonyWheelTests {
             && $0.to.chord == Chord(root: .g, quality: .dominant7) })
     }
 
+    @Test func passingDiminishedWalksUpAHalfStep() {
+        // F → F♯°7 (the owner's chromatic walk: F, F♯°7, Gm, G♯°7...).
+        let fColumn = HarmonyWheel.nodes.first {
+            $0.ring == .majorKey && $0.chord.root == .f
+        }!.index
+        let fromF = HarmonyWheel.moves(from: HarmonyWheel.node(.majorKey, fColumn))
+        let fDim = fromF.first { $0.kind == .passingDim }
+        #expect(fDim?.to.chord == Chord(root: .fSharp, quality: .diminished7))
+
+        // Gm → G♯°7, and F♯°7 → Gm already exists to chain them.
+        let gmColumn = HarmonyWheel.nodes.first {
+            $0.ring == .relativeMinor && $0.chord.root == .g
+        }!.index
+        let fromGm = HarmonyWheel.moves(from: HarmonyWheel.node(.relativeMinor, gmColumn))
+        #expect(fromGm.first { $0.kind == .passingDim }?.to.chord
+                == Chord(root: .gSharp, quality: .diminished7))
+        let fSharpDimCol = HarmonyWheel.nodes.first {
+            $0.ring == .diminished && $0.chord.root == .fSharp
+        }!.index
+        let fromFSharpDim = HarmonyWheel.moves(from: HarmonyWheel.node(.diminished, fSharpDimCol))
+        #expect(fromFSharpDim.contains { $0.kind == .resolve
+            && $0.to.chord == Chord(root: .g, quality: .minor) })
+    }
+
     @Test func minorsRideTheRimToo() {
         // Am's rim neighbors are Em (sharpward) and Dm (flatward).
         let moves = HarmonyWheel.moves(from: HarmonyWheel.node(.relativeMinor, 0))

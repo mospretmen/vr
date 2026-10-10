@@ -20,6 +20,17 @@ struct HarmonyWheelView: View {
     /// arcs beyond, each with direction arrows.
     private var gradedMoves: [(move: HarmonyWheel.Move, depth: Int)] {
         var graded: [(HarmonyWheel.Move, Int)] = []
+        // Standing on a diminished chip, its whole family clique is depth 1:
+        // the four chips are the same chord, so all their links are "here".
+        var familyPromote = Set<String>()
+        if selected.ring == .diminished {
+            for offset in [0, 3, 6, 9] {
+                let member = HarmonyWheel.node(.diminished, (selected.index + offset) % 12)
+                for move in HarmonyWheel.moves(from: member) where move.kind == .dimFamily {
+                    familyPromote.insert(move.from.id + ">" + move.to.id)
+                }
+            }
+        }
         var seenEdges = Set<String>()
         var frontier: Set<HarmonyWheel.Node> = [selected]
         var visited: Set<HarmonyWheel.Node> = [selected]
@@ -30,12 +41,18 @@ struct HarmonyWheelView: View {
                 for move in HarmonyWheel.moves(from: node) {
                     let key = move.from.id + ">" + move.to.id
                     guard seenEdges.insert(key).inserted else { continue }
-                    graded.append((move, depth))
+                    graded.append((move, familyPromote.contains(key) ? 1 : depth))
                     if !visited.contains(move.to) { next.insert(move.to) }
                 }
             }
             visited.formUnion(next)
             frontier = next
+        }
+        for move in HarmonyWheel.allMoves {
+            let key = move.from.id + ">" + move.to.id
+            if familyPromote.contains(key), seenEdges.insert(key).inserted {
+                graded.append((move, 1))
+            }
         }
         return graded
     }
@@ -208,7 +225,7 @@ struct HarmonyWheelView: View {
         switch move.kind {
         case .dimFamily:
             return chipColor(for: move.from)
-        case .deepen:
+        case .deepen, .passingDim:
             return chipColor(for: move.to)
         default:
             return MoveStyle.style(for: move.kind).color
@@ -295,11 +312,11 @@ struct HarmonyWheelView: View {
             arrowhead(context: context, tip: g.end, angle: g.endAngle,
                       size: look.head, color: mainColor)
 
-            // Smaller counter-head in the lesser direction's own color.
-            if let back = info.backward {
-                let backColor = moveColor(back).opacity(look.opacity)
+            // Smaller counter-head in the SAME color as its stroke, so the
+            // pair reads as one coherent two-way line.
+            if info.backward != nil {
                 arrowhead(context: context, tip: g.start, angle: g.startBackAngle,
-                          size: look.head * 0.7, color: backColor)
+                          size: look.head * 0.7, color: mainColor)
             }
         }
     }
@@ -528,6 +545,7 @@ private struct MoveStyle {
         // draw time; these are only legend fallbacks.
         .init(kind: .deepen, color: .purple, label: "Dim paths"),
         .init(kind: .dimFamily, color: .purple, label: "Dim paths"),
+        .init(kind: .passingDim, color: .purple, label: "Dim paths"),
     ]
 
     /// Legend rows (deduped — fifths share a color, dim paths share a row).
