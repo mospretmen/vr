@@ -74,6 +74,55 @@ public enum HarmonyWheel {
         node(.diminished, index).chord.root.rawValue % 3
     }
 
+    // MARK: - Functional analysis
+
+    /// The node's roman-numeral function relative to a key center —
+    /// textbook style: diatonic chords plain (I, ii, V7), applied
+    /// dominants as V7/x, applied diminisheds as vii°7/x, borrowed roots
+    /// flat-prefixed (♭VII).
+    public static func romanNumeral(for node: Node, inKey tonic: PitchClass) -> String {
+        let interval = tonic.semitones(to: node.chord.root)
+        switch node.ring {
+        case .majorKey:
+            return majorNumeral(interval)
+        case .relativeMinor:
+            return minorNumeral(interval)
+        case .dominant:
+            if interval == 7 { return "V7" }
+            let target = tonic.semitones(to: node.chord.root.transposed(by: 5))
+            return "V7/" + degreeNumeral(target)
+        case .diminished:
+            if interval == 11 { return "vii°7" }
+            let target = tonic.semitones(to: node.chord.root.transposed(by: 1))
+            return "vii°7/" + degreeNumeral(target)
+        }
+    }
+
+    /// Numeral for the diatonic chord on a scale step (case shows quality);
+    /// non-diatonic steps are flat-prefixed uppercase.
+    private static func degreeNumeral(_ interval: Int) -> String {
+        switch interval {
+        case 0: "I"
+        case 2: "ii"
+        case 4: "iii"
+        case 5: "IV"
+        case 7: "V"
+        case 9: "vi"
+        case 11: "vii°"
+        default: majorNumeral(interval)
+        }
+    }
+
+    private static func majorNumeral(_ interval: Int) -> String {
+        ["I", "♭II", "II", "♭III", "III", "IV", "♭V", "V",
+         "♭VI", "VI", "♭VII", "VII"][((interval % 12) + 12) % 12]
+    }
+
+    private static func minorNumeral(_ interval: Int) -> String {
+        ["i", "♭ii", "ii", "♭iii", "iii", "iv", "♭v", "v",
+         "♭vi", "vi", "♭vii", "vii"][((interval % 12) + 12) % 12]
+    }
+
     // MARK: - Moves
 
     public enum MoveKind: String, Codable, Sendable, Hashable {

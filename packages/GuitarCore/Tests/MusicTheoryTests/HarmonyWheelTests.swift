@@ -172,6 +172,29 @@ struct HarmonyWheelTests {
         #expect(!HarmonyWheel.isTwoWay(dmToG7))
     }
 
+    @Test func romanNumeralsReadLikeATextbookInC() {
+        func numeral(_ ring: HarmonyWheel.Ring, _ root: PitchClass,
+                     _ quality: ChordQuality) -> String {
+            let node = HarmonyWheel.nodes.first {
+                $0.ring == ring && $0.chord == Chord(root: root, quality: quality)
+            }!
+            return HarmonyWheel.romanNumeral(for: node, inKey: .c)
+        }
+        #expect(numeral(.majorKey, .c, .major) == "I")
+        #expect(numeral(.majorKey, .f, .major) == "IV")
+        #expect(numeral(.majorKey, .aSharp, .major) == "♭VII")
+        #expect(numeral(.relativeMinor, .a, .minor) == "vi")
+        #expect(numeral(.relativeMinor, .d, .minor) == "ii")
+        #expect(numeral(.relativeMinor, .g, .minor) == "v")
+        #expect(numeral(.dominant, .g, .dominant7) == "V7")
+        #expect(numeral(.dominant, .e, .dominant7) == "V7/vi")
+        #expect(numeral(.dominant, .d, .dominant7) == "V7/V")
+        #expect(numeral(.dominant, .c, .dominant7) == "V7/IV")
+        #expect(numeral(.diminished, .b, .diminished7) == "vii°7")
+        #expect(numeral(.diminished, .gSharp, .diminished7) == "vii°7/vi")
+        #expect(numeral(.diminished, .fSharp, .diminished7) == "vii°7/V")
+    }
+
     @Test func wheelIsFullyConnected() {
         var visited: Set<HarmonyWheel.Node> = []
         var frontier = [HarmonyWheel.node(.majorKey, 0)]

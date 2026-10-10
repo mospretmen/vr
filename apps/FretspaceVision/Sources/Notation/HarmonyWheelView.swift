@@ -11,6 +11,8 @@ struct HarmonyWheelView: View {
     /// The column you harmonically live in — its neighborhood (which holds
     /// all its diatonic chords) is haloed. Modulation = moving this.
     @State private var keyCenter: Int = 0
+    /// Tap a chord, hear the chord — same synth as the backing pads.
+    @State private var pads = ChordPadEngine()
 
     private var moves: [HarmonyWheel.Move] { HarmonyWheel.moves(from: selected) }
 
@@ -63,6 +65,8 @@ struct HarmonyWheelView: View {
             GeometryReader { proxy in
                 wheel(size: proxy.size)
             }
+            HarmonyContextCard(selected: selected, moves: moves,
+                               moveColor: { self.moveColor($0) })
             breadcrumb
         }
         .padding(20)
@@ -161,6 +165,7 @@ struct HarmonyWheelView: View {
         guard let node = layout.node(at: point) else { return }
         let isDestination = moves.contains { $0.to == node }
         selected = node
+        pads.play(node.chord, durationMs: 1400)
         if isDestination {
             path.append(node)
         } else {
@@ -459,6 +464,24 @@ struct HarmonyWheelView: View {
                     .foregroundStyle(.white.opacity(
                         isSelected || isDestination ? 1.0 : 0.75)),
                 at: position
+            )
+
+            // Roman-numeral function relative to the key center, floated
+            // just outside the chip along its radial.
+            let numeral = HarmonyWheel.romanNumeral(
+                for: node, inKey: HarmonyWheel.spokes[keyCenter])
+            let dx = position.x - layout.center.x
+            let dy = position.y - layout.center.y
+            let dist = max(hypot(dx, dy), 0.001)
+            let numeralPos = CGPoint(
+                x: position.x + dx / dist * (radius + 11),
+                y: position.y + dy / dist * (radius + 11))
+            let isDiatonic = !numeral.contains("/") && !numeral.contains("♭")
+            context.draw(
+                Text(numeral)
+                    .font(.system(size: 11, weight: isDiatonic ? .bold : .regular))
+                    .foregroundStyle(.white.opacity(isDiatonic ? 0.85 : 0.45)),
+                at: numeralPos
             )
         }
     }
