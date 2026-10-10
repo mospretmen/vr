@@ -290,6 +290,8 @@ struct ControlPanelView: View {
 
     private var panelFooterSection: some View {
         Section {
+            Button("Open Harmony Compass") { openWindow(id: SceneID.harmony) }
+                .font(.headline)
             Button("Open Notation Panel") { openWindow(id: SceneID.notation) }
         } footer: {
             let summary = model.practiceLog.summary

@@ -17,6 +17,11 @@ struct FretspaceApp: App {
         }
         .defaultSize(width: 700, height: 420)
 
+        WindowGroup(id: SceneID.harmony) {
+            HarmonyWheelView()
+        }
+        .defaultSize(width: 780, height: 840)
+
         ImmersiveSpace(id: SceneID.immersive) {
             ImmersiveView()
                 .environment(model)
@@ -28,5 +33,6 @@ struct FretspaceApp: App {
 enum SceneID {
     static let controlPanel = "controlPanel"
     static let notation = "notation"
+    static let harmony = "harmonyWheel"
     static let immersive = "fretboardSpace"
 }
