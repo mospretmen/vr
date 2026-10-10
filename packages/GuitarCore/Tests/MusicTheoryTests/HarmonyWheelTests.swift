@@ -75,6 +75,20 @@ struct HarmonyWheelTests {
         }
     }
 
+    @Test func minorsJumpIntoTheirTwoFiveDominant() {
+        // Am is the ii of G: Am → D7. Dm is the ii of C: Dm → G7.
+        let fromAm = HarmonyWheel.moves(from: HarmonyWheel.node(.relativeMinor, 0))
+        #expect(fromAm.contains { $0.kind == .twoFive
+            && $0.to.chord == Chord(root: .d, quality: .dominant7) })
+
+        let dmColumn = HarmonyWheel.nodes.first {
+            $0.ring == .relativeMinor && $0.chord.root == .d
+        }!.index
+        let fromDm = HarmonyWheel.moves(from: HarmonyWheel.node(.relativeMinor, dmColumn))
+        #expect(fromDm.contains { $0.kind == .twoFive
+            && $0.to.chord == Chord(root: .g, quality: .dominant7) })
+    }
+
     @Test func minorsRideTheRimToo() {
         // Am's rim neighbors are Em (sharpward) and Dm (flatward).
         let moves = HarmonyWheel.moves(from: HarmonyWheel.node(.relativeMinor, 0))

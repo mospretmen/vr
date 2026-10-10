@@ -11,6 +11,32 @@ struct HarmonyWheelView: View {
 
     private var moves: [HarmonyWheel.Move] { HarmonyWheel.moves(from: selected) }
 
+    /// The onward web: moves graded by distance from the selected chord.
+    /// Depth 1 blazes, depth 2 glows, depth 3 whispers — so standing on C
+    /// you see C→E7, then E7→Am / Am→E7 / E7→G♯°7, then the dim family
+    /// arcs beyond, each with direction arrows.
+    private var gradedMoves: [(move: HarmonyWheel.Move, depth: Int)] {
+        var graded: [(HarmonyWheel.Move, Int)] = []
+        var seenEdges = Set<String>()
+        var frontier: Set<HarmonyWheel.Node> = [selected]
+        var visited: Set<HarmonyWheel.Node> = [selected]
+
+        for depth in 1...3 {
+            var next: Set<HarmonyWheel.Node> = []
+            for node in frontier {
+                for move in HarmonyWheel.moves(from: node) {
+                    let key = move.from.id + ">" + move.to.id
+                    guard seenEdges.insert(key).inserted else { continue }
+                    graded.append((move, depth))
+                    if !visited.contains(move.to) { next.insert(move.to) }
+                }
+            }
+            visited.formUnion(next)
+            frontier = next
+        }
+        return graded
+    }
+
     var body: some View {
         VStack(spacing: 12) {
             header
@@ -120,13 +146,20 @@ struct HarmonyWheelView: View {
         }
     }
 
-    /// The selected chord's departures, blazing on top with arrowheads.
+    /// The onward web from the selected chord: deeper hops draw first so
+    /// nearer futures sit on top; every highlighted edge carries an arrow.
     private func drawActiveMoves(context: GraphicsContext, layout: WheelLayout) {
-        for move in moves {
+        let appearance: [Int: (opacity: Double, width: CGFloat, head: CGFloat)] = [
+            1: (0.95, 3.0, 11),
+            2: (0.55, 2.0, 8),
+            3: (0.28, 1.5, 6),
+        ]
+        for (move, depth) in gradedMoves.sorted(by: { $0.depth > $1.depth }) {
+            guard let look = appearance[depth] else { continue }
             let style = MoveStyle.style(for: move.kind)
             let path = curve(from: move.from, to: move.to, layout: layout)
-            context.stroke(path, with: .color(style.color.opacity(0.95)),
-                           style: StrokeStyle(lineWidth: 3, lineCap: .round))
+            context.stroke(path, with: .color(style.color.opacity(look.opacity)),
+                           style: StrokeStyle(lineWidth: look.width, lineCap: .round))
 
             let to = layout.position(of: move.to)
             let control = controlPoint(from: layout.position(of: move.from),
@@ -134,12 +167,12 @@ struct HarmonyWheelView: View {
             let angle = atan2(to.y - control.y, to.x - control.x)
             var head = Path()
             head.move(to: to)
-            head.addLine(to: CGPoint(x: to.x - 11 * cos(angle - 0.4),
-                                     y: to.y - 11 * sin(angle - 0.4)))
-            head.addLine(to: CGPoint(x: to.x - 11 * cos(angle + 0.4),
-                                     y: to.y - 11 * sin(angle + 0.4)))
+            head.addLine(to: CGPoint(x: to.x - look.head * cos(angle - 0.4),
+                                     y: to.y - look.head * sin(angle - 0.4)))
+            head.addLine(to: CGPoint(x: to.x - look.head * cos(angle + 0.4),
+                                     y: to.y - look.head * sin(angle + 0.4)))
             head.closeSubpath()
-            context.fill(head, with: .color(style.color))
+            context.fill(head, with: .color(style.color.opacity(look.opacity)))
         }
     }
 
@@ -287,6 +320,7 @@ private struct MoveStyle {
         .init(kind: .resolve, color: .green, label: "Resolve"),
         .init(kind: .toDominant, color: .orange, label: "To V7"),
         .init(kind: .relative, color: .yellow, label: "Relative"),
+        .init(kind: .twoFive, color: .mint, label: "ii–V"),
         .init(kind: .fifthSharpward, color: .blue, label: "Fifth ♯"),
         .init(kind: .fifthFlatward, color: .teal, label: "Fifth ♭"),
         .init(kind: .deepen, color: .purple, label: "V7 → dim"),

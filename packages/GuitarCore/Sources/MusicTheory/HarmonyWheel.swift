@@ -72,6 +72,7 @@ public enum HarmonyWheel {
         case fifthSharpward     // along the outer rim, clockwise
         case fifthFlatward      // along the outer rim, counterclockwise
         case relative           // major ↔ relative minor (same column, adjacent)
+        case twoFive            // minor as ii → the V it precedes (Dm → G7)
         case deepen             // dominant → its own 7♭9 diminished (straight down)
         case dimFamily          // dim ↔ dim three columns away (same four notes)
     }
@@ -106,6 +107,7 @@ public enum HarmonyWheel {
         case .relativeMinor:
             add(.relative, .majorKey, i)               // Am → C
             add(.toDominant, .dominant, i)             // Am → E7 (straight down)
+            add(.twoFive, .dominant, i + 10)           // Am as ii → D7 (ii–V)
             add(.fifthSharpward, .relativeMinor, i + 1)
             add(.fifthFlatward, .relativeMinor, i + 11)
 
