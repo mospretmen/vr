@@ -712,6 +712,42 @@ struct PublishedShapeTests {
     }
 }
 
+@Suite("Interval exercises")
+struct IntervalExerciseTests {
+    @Test func thirdsPairEveryDegreeWithItsThird() {
+        let scale = Scale(root: .c, type: .major)
+        let model = FretboardModel()
+        let drill = ExerciseGenerator.scaleInIntervals(
+            scale: scale, box: 7, intervalDegrees: 3, on: model)
+        #expect(!drill.steps.isEmpty)
+        // Pairs: every odd step sits a diatonic third above its partner.
+        let pairs = stride(from: 0, to: drill.steps.count - 1, by: 2).map {
+            (drill.steps[$0], drill.steps[$0 + 1])
+        }
+        for (a, b) in pairs.prefix(pairs.count / 2) { // ascending half
+            let up = (b.note.midi - a.note.midi + 24) % 24
+            #expect(up == 3 || up == 4, "a diatonic third is 3–4 semitones, got \(up)")
+        }
+        // Every sounded note belongs to the scale.
+        for step in drill.steps {
+            #expect(scale.contains(step.note.pitchClass))
+        }
+    }
+
+    @Test func sixthsAreWideAndDiatonic() {
+        let drill = ExerciseGenerator.scaleInIntervals(
+            scale: Scale(root: .g, type: .major), box: 2,
+            intervalDegrees: 6, on: FretboardModel())
+        let pairs = stride(from: 0, to: drill.steps.count - 1, by: 2).map {
+            (drill.steps[$0], drill.steps[$0 + 1])
+        }
+        for (a, b) in pairs.prefix(3) {
+            let up = b.note.midi - a.note.midi
+            #expect(up == 8 || up == 9, "a diatonic sixth is 8–9 semitones, got \(up)")
+        }
+    }
+}
+
 @Suite("Barry Harris 6th-diminished")
 struct SixthDiminishedTests {
     @Test func ladderAlternatesSixAndDiminishedUpTheScale() {

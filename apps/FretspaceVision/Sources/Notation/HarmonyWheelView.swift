@@ -130,11 +130,6 @@ struct HarmonyWheelView: View {
     /// Everything that used to live on the main menu, one tap away.
     private var utilityBar: some View {
         HStack(spacing: 10) {
-            Button {
-                openWindow(id: SceneID.controlPanel)
-            } label: {
-                Label("Controls", systemImage: "slider.horizontal.3")
-            }
         }
         .buttonStyle(.bordered)
         .font(.callout)

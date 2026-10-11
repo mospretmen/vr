@@ -20,8 +20,6 @@ struct ControlPanelView: View {
                 // panel keeps only what the compass can't do — the physical
                 // guitar (AR overlay, calibration, handedness, tuning), the
                 // stage board, and listening.
-                stageSection
-                listenSection
                 panelFooterSection
             }
             .navigationTitle("Fretspace")

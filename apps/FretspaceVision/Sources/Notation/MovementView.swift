@@ -21,8 +21,17 @@ struct MovementView: View {
     }
 
     private func voicing(for step: SixthDiminished.Step) -> SeventhVoicing? {
-        SeventhVoicings.drop2(of: step.chord, strings: strings, on: board)
-            .first { $0.steps.first?.note.pitchClass == step.bass }
+        // Prefer the inversion with the rung's bass; widen the hand span
+        // before giving up, and never show an empty board.
+        for span in [5, 6, 7] {
+            let shapes = SeventhVoicings.drop2(of: step.chord, strings: strings,
+                                               on: board, maxSpan: span)
+            if let match = shapes.first(where: { $0.steps.first?.note.pitchClass == step.bass }) {
+                return match
+            }
+        }
+        return SeventhVoicings.drop2(of: step.chord, strings: strings,
+                                     on: board, maxSpan: 7).first
     }
 
     private func rungLabel(_ step: SixthDiminished.Step) -> String {
@@ -101,8 +110,7 @@ struct MovementView: View {
                 stringCount: 6,
                 fretCount: 15,
                 labelStyle: .degrees,
-                chord: step.chord,
-                connections: shape.map { [$0.positions] } ?? []
+                chord: step.chord
             )
             .aspectRatio(5.6, contentMode: .fit)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)

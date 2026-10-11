@@ -72,6 +72,20 @@ struct ScaleDetailView: View {
                 Toggle("Guide tones", isOn: $guideTones)
                     .toggleStyle(.button)
                     .font(.caption)
+                Divider().frame(height: 18)
+                Text("Practice in").font(.caption).foregroundStyle(.secondary)
+                ForEach([3, 4, 5, 6, 7], id: \.self) { interval in
+                    Button("\(interval)ths") {
+                        let drill = ExerciseGenerator.scaleInIntervals(
+                            scale: scale,
+                            box: board.boxStartFrets(for: scale).first ?? 5,
+                            intervalDegrees: interval,
+                            on: board)
+                        pads.playRun(drill.steps.map(\.note), noteMs: 190)
+                    }
+                    .font(.caption)
+                    .buttonStyle(.bordered)
+                }
                 Spacer()
             }
 

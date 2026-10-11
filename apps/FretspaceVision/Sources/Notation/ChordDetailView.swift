@@ -248,10 +248,10 @@ struct ChordDetailView: View {
     }
 
     private var shapeConnections: [[FretPosition]] {
-        switch mode {
-        case .grips: return []
-        case .shells, .triads, .drop2: return currentInversions.map(\.shape)
-        }
+        // Owner call: the tone-to-tone lines read as fingering advice they
+        // aren't. Markers + role labels carry the shape; lines retired
+        // until a validated fingering model earns them back.
+        []
     }
 
     /// Guitarist numbering: string 6 is the low E.

@@ -40,6 +40,38 @@ public enum ExerciseGenerator {
         )
     }
 
+    /// The classic interval drill: walk the scale in diatonic 3rds, 4ths,
+    /// 5ths, 6ths or 7ths — degree 1 with degree 1+n, then 2 with 2+n, up
+    /// the box and back down. The workhorse pattern vocabulary.
+    public static func scaleInIntervals(
+        scale: Scale,
+        box startFret: Int,
+        intervalDegrees: Int,          // 3 = thirds, 4 = fourths … 7 = sevenths
+        span: Int = 5,
+        on model: FretboardModel
+    ) -> Exercise {
+        let box = model.positionBox(for: scale, startingAt: startFret, span: span)
+            .sorted {
+                ($0.position.string, $0.position.fret) < ($1.position.string, $1.position.fret)
+            }
+        let gap = intervalDegrees - 1
+        guard box.count > gap else {
+            return Exercise(name: "\(scale.name) in \(intervalDegrees)ths", steps: [])
+        }
+        var ascending: [ExerciseStep] = []
+        for i in 0..<(box.count - gap) {
+            ascending.append(ExerciseStep(position: box[i].position, note: box[i].note))
+            ascending.append(ExerciseStep(position: box[i + gap].position,
+                                          note: box[i + gap].note))
+        }
+        let descending = ascending.dropLast(2).reversed()
+        let names = [3: "3rds", 4: "4ths", 5: "5ths", 6: "6ths", 7: "7ths"]
+        return Exercise(
+            name: "\(scale.name) in \(names[intervalDegrees] ?? "steps") — fret \(startFret)",
+            steps: ascending + Array(descending)
+        )
+    }
+
     /// The three triad inversions of a chord on a set of three adjacent
     /// strings, each voiced at its lowest playable spot, ordered up the neck.
     /// The classic "triads across the neck" drill.
