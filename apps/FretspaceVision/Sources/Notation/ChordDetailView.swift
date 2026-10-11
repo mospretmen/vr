@@ -6,6 +6,25 @@ import MusicTheory
 /// shape drawn on the fretboard and arpeggiable bottom to top.
 struct ChordDetailView: View {
     let chord: Chord
+    @Environment(\.openWindow) private var openWindow
+
+    /// The 6-chord whose Barry Harris ladder this chord belongs to, if any.
+    private var movementSixChord: Chord? {
+        let intervals = chord.quality.intervals
+        if intervals.starts(with: [0, 4, 7]) || intervals == [0, 4, 7, 9] {
+            return Chord(root: chord.root,
+                         quality: ChordQuality(name: "6", symbol: "6", intervals: [0, 4, 7, 9]))
+        }
+        if intervals.starts(with: [0, 3, 7]) {
+            return Chord(root: chord.root,
+                         quality: ChordQuality(name: "m6", symbol: "m6", intervals: [0, 3, 7, 9]))
+        }
+        if chord.quality == .diminished7 {
+            return Chord(root: chord.root.transposed(by: 1),
+                         quality: ChordQuality(name: "6", symbol: "6", intervals: [0, 4, 7, 9]))
+        }
+        return nil
+    }
 
     private enum Mode: String, CaseIterable, Identifiable {
         case grips = "Grips"
@@ -84,6 +103,14 @@ struct ChordDetailView: View {
             }
             .buttonStyle(.borderedProminent)
             Spacer()
+            if let six = movementSixChord {
+                Button {
+                    openWindow(id: SceneID.movement, value: six)
+                } label: {
+                    Label("Movement", systemImage: "arrow.up.right.circle")
+                }
+                .buttonStyle(.bordered)
+            }
             Toggle("Guide tones", isOn: $guideTones)
                 .toggleStyle(.button)
                 .font(.caption)

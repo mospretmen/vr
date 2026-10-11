@@ -680,6 +680,22 @@ struct PublishedShapeTests {
         }
     }
 
+    @Test func drop2OnStandardSeventhsAlwaysKeepsTheFifth() {
+        // The 5th may only vanish when the QUALITY itself replaces it
+        // (7♯9, 7♭13); on plain sevenths every drop-2 shape carries it.
+        let board = FretboardModel()
+        for quality in [ChordQuality.major7, .dominant7, .minor7, .minor7b5, .diminished7] {
+            let chord = Chord(root: .c, quality: quality)
+            let fifth = chord.root.transposed(by: quality.intervals[2])
+            for set in SeventhVoicings.stringSets {
+                for v in SeventhVoicings.drop2(of: chord, strings: set, on: board) {
+                    #expect(v.steps.map(\.note.pitchClass).contains(fifth),
+                            "\(chord.symbol) \(v.inversion.label) on \(set)")
+                }
+            }
+        }
+    }
+
     @Test func closedTriadsMatchTheClassicTopStringShapes() {
         let c = Chord(root: .c, quality: .major)
         let board = FretboardModel()

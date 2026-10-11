@@ -53,6 +53,19 @@ struct FretspaceApp: App {
             return WindowPlacement()
         }
 
+        WindowGroup(id: SceneID.movement, for: Chord.self) { $chord in
+            if let chord {
+                MovementView(chord: chord)
+            }
+        }
+        .defaultSize(width: 1040, height: 560)
+        .defaultWindowPlacement { _, context in
+            if let compass = context.windows.first(where: { $0.id == SceneID.harmony }) {
+                return WindowPlacement(.trailing(compass))
+            }
+            return WindowPlacement()
+        }
+
         ImmersiveSpace(id: SceneID.immersive) {
             ImmersiveView()
                 .environment(model)
@@ -68,5 +81,6 @@ enum SceneID {
     static let scaleDetail = "scaleDetail"
     static let chordDetail = "chordDetail"
     static let compass3D = "compass3D"
+    static let movement = "movement"
     static let immersive = "fretboardSpace"
 }

@@ -284,9 +284,11 @@ struct FretboardDiagram: View {
             // Shape connections (triad voicings) under the markers.
             for group in connections where group.allSatisfy({ $0.fret <= fretCount }) {
                 guard group.count > 1 else { continue }
+                // Always walk string order — a shape's line never zigzags.
+                let ordered = group.sorted { $0.string < $1.string }
                 var path = Path()
-                path.move(to: center(group[0]))
-                for position in group.dropFirst() {
+                path.move(to: center(ordered[0]))
+                for position in ordered.dropFirst() {
                     path.addLine(to: center(position))
                 }
                 context.stroke(path, with: .color(.white.opacity(0.5)),
