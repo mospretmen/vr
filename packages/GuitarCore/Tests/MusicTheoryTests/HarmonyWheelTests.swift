@@ -428,6 +428,24 @@ struct ChordVoicingTests {
         #expect(amSubs.map(\.to.chord) == [Chord(root: .aSharp, quality: .dominant7)])
     }
 
+    @Test func dominantsSpellByFunctionInTheKeyFrame() {
+        // In C: the backdoor is B♭7, the sub D♭7; sharp-side stays sharp.
+        let c = PitchClass.c
+        #expect(HarmonyWheel.functionalLabel(
+            for: HarmonyWheel.node(.dominant, 6), inKeyFrame: c) == "B♭7")
+        #expect(HarmonyWheel.functionalLabel(
+            for: HarmonyWheel.node(.dominant, 3), inKeyFrame: c) == "D♭7")
+        #expect(HarmonyWheel.functionalLabel(
+            for: HarmonyWheel.node(.dominant, 0), inKeyFrame: c) == "E7")
+        #expect(HarmonyWheel.functionalLabel(
+            for: HarmonyWheel.node(.dominant, 9), inKeyFrame: c) == "G7")
+        // Modulate to E: the same col-6 chip is now the IV7 — A♯?? No: A♯
+        // is the ♭5 degree of E, so it spells flat there too (B♭7); but
+        // col 1's dominant (B7) is E's V7 and stays sharp.
+        #expect(HarmonyWheel.functionalLabel(
+            for: HarmonyWheel.node(.dominant, 1), inKeyFrame: .e) == "B7")
+    }
+
     @Test func theBackdoorDominantSlipsHome() {
         // C ⇄ B♭7: the ♭VII7 sits straight across the wheel and resolves
         // up a whole step into the key.

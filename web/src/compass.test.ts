@@ -4,6 +4,7 @@ import { describe as suite, expect, it } from "vitest";
 import {
   ALL_MOVES,
   chordPitchClasses,
+  functionalLabel,
   gradedPairs,
   isTwoWay,
   movesFrom,
@@ -99,6 +100,12 @@ suite("compass graph parity", () => {
     const home = movesFrom(out[0].to).filter((m) => m.kind === "backdoor");
     expect(home.map((m) => m.to.id)).toEqual([c.id]);
     expect(isTwoWay(out[0])).toBe(true);
+  });
+
+  it("dominants spell by function in the key frame", () => {
+    expect(functionalLabel(node("dominant", 6), 0)).toBe("B♭7");
+    expect(functionalLabel(node("dominant", 3), 0)).toBe("D♭7");
+    expect(functionalLabel(node("dominant", 0), 0)).toBe("E7");
   });
 
   it("chord pads sound the right tones", () => {

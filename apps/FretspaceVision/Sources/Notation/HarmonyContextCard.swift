@@ -6,6 +6,7 @@ import MusicTheory
 struct HarmonyContextCard: View {
     let selected: HarmonyWheel.Node
     let moves: [HarmonyWheel.Move]
+    let frameTonic: PitchClass
     let moveColor: (HarmonyWheel.Move) -> Color
     let onSelectScale: (Scale) -> Void
     let onShowVoicings: () -> Void
@@ -20,10 +21,12 @@ struct HarmonyContextCard: View {
             // The staff and title follow a tapped alteration, so you see
             // exactly the stack you're hearing.
             MiniStaff(chord: pickedAlteration?.chord ?? selected.chord,
-                      label: pickedAlteration?.label ?? selected.label)
+                      label: pickedAlteration?.label
+                          ?? HarmonyWheel.functionalLabel(for: selected, inKeyFrame: frameTonic))
                 .frame(height: 92)
                 .frame(maxWidth: .infinity)
-            Text(pickedAlteration?.label ?? selected.label)
+            Text(pickedAlteration?.label
+                 ?? HarmonyWheel.functionalLabel(for: selected, inKeyFrame: frameTonic))
                 .font(.title2.bold())
                 .frame(maxWidth: .infinity)
             Divider()
@@ -58,7 +61,9 @@ struct HarmonyContextCard: View {
                         } label: {
                             HStack(alignment: .firstTextBaseline, spacing: 7) {
                                 Circle().fill(moveColor(move)).frame(width: 9, height: 9)
-                                Text(Self.describe(move))
+                                Text(Self.describe(move,
+                                    toLabel: HarmonyWheel.functionalLabel(
+                                        for: move.to, inKeyFrame: frameTonic)))
                                     .font(.callout)
                                     .foregroundStyle(.primary.opacity(0.9))
                                     .fixedSize(horizontal: false, vertical: true)
@@ -69,8 +74,10 @@ struct HarmonyContextCard: View {
                         if expandedMove == index {
                             VoiceLeadingDetail(from: selected.chord,
                                                to: move.to.chord,
-                                               fromLabel: selected.label,
-                                               toLabel: move.to.label)
+                                               fromLabel: HarmonyWheel.functionalLabel(
+                                                   for: selected, inKeyFrame: frameTonic),
+                                               toLabel: HarmonyWheel.functionalLabel(
+                                                   for: move.to, inKeyFrame: frameTonic))
                         }
                     }
                 }
@@ -89,8 +96,8 @@ struct HarmonyContextCard: View {
     }
 
     /// Plain-English meaning of a pathway, for the player not the theorist.
-    static func describe(_ move: HarmonyWheel.Move) -> String {
-        let to = move.to.label
+    static func describe(_ move: HarmonyWheel.Move, toLabel: String? = nil) -> String {
+        let to = toLabel ?? move.to.label
         switch move.kind {
         case .resolve:
             return "→ \(to): resolve — the tension releases home."

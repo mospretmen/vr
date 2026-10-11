@@ -98,6 +98,19 @@ public enum HarmonyWheel {
         }
     }
 
+    /// A node's label spelled for the CURRENT key frame: dominants (and
+    /// their roots) on flat scale degrees spell flat — in C, the backdoor
+    /// is B♭7 and the sub is D♭7, never A♯7/C♯7 — while sharp-side
+    /// dominants (E7, B7) stay sharp. Keys and minors keep their
+    /// conventional column spelling.
+    public static func functionalLabel(for node: Node, inKeyFrame tonic: PitchClass) -> String {
+        guard node.ring == .dominant else { return node.label }
+        let interval = tonic.semitones(to: node.chord.root)
+        let flatDegrees: Set<Int> = [1, 3, 6, 8, 10]
+        let spelling: PitchClass.Spelling = flatDegrees.contains(interval) ? .flats : .sharps
+        return node.chord.root.name(spelling) + "7"
+    }
+
     /// Functional numerals when a MINOR key is the reference frame —
     /// "stand on Cm and the wheel reads in C minor": Cm → i, G7 → V7,
     /// E♭ → III, A♭ → VI, D♭ → ♭II (the Neapolitan).

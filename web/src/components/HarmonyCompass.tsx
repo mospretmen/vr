@@ -7,6 +7,7 @@ import {
   ALL_NODES,
   chordPitchClasses,
   describe,
+  functionalLabel,
   gradedPairs,
   movesFrom,
   node,
@@ -154,6 +155,7 @@ function playChord(ctx: AudioContext, n: CompassNode) {
 
 export function HarmonyCompass() {
   const [selected, setSelected] = useState<CompassNode>(() => node("majorKey", 0));
+  const [frameTonic, setFrameTonic] = useState(0);
   const audio = useRef<AudioContext | null>(null);
   const lattice = useMemo(latticePairs, []);
   const moves = useMemo(() => movesFrom(selected), [selected]);
@@ -169,6 +171,7 @@ export function HarmonyCompass() {
 
   const tap = (n: CompassNode) => {
     setSelected(n);
+    if (n.ring === "majorKey" || n.ring === "relativeMinor") setFrameTonic(n.root);
     audio.current ??= new AudioContext();
     playChord(audio.current, n);
   };
@@ -306,7 +309,7 @@ export function HarmonyCompass() {
                 fontSize={n.ring === "diminished" ? 9.5 : 12}
                 fontWeight={600}
               >
-                {n.label}
+                {functionalLabel(n, frameTonic)}
               </text>
             </g>
           );

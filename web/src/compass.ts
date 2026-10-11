@@ -273,3 +273,13 @@ export function gradedPairs(start: CompassNode): GradedPair[] {
     twoWay: isTwoWay(move),
   }));
 }
+
+
+/** A node's label spelled for the current key frame: dominants on flat
+ *  scale degrees spell flat (in C the backdoor is B♭7, the sub D♭7). */
+export function functionalLabel(n: CompassNode, frameTonic: number): string {
+  if (n.ring !== "dominant") return n.label;
+  const interval = (((n.root - frameTonic) % 12) + 12) % 12;
+  const flat = [1, 3, 6, 8, 10].includes(interval);
+  return name(n.root, flat) + "7";
+}

@@ -26,18 +26,6 @@ struct FretspaceApp: App {
         }
         .defaultSize(width: 700, height: 420)
 
-        WindowGroup(id: SceneID.compass3D) {
-            Compass3DView()
-        }
-        .windowStyle(.volumetric)
-        .defaultSize(width: 0.75, height: 0.75, depth: 0.45, in: .meters)
-        .defaultWindowPlacement { _, context in
-            if let compass = context.windows.first(where: { $0.id == SceneID.harmony }) {
-                return WindowPlacement(.trailing(compass))
-            }
-            return WindowPlacement()
-        }
-
         WindowGroup(id: SceneID.scaleDetail, for: Scale.self) { $scale in
             if let scale {
                 ScaleDetailView(scale: scale)

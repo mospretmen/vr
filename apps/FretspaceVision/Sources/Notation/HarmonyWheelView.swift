@@ -20,9 +20,6 @@ struct HarmonyWheelView: View {
             openWindow(id: SceneID.chordDetail,
                        value: Chord(root: .g, quality: .dominant7))
         }
-        if mode == "3d" || mode == "all" {
-            openWindow(id: SceneID.compass3D)
-        }
     }
     @State private var selected: HarmonyWheel.Node = HarmonyWheel.node(.majorKey, 0)
     @State private var path: [HarmonyWheel.Node] = [HarmonyWheel.node(.majorKey, 0)]
@@ -30,6 +27,12 @@ struct HarmonyWheelView: View {
     /// all its diatonic chords) is haloed. Modulation = moving this.
     @State private var keyCenter: Int = 0
     @State private var keyIsMinor = false
+
+    /// The tonic the wheel is currently read from — spelling follows it.
+    private var frameTonic: PitchClass {
+        let major = HarmonyWheel.spokes[keyCenter]
+        return keyIsMinor ? major.transposed(by: -3) : major
+    }
     /// Pathway families switched off via the tappable legend.
     @State private var hiddenKinds: Set<HarmonyWheel.MoveKind> = []
     /// Tap a chord, hear the chord — same synth as the backing pads.
@@ -89,6 +92,7 @@ struct HarmonyWheelView: View {
                     wheel(size: proxy.size)
                 }
                 HarmonyContextCard(selected: selected, moves: moves,
+                                   frameTonic: frameTonic,
                                    moveColor: { self.moveColor($0) },
                                    onSelectScale: { scale in
                                        openWindow(id: SceneID.scaleDetail, value: scale)
@@ -126,11 +130,6 @@ struct HarmonyWheelView: View {
     /// Everything that used to live on the main menu, one tap away.
     private var utilityBar: some View {
         HStack(spacing: 10) {
-            Button {
-                openWindow(id: SceneID.compass3D)
-            } label: {
-                Label("3D", systemImage: "cube.transparent")
-            }
             Button {
                 openWindow(id: SceneID.controlPanel)
             } label: {
@@ -556,7 +555,7 @@ struct HarmonyWheelView: View {
                                with: .color(.white.opacity(0.9)), lineWidth: 2)
             }
             context.draw(
-                Text(node.label)
+                Text(HarmonyWheel.functionalLabel(for: node, inKeyFrame: frameTonic))
                     .font(.system(size: radius * 0.62,
                                   weight: (isSelected || isDestination) ? .bold : .medium,
                                   design: .rounded))
