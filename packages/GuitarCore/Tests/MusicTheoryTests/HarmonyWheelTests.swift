@@ -637,6 +637,19 @@ struct PublishedShapeTests {
         }
     }
 
+    @Test func noShapeMixesOpenStringsWithHighFrets() {
+        let board = FretboardModel()
+        for node in HarmonyWheel.nodes {
+            for set in TriadVoicings.stringSets {
+                for v in TriadVoicings.inversions(of: node.chord, strings: set, on: board) {
+                    let frets = v.positions.map(\.fret)
+                    #expect(frets.max()! - frets.min()! <= 4,
+                            "\(node.chord.symbol) \(v.inversion.label): \(frets)")
+                }
+            }
+        }
+    }
+
     @Test func closedTriadsMatchTheClassicTopStringShapes() {
         let c = Chord(root: .c, quality: .major)
         let board = FretboardModel()

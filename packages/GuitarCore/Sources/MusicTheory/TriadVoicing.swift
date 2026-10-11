@@ -100,9 +100,11 @@ public enum TriadVoicings {
         func search(_ voice: Int, _ chosen: [ExerciseStep]) {
             if voice == candidates.count {
                 let frets = chosen.map(\.position.fret)
-                let fretted = frets.filter { $0 > 0 }
-                let spread = fretted.isEmpty ? 0 : fretted.max()! - fretted.min()! + 1
-                guard spread <= maxSpan else { return }
+                // Open strings count toward the span: an open E against
+                // fret-10 notes is not a shape any hand plays.
+                let spread = frets.max()! - frets.min()! + 1
+                guard spread <= maxSpan || frets.allSatisfy({ $0 == 0 })
+                else { return }
                 let key = (frets.min()!, spread)
                 if key < bestKey {
                     bestKey = key

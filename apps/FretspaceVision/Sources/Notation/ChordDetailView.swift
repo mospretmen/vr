@@ -20,6 +20,8 @@ struct ChordDetailView: View {
     @State private var shellIndex = 0
     @State private var bass: ChordTone = .root
     @State private var guideTones = false
+    /// nil = show all inversions climbing the neck.
+    @State private var inversionFilter: Int? = nil
     @State private var stringSetIndex = 0
     @State private var labelStyle: LabelStyle = .degrees
     @State private var pads = ChordPadEngine()
@@ -145,6 +147,15 @@ struct ChordDetailView: View {
                     }
                 }
                 .pickerStyle(.menu)
+                Picker("Inversion", selection: $inversionFilter) {
+                    Text("All").tag(Int?.none)
+                    Text("Root").tag(Int?.some(0))
+                    Text("1st").tag(Int?.some(1))
+                    Text("2nd").tag(Int?.some(2))
+                    if mode == .drop2 { Text("3rd").tag(Int?.some(3)) }
+                }
+                .pickerStyle(.segmented)
+                .frame(width: mode == .drop2 ? 280 : 230)
                 Spacer()
                 ForEach(currentInversions, id: \.shape) { item in
                     Button {
@@ -181,18 +192,22 @@ struct ChordDetailView: View {
                                    notes: grip.positions.map { board.note(at: $0) })]
         case .triads:
             let set = triadSets[min(stringSetIndex, triadSets.count - 1)]
-            return TriadVoicings.inversions(of: chord, strings: set, on: board).map {
-                InversionShape(shape: $0.positions,
-                               label: $0.inversion.label,
-                               notes: $0.steps.map(\.note))
-            }
+            return TriadVoicings.inversions(of: chord, strings: set, on: board)
+                .filter { inversionFilter == nil || $0.inversion.rawValue == inversionFilter }
+                .map {
+                    InversionShape(shape: $0.positions,
+                                   label: $0.inversion.label,
+                                   notes: $0.steps.map(\.note))
+                }
         case .drop2:
             let set = drop2Sets[min(stringSetIndex, drop2Sets.count - 1)]
-            return SeventhVoicings.drop2(of: chord, strings: set, on: board).map {
-                InversionShape(shape: $0.positions,
-                               label: $0.inversion.label,
-                               notes: $0.steps.map(\.note))
-            }
+            return SeventhVoicings.drop2(of: chord, strings: set, on: board)
+                .filter { inversionFilter == nil || $0.inversion.rawValue == inversionFilter }
+                .map {
+                    InversionShape(shape: $0.positions,
+                                   label: $0.inversion.label,
+                                   notes: $0.steps.map(\.note))
+                }
         }
     }
 
