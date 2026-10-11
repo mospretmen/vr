@@ -62,7 +62,10 @@ public enum ChordVoicings {
                          pcs: pcs, required: required, into: &best)
             }
         }
-        return best.keys.sorted().prefix(limit).compactMap { best[$0]?.voicing }
+        // Best grips first (the canonical shape leads), position breaks ties.
+        return best.values
+            .sorted { ($0.score, $1.voicing.neckPosition) < ($1.score, $0.voicing.neckPosition) }
+            .prefix(limit).map(\.voicing)
     }
 
     /// Shell voicings for seventh chords: root + the two guide tones (3rd
@@ -167,20 +170,42 @@ public enum ChordVoicings {
 
         let voicing = Voicing(frets: frets)
         let missingColor = pcs.subtracting(covered).count
-        // Players keep 3rds/7ths/extensions out of the mud: on 4+ note
-        // chords, color tones below A2 cost dearly (the bass is exempt —
-        // it IS the chosen inversion).
-        var lowColor = 0
+
+        // Voicing conventions, learned from how grips are actually built:
+        let notes = sounded.map { board.note(at: $0) }
+        let roles = notes.map { chord.tone(of: $0.pitchClass) }
+        let big = chord.pitchClasses.count >= 5
+        var convention = 0
         if chord.quality.intervals.count >= 4 {
-            for position in sounded.dropFirst() {
-                let note = board.note(at: position)
-                if note.midi < 45, note.pitchClass != chord.root,
-                   chord.tone(of: note.pitchClass) != .fifth {
-                    lowColor += 3
+            // 1. Color tones out of the mud (threshold rises on big chords;
+            //    the bass is exempt — it IS the chosen inversion).
+            let mudline = big ? 48 : 45
+            for (index, note) in notes.enumerated() where index > 0 {
+                if note.midi < mudline, note.pitchClass != chord.root,
+                   roles[index] != .fifth {
+                    convention += 4
                 }
             }
+            // 2. Extensions stack ABOVE the 3rd, not under it.
+            if let thirdIndex = roles.firstIndex(of: .third) {
+                for index in 0..<thirdIndex where roles[index] == .extended {
+                    convention += 2
+                }
+            }
+            // 3. On big chords the 3rd is an interior voice, not the top.
+            if big, roles.last == .third { convention += 3 }
         }
-        let score = missingColor * 10 - sounded.count * 2 + span + lowColor
+        // 4. Doubling is for roots; duplicated color tones crowd the grip.
+        var seen: [PitchClass: Int] = [:]
+        for note in notes { seen[note.pitchClass, default: 0] += 1 }
+        for (pc, count) in seen where pc != chord.root && count > 1 {
+            convention += count - 1
+        }
+
+        // Missing OPTIONAL tones are cheap (required ones were enforced
+        // above) — the canonical m11 barre drops its 9th, as players do.
+        let score = missingColor * 2 - sounded.count * 2 + span + convention
+            + voicing.neckPosition / 2  // mild preference for lower grips
         let position = voicing.neckPosition
         if let current = best[position], current.score <= score { return }
         best[position] = (score, voicing)

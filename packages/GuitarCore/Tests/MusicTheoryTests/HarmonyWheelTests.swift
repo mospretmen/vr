@@ -317,6 +317,21 @@ struct ChordVoicingTests {
         }
     }
 
+    @Test func bigChordGripsMatchHowGuitaristsPlay() {
+        // Gm11's standard grip is the six-string barre at fret 3
+        // (G C F B♭ D G) — it must come FIRST, not a low cluster.
+        let gm11 = Chord(root: .g, quality: ChordQuality(
+            name: "m11", symbol: "m11", intervals: [0, 3, 7, 10, 14, 17]))
+        let grips = ChordVoicings.voicings(for: gm11)
+        #expect(grips.first == Voicing(frets: [3, 3, 3, 3, 3, 3]))
+        // Open C still leads its own list — conventions must not dethrone
+        // the open classics.
+        let c = ChordVoicings.voicings(for: Chord(root: .c, quality: .major))
+        #expect(c.first == Voicing(frets: [nil, 3, 2, 0, 1, 0]))
+        let e = ChordVoicings.voicings(for: Chord(root: .e, quality: .major))
+        #expect(e.first == Voicing(frets: [0, 2, 2, 1, 0, 0]))
+    }
+
     @Test func chordDegreeLabelsSpellTrueQualities() {
         let dim7 = Chord(root: .c, quality: .diminished7)
         #expect(dim7.degreeLabel(of: .c) == "R")
