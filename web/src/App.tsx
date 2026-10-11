@@ -1,14 +1,20 @@
 import type { ReactNode } from "react";
 import { FretboardExplorer } from "./components/FretboardExplorer";
 import { HarmonyCompass } from "./components/HarmonyCompass";
+import {
+  PricingSection,
+  VisionProSection,
+  WaitlistSection,
+} from "./components/VisionShowcase";
 import { PracticeStats } from "./components/PracticeStats";
 import { TrackLibrary } from "./components/TrackLibrary";
 
 const NAV_LINKS = [
   { label: "Compass", href: "#compass" },
+  { label: "Vision Pro", href: "#visionpro" },
   { label: "Explorer", href: "#explorer" },
-  { label: "Library", href: "#library" },
-  { label: "Stats", href: "#stats" },
+  { label: "Pricing", href: "#pricing" },
+  { label: "Waitlist", href: "#waitlist" },
 ] as const;
 
 function Wordmark() {
@@ -232,6 +238,7 @@ export default function App() {
       <main>
         <Hero />
         <Features />
+        <VisionProSection />
         <Section
           id="explorer"
           title="Fretboard Explorer"
@@ -257,6 +264,8 @@ export default function App() {
             <PracticeStats />
           </div>
         </Section>
+        <PricingSection />
+        <WaitlistSection />
       </main>
       <Footer />
     </div>
