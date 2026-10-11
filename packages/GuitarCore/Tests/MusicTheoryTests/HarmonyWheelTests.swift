@@ -677,3 +677,29 @@ struct PublishedShapeTests {
         }
     }
 }
+
+@Suite("Barry Harris 6th-diminished")
+struct SixthDiminishedTests {
+    @Test func ladderAlternatesSixAndDiminishedUpTheScale() {
+        let ladder = SixthDiminished.ladder(root: .c)
+        #expect(ladder.count == 8)
+        #expect(ladder.map(\.bass) == [.c, .d, .e, .f, .g, .gSharp, .a, .b])
+        for (index, step) in ladder.enumerated() {
+            if index.isMultiple(of: 2) {
+                #expect(step.chord.symbol == "C6")
+                // The bass of every 6-chord rung is a chord tone.
+                #expect(step.chord.contains(step.bass))
+            } else {
+                #expect(step.chord.symbol == "B°7")
+                #expect(step.chord.contains(step.bass))
+            }
+        }
+    }
+
+    @Test func minorLadderUsesTheMinorSix() {
+        let ladder = SixthDiminished.ladder(root: .c, minor: true)
+        #expect(ladder[0].chord.symbol == "Cm6")
+        #expect(ladder[1].chord.symbol == "B°7")
+        #expect(SixthDiminished.scale(root: .c, minor: true).contains(.dSharp))
+    }
+}

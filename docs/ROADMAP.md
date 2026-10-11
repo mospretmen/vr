@@ -91,3 +91,9 @@ playable, reachable from the compass ("phrases over this chord").
 Needs a personal-phrase editor and Neon sync across platforms. Prefer
 style-of originals over verbatim transcriptions (copyright). Builds on
 the progression recorder's playback substrate.
+
+## Barry Harris movement (core landed 2026-10-11, UI next)
+SixthDiminished: the 6th-diminished scale + the eight-rung ladder
+(C6 · B°7 · C6/E · B°7/D …) that gives a static chord motion. UI to
+come: a "Movement" view from the chord window — the ladder voiced as
+drop-2s climbing a string set, playable rung by rung.
