@@ -159,7 +159,7 @@ struct ChordDetailView: View {
             ForEach(modes) { Text($0.rawValue).tag($0) }
         }
         .pickerStyle(.segmented)
-        .frame(width: 340)
+        .fixedSize()
     }
 
     @ViewBuilder
