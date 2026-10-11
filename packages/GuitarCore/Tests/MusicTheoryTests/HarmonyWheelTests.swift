@@ -446,6 +446,16 @@ struct ChordVoicingTests {
             for: HarmonyWheel.node(.dominant, 1), inKeyFrame: .e) == "B7")
     }
 
+    @Test func theMediantIsAQuietDiatonicStep() {
+        let c = HarmonyWheel.node(.majorKey, 0)
+        let mediant = HarmonyWheel.moves(from: c).filter { $0.kind == .mediant }
+        #expect(mediant.map(\.to.chord) == [Chord(root: .e, quality: .minor)])
+        // And the diatonic seventh seat is already covered: C reaches B°7.
+        let dims = HarmonyWheel.moves(from: c)
+            .filter { $0.kind == .deepen }.map(\.to.chord)
+        #expect(dims == [Chord(root: .b, quality: .diminished7)])
+    }
+
     @Test func theBackdoorDominantSlipsHome() {
         // C ⇄ B♭7: the ♭VII7 sits straight across the wheel and resolves
         // up a whole step into the key.

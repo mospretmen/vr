@@ -49,6 +49,7 @@ const KIND_COLOR: Record<MoveKind, string> = {
   fifthSharpward: "#60a5fa",
   fifthFlatward: "#60a5fa",
   relative: "#e2e8f0",
+  mediant: "#cbd5e1",
   passingDim: "#c084fc",
   deepen: "#c084fc",
   dimFamily: "#c084fc",

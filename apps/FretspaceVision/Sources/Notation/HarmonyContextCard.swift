@@ -131,6 +131,8 @@ struct HarmonyContextCard: View {
             return "→ \(to): up a fourth — to the subdominant side (its IV)."
         case .relative:
             return "→ \(to): relative switch — same notes, new home."
+        case .mediant:
+            return "→ \(to): the iii — the quiet mediant, two tones shared with home."
         case .passingDim:
             return "→ \(to): chromatic walk-up through the passing dim."
         case .backdoor:

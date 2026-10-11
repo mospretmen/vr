@@ -13,6 +13,7 @@ export type MoveKind =
   | "fifthSharpward"
   | "fifthFlatward"
   | "relative"
+  | "mediant"
   | "twoFive"
   | "passingDim"
   | "soften"
@@ -100,6 +101,7 @@ export function movesFrom(n: CompassNode): Move[] {
       add("toDominant", "dominant", i + 10); //       C → D7 (V7 of V)
       add("toDominant", "dominant", i + 7); //        C → F7 (IV7 — blues)
       add("twoFive", "relativeMinor", i + 11); //     C → Dm (its ii)
+      add("mediant", "relativeMinor", i + 1); //      C → Em (the quiet iii)
       add("tritoneSub", "dominant", i + 3); //        C → D♭7 (sub of its V7)
       add("backdoor", "dominant", i + 6); //          C → B♭7 (the back door out)
       add("fifthSharpward", "majorKey", i + 1);
@@ -184,6 +186,8 @@ export function describe(m: Move): string {
         : `→ ${to}: up a fourth — to the subdominant side (its IV).`;
     case "relative":
       return `→ ${to}: relative switch — same notes, new home.`;
+    case "mediant":
+      return `→ ${to}: the iii — the quiet mediant, two tones shared with home.`;
     case "passingDim":
       return `→ ${to}: chromatic walk-up through the passing dim.`;
     case "soften":
