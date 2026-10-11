@@ -65,6 +65,35 @@ final class ChordPadEngine {
         }
     }
 
+    /// Sound EXACT notes together (a voiced shape, not a generic pad).
+    /// Queues after whatever is playing, so a ladder climbs voicing by
+    /// voicing when called per rung.
+    func playVoicing(_ notes: [Note], durationMs: Int = 560, restart: Bool = false) {
+        guard ensureRunning() else { return }
+        if restart { player.stop() }
+        if !player.isPlaying { player.play() }
+        let seconds = Double(durationMs) / 1000.0
+        let frames = AVAudioFrameCount(sampleRate * seconds)
+        guard frames > 0,
+              let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frames),
+              let samples = buffer.floatChannelData?[0] else { return }
+        buffer.frameLength = frames
+        let freqs = notes.map { 440.0 * pow(2.0, (Double($0.midi) - 69.0) / 12.0) }
+        let gain = 0.22 / Double(max(freqs.count, 1))
+        for frame in 0..<Int(frames) {
+            let t = Double(frame) / sampleRate
+            var envelope = min(t / 0.03, 1.0)
+            let tail = seconds - t
+            if tail < 0.12 { envelope *= max(0, tail / 0.12) }
+            var value = 0.0
+            for f in freqs {
+                value += sin(2 * .pi * f * t) + 0.3 * sin(2 * .pi * f * 2 * t)
+            }
+            samples[frame] = Float(value * gain * envelope)
+        }
+        player.scheduleBuffer(buffer, at: nil)
+    }
+
     /// Arpeggiate exact sounding notes (a grip or triad shape, bottom to top).
     func playRun(_ notes: [Note], noteMs: Int = 240) {
         guard ensureRunning() else { return }

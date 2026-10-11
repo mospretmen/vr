@@ -69,6 +69,25 @@ struct ChordDetailView: View {
         return list
     }
     @State private var rungIndex = 0
+    @State private var ladderTask: Task<Void, Never>? = nil
+
+    /// Walk the ladder: each rung's ACTUAL voicing sounds while the board
+    /// follows along — the movement is seen and heard together.
+    private func playLadder() {
+        ladderTask?.cancel()
+        let steps = ladder
+        ladderTask = Task { @MainActor in
+            for (index, step) in steps.enumerated() {
+                if Task.isCancelled { return }
+                rungIndex = index
+                if let v = rungVoicing(step) {
+                    pads.playVoicing(v.steps.map(\.note), durationMs: 560,
+                                     restart: index == 0)
+                }
+                try? await Task.sleep(nanoseconds: 600_000_000)
+            }
+        }
+    }
     private var ladder: [SixthDiminished.Step] {
         guard let six = movementSixChord else { return [] }
         return SixthDiminished.ladder(root: six.root,
@@ -206,7 +225,7 @@ struct ChordDetailView: View {
                     }
                     .pickerStyle(.menu)
                     Button {
-                        pads.playProgression(ladder.map(\.chord), eachMs: 620)
+                        playLadder()
                     } label: {
                         Label("Play ladder", systemImage: "play.fill")
                     }
