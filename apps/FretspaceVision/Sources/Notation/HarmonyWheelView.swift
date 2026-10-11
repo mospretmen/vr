@@ -152,7 +152,19 @@ struct HarmonyWheelView: View {
                 }
                 .buttonStyle(.plain)
             }
-            Text("· → one-way · ⇄ returns · tap to filter").font(.caption2)
+            if hiddenKinds.isEmpty {
+                Text("· → one-way · ⇄ returns · tap to filter").font(.caption2)
+            } else {
+                Button {
+                    hiddenKinds = []
+                } label: {
+                    Text("Show all")
+                        .font(.caption2.bold())
+                        .padding(.horizontal, 8).padding(.vertical, 3)
+                        .background(.orange.opacity(0.35), in: .capsule)
+                }
+                .buttonStyle(.plain)
+            }
         }
         .foregroundStyle(.secondary)
     }
