@@ -93,3 +93,53 @@ extension HarmonizedScale {
         }
     }
 }
+
+
+extension HarmonizedScale {
+    /// One available tension on a degree's chord, chord-scale style.
+    public struct DegreeTension: Sendable, Hashable {
+        public let label: String
+        /// Half-step above a chord tone (and not a dominant color) —
+        /// touch it, don't sit on it.
+        public let isAvoid: Bool
+    }
+
+    /// Per-degree tensions: the scale tones left over after stacking each
+    /// seventh chord, labeled from its root (9, ♭9, ♯11, ♭13, 13…), with
+    /// the classic avoid rule — half-step over a chord tone is an avoid,
+    /// EXCEPT ♭9/♯9/♭13 on dominant chords, which are colors.
+    public static func tensions(of scale: Scale) -> [[DegreeTension]] {
+        let chords = seventhChords(of: scale)
+        guard !chords.isEmpty else { return [] }
+        let scaleSet = Set(scale.pitchClasses)
+        return chords.map { chord in
+            let chordSet = Set(chord.pitchClasses)
+            let intervals = Set(chord.quality.intervals.map { ($0 % 12 + 12) % 12 })
+            let isDominant = intervals.contains(4) && intervals.contains(10)
+            return scale.pitchClasses
+                .filter { !chordSet.contains($0) }
+                .map { pc -> DegreeTension in
+                    let semis = chord.root.semitones(to: pc)
+                    let label: String
+                    switch semis {
+                    case 1: label = "♭9"
+                    case 2: label = "9"
+                    case 3: label = "♯9"
+                    case 4: label = "3"
+                    case 5: label = "11"
+                    case 6: label = "♯11"
+                    case 7: label = "5"
+                    case 8: label = "♭13"
+                    case 9: label = "13"
+                    case 10: label = "♭7"
+                    default: label = "♮7"
+                    }
+                    let halfAbove = intervals.contains(((semis - 1) % 12 + 12) % 12)
+                    let dominantColor = isDominant && ["♭9", "♯9", "♭13"].contains(label)
+                    return DegreeTension(label: label,
+                                         isAvoid: halfAbove && !dominantColor)
+                }
+                .sorted { a, b in a.label.count < b.label.count || a.label < b.label }
+        }
+    }
+}

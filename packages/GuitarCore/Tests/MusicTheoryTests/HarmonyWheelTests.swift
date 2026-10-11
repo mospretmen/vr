@@ -722,6 +722,24 @@ struct PublishedShapeTests {
     }
 }
 
+@Suite("Degree tensions")
+struct DegreeTensionTests {
+    @Test func textbookTensionRowsFallOut() {
+        // C major: Imaj7 gets 9 and 13, 11 is the classic avoid.
+        let major = HarmonizedScale.tensions(of: Scale(root: .c, type: .major))
+        let onI = major[0]
+        #expect(onI.contains(.init(label: "9", isAvoid: false)))
+        #expect(onI.contains(.init(label: "13", isAvoid: false)))
+        #expect(onI.contains(.init(label: "11", isAvoid: true)))
+        // C harmonic minor's V7: ♭9 and ♭13 are COLORS, 11 still avoids.
+        let harm = HarmonizedScale.tensions(of: Scale(root: .c, type: .harmonicMinor))
+        let onV = harm[4]
+        #expect(onV.contains(.init(label: "♭9", isAvoid: false)))
+        #expect(onV.contains(.init(label: "♭13", isAvoid: false)))
+        #expect(onV.contains(.init(label: "11", isAvoid: true)))
+    }
+}
+
 @Suite("Degree modes")
 struct DegreeModeTests {
     @Test func rotationsNameThemselves() {
