@@ -241,6 +241,9 @@ public enum HarmonyWheel {
             add(.toDominant, .dominant, i + 9)         // C → G7 (its own V7)
             add(.twoFive, .relativeMinor, i + 11)      // C → Dm (your ii — starts ii–V–I)
             add(.toDominant, .dominant, i + 10)        // C → D7 (V7 of its V)
+            add(.toDominant, .dominant, i + 7)         // C → F7 (IV7 — blues; also
+                                                       // the sub-V7 of the minor a
+                                                       // major third below: A♭→D♭7→Cm)
             add(.tritoneSub, .dominant, i + 3)         // C → D♭7 (sub of its V7)
             add(.fifthSharpward, .majorKey, i + 1)
             add(.fifthFlatward, .majorKey, i + 11)

@@ -428,6 +428,24 @@ struct ChordVoicingTests {
         #expect(amSubs.map(\.to.chord) == [Chord(root: .aSharp, quality: .dominant7)])
     }
 
+    @Test func sixToSubFiveToMinorOneIsAFullLitWalk() {
+        // Owner's walk: A♭ (VI of Cm) → D♭7 (sub of Cm's V7) → Cm.
+        let aFlat = HarmonyWheel.node(.majorKey, 8)
+        #expect(aFlat.chord.root == .gSharp)
+        let toSub = HarmonyWheel.moves(from: aFlat)
+            .filter { $0.kind == .toDominant && $0.to.chord.root == .cSharp }
+        #expect(toSub.count == 1, "A♭ reaches its IV7 (D♭7)")
+        let home = HarmonyWheel.moves(from: toSub[0].to)
+            .filter { $0.kind == .tritoneSub && $0.to.ring == .relativeMinor }
+        #expect(home.map(\.to.chord) == [Chord(root: .c, quality: .minor)],
+                "D♭7 resolves a half-step down into Cm")
+        // And in C the same edge is the blues IV7: C → F7.
+        let c = HarmonyWheel.node(.majorKey, 0)
+        #expect(HarmonyWheel.moves(from: c).contains {
+            $0.kind == .toDominant && $0.to.chord == Chord(root: .f, quality: .dominant7)
+        })
+    }
+
     @Test func secondaryDominantSoftensIntoTheTwo() {
         // C → D7 (V7/V) → Dm7 (soften, same root) → G7 → C.
         let c = HarmonyWheel.node(.majorKey, 0)

@@ -97,6 +97,15 @@ struct HarmonyContextCard: View {
         case .deceptive:
             return "→ \(to): deceptive — slips to the relative instead of home."
         case .toDominant:
+            if move.from.ring == .majorKey {
+                switch (move.to.index - move.from.index + 12) % 12 {
+                case 0: return "→ \(to): V7 of the relative minor (its III7)."
+                case 9: return "→ \(to): its own V7 — the straight tension home."
+                case 10: return "→ \(to): V7 of V — two steps of tension."
+                case 7: return "→ \(to): IV7 — blues color; also slides a half-step into the minor below it."
+                default: break
+                }
+            }
             return "→ \(to): raise tension on its dominant."
         case .twoFive:
             if move.from.ring == .majorKey {
