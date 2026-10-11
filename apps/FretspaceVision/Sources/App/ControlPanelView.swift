@@ -280,7 +280,6 @@ struct ControlPanelView: View {
 
     private var panelFooterSection: some View {
         Section {
-            Button("Open Notation Panel") { openWindow(id: SceneID.notation) }
         } footer: {
             let summary = model.practiceLog.summary
             if summary.sessionCount > 0 {

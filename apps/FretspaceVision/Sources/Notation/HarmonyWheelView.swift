@@ -80,7 +80,8 @@ struct HarmonyWheelView: View {
                                    onHearChord: { pads.play($0, durationMs: 1400) },
                                    onOpenChord: { chord in
                                        openWindow(id: SceneID.chordDetail, value: chord)
-                                   })
+                                   },
+                                   onHearProgression: { pads.playProgression($0) })
             }
             breadcrumb
         }

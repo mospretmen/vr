@@ -11,7 +11,9 @@ struct HarmonyContextCard: View {
     let onShowVoicings: () -> Void
     let onHearChord: (Chord) -> Void
     let onOpenChord: (Chord) -> Void
+    let onHearProgression: ([Chord]) -> Void
     @State private var pickedAlteration: ChordAlteration?
+    @State private var expandedMove: Int?
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -41,15 +43,34 @@ struct HarmonyContextCard: View {
             AlterationChips(chord: selected.chord, picked: $pickedAlteration,
                             onHear: onHearChord, onOpenChord: onOpenChord)
             Divider()
+            Text("Tap a pathway to see the voices move")
+                .font(.caption2).foregroundStyle(.tertiary)
             ScrollView {
                 VStack(alignment: .leading, spacing: 9) {
-                    ForEach(Array(moves.enumerated()), id: \.offset) { _, move in
-                        HStack(alignment: .firstTextBaseline, spacing: 7) {
-                            Circle().fill(moveColor(move)).frame(width: 9, height: 9)
-                            Text(Self.describe(move))
-                                .font(.callout)
-                                .foregroundStyle(.primary.opacity(0.9))
-                                .fixedSize(horizontal: false, vertical: true)
+                    ForEach(Array(moves.enumerated()), id: \.offset) { index, move in
+                        Button {
+                            if expandedMove == index {
+                                expandedMove = nil
+                            } else {
+                                expandedMove = index
+                                onHearProgression([selected.chord, move.to.chord])
+                            }
+                        } label: {
+                            HStack(alignment: .firstTextBaseline, spacing: 7) {
+                                Circle().fill(moveColor(move)).frame(width: 9, height: 9)
+                                Text(Self.describe(move))
+                                    .font(.callout)
+                                    .foregroundStyle(.primary.opacity(0.9))
+                                    .fixedSize(horizontal: false, vertical: true)
+                                    .multilineTextAlignment(.leading)
+                            }
+                        }
+                        .buttonStyle(.plain)
+                        if expandedMove == index {
+                            VoiceLeadingDetail(from: selected.chord,
+                                               to: move.to.chord,
+                                               fromLabel: selected.label,
+                                               toLabel: move.to.label)
                         }
                     }
                 }
@@ -57,7 +78,10 @@ struct HarmonyContextCard: View {
             }
             Spacer(minLength: 0)
         }
-        .onChange(of: selected) { pickedAlteration = nil }
+        .onChange(of: selected) {
+            pickedAlteration = nil
+            expandedMove = nil
+        }
         .padding(16)
         .background(.thinMaterial, in: .rect(cornerRadius: 14))
         .frame(width: 300)
@@ -271,6 +295,123 @@ struct AlterationChips: View {
                         .background(.orange.opacity(0.3), in: .capsule)
                 }
                 .buttonStyle(.plain)
+            }
+        }
+    }
+}
+
+
+/// The voices traveling between two chords: both stacks on one staff with
+/// motion lines — green half-step pulls, dashed held common tones.
+struct VoiceLeadingDetail: View {
+    let from: Chord
+    let to: Chord
+    let fromLabel: String
+    let toLabel: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 5) {
+            VoiceLeadingStaff(from: from, to: to,
+                              fromLabel: fromLabel, toLabel: toLabel)
+                .frame(height: 112)
+                .frame(maxWidth: .infinity)
+                .background(.black.opacity(0.18), in: .rect(cornerRadius: 8))
+            Text(VoiceLeading.moves(from: from, to: to)
+                    .map(\.summary).joined(separator: " · "))
+                .font(.caption2)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.leading, 16)
+    }
+}
+
+/// Two chord stacks with per-voice connectors.
+struct VoiceLeadingStaff: View {
+    let from: Chord
+    let to: Chord
+    let fromLabel: String
+    let toLabel: String
+
+    var body: some View {
+        Canvas { context, size in
+            let lineGap: CGFloat = 7.5
+            let staffTop = size.height / 2 - 2.5 * lineGap
+            let left: CGFloat = 12
+            let right = size.width - 12
+            for line in 0..<5 {
+                let y = staffTop + CGFloat(line) * lineGap
+                var path = Path()
+                path.move(to: CGPoint(x: left, y: y))
+                path.addLine(to: CGPoint(x: right, y: y))
+                context.stroke(path, with: .color(.white.opacity(0.4)), lineWidth: 0.8)
+            }
+
+            func yFor(step: Int) -> CGFloat {
+                staffTop + 4 * lineGap - CGFloat(step - 2) * lineGap / 2
+            }
+            // Stack one chord; returns y per pitch class, honoring spelling.
+            func drawStack(_ chord: Chord, label: String, x: CGFloat) -> [PitchClass: CGFloat] {
+                let useFlats = label.contains("♭")
+                let letterSteps: [Character: Int] = ["C": 0, "D": 1, "E": 2, "F": 3,
+                                                     "G": 4, "A": 5, "B": 6]
+                var ys: [PitchClass: CGFloat] = [:]
+                var lastStep = -10
+                for pc in chord.pitchClasses {
+                    let name = pc.name(useFlats ? .flats : .sharps)
+                    guard let letter = name.first, var step = letterSteps[letter] else { continue }
+                    while step <= lastStep { step += 7 }
+                    lastStep = step
+                    let y = yFor(step: step)
+                    var ledgers: [Int] = []
+                    if step <= 0 { ledgers = Array(stride(from: 0, through: step, by: -2)) }
+                    if step >= 12 { ledgers = Array(stride(from: 12, through: step, by: 2)) }
+                    for l in ledgers {
+                        var ledger = Path()
+                        ledger.move(to: CGPoint(x: x - 8, y: yFor(step: l)))
+                        ledger.addLine(to: CGPoint(x: x + 8, y: yFor(step: l)))
+                        context.stroke(ledger, with: .color(.white.opacity(0.4)), lineWidth: 0.8)
+                    }
+                    let head = Path(ellipseIn: CGRect(x: x - 5, y: y - 3.8, width: 10, height: 7.6))
+                    context.fill(head, with: .color(.white))
+                    if name.count > 1 {
+                        context.draw(Text(String(name.dropFirst())).font(.system(size: 10))
+                            .foregroundStyle(.white),
+                            at: CGPoint(x: x - 11, y: y))
+                    }
+                    ys[pc] = y
+                }
+                context.draw(Text(label).font(.system(size: 11, weight: .semibold))
+                    .foregroundStyle(.white.opacity(0.85)),
+                    at: CGPoint(x: x, y: size.height - 8))
+                return ys
+            }
+
+            let xL = left + 34
+            let xR = right - 34
+            let leftYs = drawStack(from, label: fromLabel, x: xL)
+            let rightYs = drawStack(to, label: toLabel, x: xR)
+
+            for move in VoiceLeading.moves(from: from, to: to) {
+                guard let y0 = leftYs[move.from], let y1 = rightYs[move.to] else { continue }
+                var line = Path()
+                line.move(to: CGPoint(x: xL + 12, y: y0))
+                line.addLine(to: CGPoint(x: xR - 12, y: y1))
+                if move.isCommonTone {
+                    context.stroke(line, with: .color(.white.opacity(0.45)),
+                                   style: StrokeStyle(lineWidth: 1.2, dash: [4, 4]))
+                } else if move.isHalfStep {
+                    context.stroke(line, with: .color(.green), lineWidth: 2.4)
+                } else {
+                    context.stroke(line, with: .color(.white.opacity(0.6)), lineWidth: 1.4)
+                }
+                let midX = (xL + xR) / 2
+                let midY = (y0 + y1) / 2 - 7
+                let tag = move.isCommonTone ? "=" :
+                    (move.semitones > 0 ? "+\(move.semitones)" : "−\(abs(move.semitones))")
+                context.draw(Text(tag).font(.system(size: 9, weight: .bold))
+                    .foregroundStyle(move.isHalfStep ? .green : .white.opacity(0.7)),
+                    at: CGPoint(x: midX, y: midY))
             }
         }
     }

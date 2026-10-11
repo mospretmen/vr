@@ -51,6 +51,20 @@ final class ChordPadEngine {
         }
     }
 
+    /// Play chords back to back — a progression or a single resolution.
+    func playProgression(_ chords: [Chord], eachMs: Int = 950) {
+        guard ensureRunning() else { return }
+        player.stop()
+        player.play()
+        let seconds = Double(eachMs) / 1000.0
+        for chord in chords {
+            if let buffer = Self.padBuffer(for: chord, seconds: seconds,
+                                           sampleRate: sampleRate, format: format) {
+                player.scheduleBuffer(buffer, at: nil)
+            }
+        }
+    }
+
     /// Arpeggiate exact sounding notes (a grip or triad shape, bottom to top).
     func playRun(_ notes: [Note], noteMs: Int = 240) {
         guard ensureRunning() else { return }

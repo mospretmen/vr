@@ -460,3 +460,38 @@ struct ChordVoicingTests {
     }
 
 }
+
+@Suite("Voice leading")
+struct VoiceLeadingTests {
+    @Test func dominantResolutionPullsByHalfSteps() {
+        let moves = VoiceLeading.moves(from: Chord(root: .g, quality: .dominant7),
+                                       to: Chord(root: .c, quality: .major))
+        #expect(moves.contains(VoiceMove(from: .b, to: .c, semitones: 1)),
+                "leading tone rises")
+        #expect(moves.contains(VoiceMove(from: .f, to: .e, semitones: -1)),
+                "seventh falls")
+        #expect(moves.contains(VoiceMove(from: .g, to: .g, semitones: 0)),
+                "root is the common tone")
+        #expect(moves.count == 4)
+        // Every arriving tone is reached.
+        #expect(Set(moves.map(\.to)) == [.c, .e, .g])
+    }
+
+    @Test func minorResolutionAndRelativesLeadSmoothly() {
+        let e7ToAm = VoiceLeading.moves(from: Chord(root: .e, quality: .dominant7),
+                                        to: Chord(root: .a, quality: .minor))
+        #expect(e7ToAm.contains(VoiceMove(from: .gSharp, to: .a, semitones: 1)))
+        let cToAm = VoiceLeading.moves(from: Chord(root: .c, quality: .major),
+                                       to: Chord(root: .a, quality: .minor))
+        #expect(cToAm.filter(\.isCommonTone).count == 2, "C and E hold")
+    }
+
+    @Test func tritoneSubSlidesDownChromatically() {
+        // D♭7 → C: every moving voice falls or holds; nothing leaps.
+        let moves = VoiceLeading.moves(from: Chord(root: .cSharp, quality: .dominant7),
+                                       to: Chord(root: .c, quality: .major))
+        #expect(moves.allSatisfy { abs($0.semitones) <= 2 })
+        #expect(moves.contains(VoiceMove(from: .cSharp, to: .c, semitones: -1)),
+                "the sub's root slides down a half step")
+    }
+}
