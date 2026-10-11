@@ -83,7 +83,10 @@ struct ScaleDetailView: View {
                     }
                 } label: {
                     VStack(spacing: 2) {
-                        Text(degrees.indices.contains(degree) ? degrees[degree] : "")
+                        Text(Self.romanDegree(
+                            degrees.indices.contains(degree) ? degrees[degree] : "",
+                            quality: sevenths.indices.contains(degree)
+                                ? sevenths[degree].quality : nil))
                             .font(.callout.bold())
                             .foregroundStyle(.orange.opacity(0.95))
                         if sevenths.indices.contains(degree) {
@@ -110,6 +113,26 @@ struct ScaleDetailView: View {
             }
             Spacer()
         }
+    }
+
+    /// "♭3" + a minor-family seventh → "♭iii"-style function numerals:
+    /// casing by quality, ø for half-diminished, ° for dim, + for ♯5.
+    private static func romanDegree(_ label: String, quality: ChordQuality?) -> String {
+        let romans = ["1": "I", "2": "II", "3": "III", "4": "IV",
+                      "5": "V", "6": "VI", "7": "VII"]
+        let accidental = label.filter { !$0.isNumber }
+        let digit = label.filter(\.isNumber)
+        guard var roman = romans[digit] else { return label }
+        var suffix = ""
+        if let quality {
+            let intervals = quality.intervals
+            let third = intervals.count > 1 ? intervals[1] : 4
+            if third == 3 { roman = roman.lowercased() }
+            if intervals == [0, 3, 6, 10] { suffix = "ø" }
+            else if intervals == [0, 3, 6, 9] { suffix = "°" }
+            else if intervals.count > 2 && intervals[2] == 8 { suffix = "+" }
+        }
+        return accidental + roman + suffix
     }
 
     private static func degreeNumeral(_ degree: Int, _ chord: Chord) -> String {
