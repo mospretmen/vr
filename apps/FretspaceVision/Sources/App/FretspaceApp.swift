@@ -31,7 +31,7 @@ struct FretspaceApp: App {
                 ScaleDetailView(scale: scale)
             }
         }
-        .defaultSize(width: 1040, height: 560)
+        .defaultSize(width: 1080, height: 690)
         .defaultWindowPlacement { _, context in
             // Scales open beside the compass, not on top of it.
             if let compass = context.windows.first(where: { $0.id == SceneID.harmony }) {
