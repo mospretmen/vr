@@ -10,6 +10,31 @@ struct ScaleDetailView: View {
     @State private var labelStyle: LabelStyle = .degrees
     @State private var boxIndex: Int? = nil
     @State private var guideTones = false
+    @State private var drillTask: Task<Void, Never>? = nil
+    @State private var drillSteps: [ExerciseStep] = []
+    @State private var drillCurrent: Int = -1
+
+    /// Walk a drill note by note: the board lights each step as it sounds —
+    /// see the thirds move, not just hear them.
+    private func playDrill(intervalDegrees: Int) {
+        drillTask?.cancel()
+        let drill = ExerciseGenerator.scaleInIntervals(
+            scale: scale,
+            box: board.boxStartFrets(for: scale).first ?? 5,
+            intervalDegrees: intervalDegrees,
+            on: board)
+        drillSteps = drill.steps
+        drillTask = Task { @MainActor in
+            for (index, step) in drill.steps.enumerated() {
+                if Task.isCancelled { return }
+                drillCurrent = index
+                pads.playVoicing([step.note], durationMs: 210, restart: index == 0)
+                try? await Task.sleep(nanoseconds: 230_000_000)
+            }
+            drillCurrent = -1
+            drillSteps = []
+        }
+    }
     @State private var pads = ChordPadEngine()
 
     private var board: FretboardModel { FretboardModel() }
@@ -22,6 +47,19 @@ struct ScaleDetailView: View {
                 for: scale, startingAt: board.boxStartFrets(for: scale)[boxIndex])
         } else {
             all = board.highlights(for: scale)
+        }
+        if !drillSteps.isEmpty {
+            // Drill mode: the walked path as exercise steps — the sounding
+            // note pops, the rest of the path dims.
+            var seen = Set<FretPosition>()
+            let currentPosition = drillCurrent >= 0 && drillCurrent < drillSteps.count
+                ? drillSteps[drillCurrent].position : nil
+            return drillSteps.compactMap { step in
+                guard seen.insert(step.position).inserted else { return nil }
+                return FretboardHighlight(
+                    position: step.position, note: step.note,
+                    role: .exerciseStep(isCurrent: step.position == currentPosition))
+            }
         }
         return all
     }
@@ -137,12 +175,18 @@ struct ScaleDetailView: View {
                 Text("Practice in").font(.caption).foregroundStyle(.secondary)
                 ForEach([3, 4, 5, 6, 7], id: \.self) { interval in
                     Button("\(interval)ths") {
-                        let drill = ExerciseGenerator.scaleInIntervals(
-                            scale: scale,
-                            box: board.boxStartFrets(for: scale).first ?? 5,
-                            intervalDegrees: interval,
-                            on: board)
-                        pads.playRun(drill.steps.map(\.note), noteMs: 190)
+                        playDrill(intervalDegrees: interval)
+                    }
+                    .font(.caption)
+                    .buttonStyle(.bordered)
+                }
+                if !drillSteps.isEmpty {
+                    Button {
+                        drillTask?.cancel()
+                        drillSteps = []
+                        drillCurrent = -1
+                    } label: {
+                        Image(systemName: "stop.fill")
                     }
                     .font(.caption)
                     .buttonStyle(.bordered)
