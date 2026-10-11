@@ -72,7 +72,7 @@ struct ScaleDetailView: View {
         let triads = scale.type.intervals.count == 7
             ? Chord.diatonicTriads(in: scale) : []
         return HStack(spacing: 6) {
-            ForEach(names.indices, id: \.self) { degree in
+            ForEach(0..<names.count, id: \.self) { degree in
                 Button {
                     if triads.indices.contains(degree) {
                         pads.play(triads[degree], durationMs: 1200)
