@@ -65,6 +65,11 @@ enum CalibrationHandle: Equatable {
 @MainActor
 @Observable
 final class AppModel {
+    /// What the single scale/chord detail windows currently show — tapping
+    /// a new chip SWITCHES the open window instead of spawning another.
+    var presentedScale: Scale? = nil
+    var presentedChord: Chord? = nil
+
     // MARK: - Musical selection
     var displayMode: DisplayMode = .scale
     var root: PitchClass = .a

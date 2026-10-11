@@ -11,15 +11,36 @@ public enum Modes {
         return table[((interval % 12) + 12) % 12]
     }
 
-    /// Spelled degree labels for a scale type, in degree order.
+    /// Spelled degree labels for a scale type, in degree order. Seven-note
+    /// scales label by DEGREE POSITION — Lydian's tritone is ♯4 (a raised
+    /// fourth degree), Locrian's is ♭5 — so the numeral always matches the
+    /// letter the note is spelled with. Other sizes keep the interval table.
     public static func degreeLabels(of type: ScaleType) -> [String] {
-        type.intervals.map(degreeLabel(forInterval:))
+        guard type.intervals.count == 7 else {
+            return type.intervals.map(degreeLabel(forInterval:))
+        }
+        let majorDegrees = [0, 2, 4, 5, 7, 9, 11]
+        return type.intervals.enumerated().map { index, interval in
+            var diff = interval - majorDegrees[index]
+            if diff > 6 { diff -= 12 }
+            if diff < -6 { diff += 12 }
+            let accidental: String
+            switch diff {
+            case -2: accidental = "𝄫"
+            case -1: accidental = "♭"
+            case 1: accidental = "♯"
+            case 2: accidental = "𝄪"
+            default: accidental = ""
+            }
+            return accidental + String(index + 1)
+        }
     }
 
     /// Spelled degree of a pitch class within a scale ("♭7"), nil if outside.
     public static func degreeLabel(of pitchClass: PitchClass, in scale: Scale) -> String? {
-        guard scale.contains(pitchClass) else { return nil }
-        return degreeLabel(forInterval: scale.root.semitones(to: pitchClass))
+        let distance = scale.root.semitones(to: pitchClass)
+        guard let index = scale.type.intervals.firstIndex(of: distance) else { return nil }
+        return degreeLabels(of: scale.type)[index]
     }
 
     /// The alterations relative to the major scale, e.g. Dorian → ["♭3", "♭7"].

@@ -11,9 +11,10 @@ struct ModesTests {
         #expect(Modes.degreeLabels(of: .minorPentatonic) == ["1", "♭3", "4", "5", "♭7"])
     }
 
-    @Test func lydianSharpFourIsSpelledFlatFive() {
-        // Deliberate chart convention: the table spells interval 6 as ♭5.
-        #expect(Modes.degreeLabels(of: .lydian) == ["1", "2", "3", "♭5", "5", "6", "7"])
+    @Test func lydianTritoneIsARaisedFourth() {
+        // Owner-corrected convention (2026-10-11): seven-note scales label
+        // by degree position — Lydian's tritone is ♯4, only Locrian's is ♭5.
+        #expect(Modes.degreeLabels(of: .lydian) == ["1", "2", "3", "♯4", "5", "6", "7"])
     }
 
     @Test func alterationsRelativeToMajor() {
@@ -58,7 +59,7 @@ struct ModesTests {
         #expect(Modes.alterations(of: .phrygianDominant) == ["♭2", "♭6", "♭7"])
         #expect(Modes.majorDegree(of: .phrygianDominant) == nil) // not diatonic
 
-        #expect(Modes.alterations(of: .lydianDominant) == ["♭5", "♭7"]) // ♯4 spelled flat-side
+        #expect(Modes.alterations(of: .lydianDominant) == ["♯4", "♭7"]) // position-spelled
         #expect(ScaleType.bebopDominant.intervals.count == 8)
         // Eight-note scales are excluded from harmonization.
         let ladder = HarmonizedScale.triadLadder(

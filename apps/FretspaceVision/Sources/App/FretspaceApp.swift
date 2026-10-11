@@ -26,10 +26,9 @@ struct FretspaceApp: App {
         }
         .defaultSize(width: 700, height: 420)
 
-        WindowGroup(id: SceneID.scaleDetail, for: Scale.self) { $scale in
-            if let scale {
-                ScaleDetailView(scale: scale)
-            }
+        WindowGroup(id: SceneID.scaleDetail) {
+            ScaleDetailHost()
+                .environment(model)
         }
         .defaultSize(width: 1080, height: 690)
         .defaultWindowPlacement { _, context in
@@ -40,12 +39,11 @@ struct FretspaceApp: App {
             return WindowPlacement()
         }
 
-        WindowGroup(id: SceneID.chordDetail, for: Chord.self) { $chord in
-            if let chord {
-                ChordDetailView(chord: chord)
-            }
+        WindowGroup(id: SceneID.chordDetail) {
+            ChordDetailHost()
+                .environment(model)
         }
-        .defaultSize(width: 1040, height: 560)
+        .defaultSize(width: 1040, height: 620)
         .defaultWindowPlacement { _, context in
             if let compass = context.windows.first(where: { $0.id == SceneID.harmony }) {
                 return WindowPlacement(.leading(compass))
@@ -58,6 +56,27 @@ struct FretspaceApp: App {
                 .environment(model)
         }
         .immersionStyle(selection: .constant(.mixed), in: .mixed)
+    }
+}
+
+/// Hosts that swap content in place — one window per kind, ever.
+struct ScaleDetailHost: View {
+    @Environment(AppModel.self) private var model
+    var body: some View {
+        if let scale = model.presentedScale {
+            ScaleDetailView(scale: scale)
+                .id(scale) // fresh per-scale state (box, labels, drills)
+        }
+    }
+}
+
+struct ChordDetailHost: View {
+    @Environment(AppModel.self) private var model
+    var body: some View {
+        if let chord = model.presentedChord {
+            ChordDetailView(chord: chord)
+                .id(chord)
+        }
     }
 }
 

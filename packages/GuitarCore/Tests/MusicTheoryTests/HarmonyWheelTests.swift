@@ -722,6 +722,19 @@ struct PublishedShapeTests {
     }
 }
 
+@Suite("Degree spelling by position")
+struct DegreePositionTests {
+    @Test func lydianRaisesTheFourthLocrianFlatsTheFifth() {
+        #expect(Modes.degreeLabels(of: .lydian) == ["1", "2", "3", "♯4", "5", "6", "7"])
+        #expect(Modes.degreeLabels(of: .locrian) == ["1", "♭2", "♭3", "4", "♭5", "♭6", "♭7"])
+        #expect(Modes.degreeLabels(of: .harmonicMinor) == ["1", "2", "♭3", "4", "5", "♭6", "7"])
+        #expect(Modes.degreeLabels(of: .lydianDominant) == ["1", "2", "3", "♯4", "5", "6", "♭7"])
+        // On-board labels agree: F♯ in C Lydian reads ♯4.
+        let cLydian = Scale(root: .c, type: .lydian)
+        #expect(Modes.degreeLabel(of: .fSharp, in: cLydian) == "♯4")
+    }
+}
+
 @Suite("Interval exercises")
 struct IntervalExerciseTests {
     @Test func thirdsPairEveryDegreeWithItsThird() {

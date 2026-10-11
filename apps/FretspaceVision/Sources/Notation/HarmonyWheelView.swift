@@ -7,6 +7,7 @@ import MusicTheory
 /// destination to travel — the breadcrumb below becomes your progression.
 struct HarmonyWheelView: View {
     @Environment(\.openWindow) private var openWindow
+    @Environment(AppModel.self) private var model
 
     /// Debug screenshot tour: `simctl launch … -tour windows|3d` opens the
     /// showcase windows automatically so the simulator can be photographed.
@@ -95,15 +96,17 @@ struct HarmonyWheelView: View {
                                    frameTonic: frameTonic,
                                    moveColor: { self.moveColor($0) },
                                    onSelectScale: { scale in
-                                       openWindow(id: SceneID.scaleDetail, value: scale)
+                                       model.presentedScale = scale
+                                       openWindow(id: SceneID.scaleDetail)
                                    },
                                    onShowVoicings: {
-                                       openWindow(id: SceneID.chordDetail,
-                                                  value: selected.chord)
+                                       model.presentedChord = selected.chord
+                                       openWindow(id: SceneID.chordDetail)
                                    },
                                    onHearChord: { pads.play($0, durationMs: 1400) },
                                    onOpenChord: { chord in
-                                       openWindow(id: SceneID.chordDetail, value: chord)
+                                       model.presentedChord = chord
+                                       openWindow(id: SceneID.chordDetail)
                                    },
                                    onHearProgression: { pads.playProgression($0) })
             }
