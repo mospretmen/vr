@@ -575,3 +575,47 @@ struct VoiceLeadingTests {
                 "the sub's root slides down a half step")
     }
 }
+
+@Suite("Published drop-2 and triad shapes")
+struct PublishedShapeTests {
+    @Test func drop2InversionsMatchTheTextbookFormulas() {
+        // Bottom-to-top tone orders per inversion: 1573 / 3715 / 5137 / 7351.
+        let cmaj7 = Chord(root: .c, quality: .major7)
+        let board = FretboardModel()
+        let voicings = SeventhVoicings.drop2(of: cmaj7, strings: [2, 3, 4, 5], on: board)
+        #expect(voicings.count == 4, "all four inversions")
+        let expected: [[PitchClass]] = [
+            [.c, .g, .b, .e],  // root position
+            [.e, .b, .c, .g],  // 1st inversion
+            [.g, .c, .e, .b],  // 2nd inversion
+            [.b, .e, .g, .c],  // 3rd inversion
+        ]
+        for order in expected {
+            #expect(voicings.contains { $0.steps.map(\.note.pitchClass) == order },
+                    "missing drop-2 order \(order.map { $0.name() })")
+        }
+        // The classic grips land on the published frets.
+        let fretSets = voicings.map { $0.positions.map(\.fret) }
+        #expect(fretSets.contains([5, 5, 5, 7]), "G-bass Cmaj7 drop-2")
+        // Every shape stays inside a hand.
+        for v in voicings {
+            let frets = v.positions.map(\.fret)
+            #expect(frets.max()! - frets.min()! <= 4, "span of \(frets)")
+        }
+    }
+
+    @Test func closedTriadsMatchTheClassicTopStringShapes() {
+        let c = Chord(root: .c, quality: .major)
+        let board = FretboardModel()
+        let shapes = TriadVoicings.inversions(of: c, strings: [3, 4, 5], on: board)
+        let fretSets = shapes.map { $0.positions.map(\.fret) }
+        #expect(fretSets.contains([0, 1, 0]), "open C/G triad (x x x 0 1 0)")
+        #expect(fretSets.contains([5, 5, 3]), "5th-position root triad")
+        for shape in shapes {
+            let notes = shape.steps.map(\.note)
+            #expect(notes[0].midi < notes[1].midi && notes[1].midi < notes[2].midi,
+                    "closed and ascending")
+            #expect(notes[2].midi - notes[0].midi < 12, "within one octave")
+        }
+    }
+}

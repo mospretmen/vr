@@ -377,12 +377,12 @@ struct VoiceLeadingStaff: View {
                         ledger.addLine(to: CGPoint(x: x + 8, y: yFor(step: l)))
                         context.stroke(ledger, with: .color(.white.opacity(0.4)), lineWidth: 0.8)
                     }
-                    let head = Path(ellipseIn: CGRect(x: x - 5, y: y - 3.8, width: 10, height: 7.6))
+                    let head = Path(ellipseIn: CGRect(x: x - 6, y: y - 4.5, width: 12, height: 9))
                     context.fill(head, with: .color(.white))
                     if name.count > 1 {
-                        context.draw(Text(String(name.dropFirst())).font(.system(size: 10))
+                        context.draw(Text(String(name.dropFirst())).font(.system(size: 12, weight: .semibold))
                             .foregroundStyle(.white),
-                            at: CGPoint(x: x - 11, y: y))
+                            at: CGPoint(x: x - 13, y: y))
                     }
                     ys[pc] = y
                 }
@@ -403,19 +403,19 @@ struct VoiceLeadingStaff: View {
                 line.move(to: CGPoint(x: xL + 12, y: y0))
                 line.addLine(to: CGPoint(x: xR - 12, y: y1))
                 if move.isCommonTone {
-                    context.stroke(line, with: .color(.white.opacity(0.45)),
-                                   style: StrokeStyle(lineWidth: 1.2, dash: [4, 4]))
+                    context.stroke(line, with: .color(.white.opacity(0.55)),
+                                   style: StrokeStyle(lineWidth: 1.5, dash: [4, 4]))
                 } else if move.isHalfStep {
-                    context.stroke(line, with: .color(.green), lineWidth: 2.4)
+                    context.stroke(line, with: .color(.green), lineWidth: 3.2)
                 } else {
-                    context.stroke(line, with: .color(.white.opacity(0.6)), lineWidth: 1.4)
+                    context.stroke(line, with: .color(.white.opacity(0.75)), lineWidth: 1.8)
                 }
                 let midX = (xL + xR) / 2
                 let midY = (y0 + y1) / 2 - 7
                 let tag = move.isCommonTone ? "=" :
                     (move.semitones > 0 ? "+\(move.semitones)" : "−\(abs(move.semitones))")
-                context.draw(Text(tag).font(.system(size: 9, weight: .bold))
-                    .foregroundStyle(move.isHalfStep ? .green : .white.opacity(0.7)),
+                context.draw(Text(tag).font(.system(size: 11, weight: .bold))
+                    .foregroundStyle(move.isHalfStep ? .green : .white.opacity(0.9)),
                     at: CGPoint(x: midX, y: midY))
             }
         }
