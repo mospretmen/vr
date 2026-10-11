@@ -35,6 +35,24 @@ struct HarmonyWheelView: View {
     }
     /// Pathway families switched off via the tappable legend.
     @State private var hiddenKinds: Set<HarmonyWheel.MoveKind> = []
+    /// The scale variant harmonized in the strip under the wheel.
+    @State private var scaleVariant: ScaleVariant = .major
+
+    enum ScaleVariant: String, CaseIterable, Identifiable {
+        case major = "Major"
+        case naturalMinor = "Nat. minor"
+        case harmonicMinor = "Harm. minor"
+        case melodicMinor = "Mel. minor"
+        var id: String { rawValue }
+        var type: ScaleType {
+            switch self {
+            case .major: .major
+            case .naturalMinor: .naturalMinor
+            case .harmonicMinor: .harmonicMinor
+            case .melodicMinor: .melodicMinor
+            }
+        }
+    }
     /// Tap a chord, hear the chord — same synth as the backing pads.
     @State private var pads = ChordPadEngine()
 
@@ -107,6 +125,7 @@ struct HarmonyWheelView: View {
                                    },
                                    onHearProgression: { pads.playProgression($0) })
             }
+            harmonizedStrip
             breadcrumb
         }
         .padding(20)
@@ -194,6 +213,60 @@ struct HarmonyWheelView: View {
                 }
                 .buttonStyle(.plain)
             }
+        }
+    }
+
+    /// One compass forever — the strip answers "what chords live in THIS
+    /// scale?" for the current tonic: seven diatonic chips per variant,
+    /// tappable (hear it; select its wheel seat when it has one). Nothing
+    /// extra is drawn on the wheel itself.
+    private var harmonizedStrip: some View {
+        let scale = Scale(root: frameTonic, type: scaleVariant.type)
+        let names = scale.spelledNames()
+        let triads = Chord.diatonicTriads(in: scale)
+        return HStack(spacing: 10) {
+            Picker("Scale", selection: $scaleVariant) {
+                ForEach(ScaleVariant.allCases) { Text($0.rawValue).tag($0) }
+            }
+            .pickerStyle(.segmented)
+            .fixedSize()
+            ForEach(Array(triads.enumerated()), id: \.offset) { degree, chord in
+                let numeral = Self.stripNumeral(degree: degree, chord: chord)
+                let seat = HarmonyWheel.nodes.first { $0.chord == chord }
+                Button {
+                    pads.play(chord, durationMs: 1200)
+                    if let seat { selected = seat }
+                } label: {
+                    VStack(spacing: 1) {
+                        Text("\(names[degree])\(chord.quality.symbol)")
+                            .font(.caption)
+                            .lineLimit(1)
+                            .minimumScaleFactor(0.6)
+                        Text(numeral)
+                            .font(.caption2)
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(minWidth: 44)
+                    .padding(.horizontal, 7).padding(.vertical, 5)
+                    .background(seat?.id == selected.id ? .blue.opacity(0.45)
+                                : seat == nil ? .white.opacity(0.06)
+                                : .white.opacity(0.13),
+                                in: .rect(cornerRadius: 9))
+                }
+                .buttonStyle(.plain)
+            }
+            Spacer()
+        }
+    }
+
+    private static func stripNumeral(degree: Int, chord: Chord) -> String {
+        let base = ["I", "II", "III", "IV", "V", "VI", "VII"][degree]
+        switch chord.quality {
+        case .major: return base
+        case .minor: return base.lowercased()
+        case .diminished: return base.lowercased() + "°"
+        case .augmented: return base + "+"
+        default: return base
         }
     }
 
