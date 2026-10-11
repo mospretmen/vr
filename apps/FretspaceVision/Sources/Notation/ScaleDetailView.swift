@@ -64,39 +64,38 @@ struct ScaleDetailView: View {
         return all
     }
 
-    /// One compact cell per degree: note, spelled degree, and the chord
-    /// that degree carries (tappable) — the whole formula in a single row.
+    /// One lean cell per degree: the spelled degree on top, the diatonic
+    /// SEVENTH chord that degree carries beneath (derived by third-stacking,
+    /// the textbook way) — tap to hear it. No repetition.
     private var formulaRow: some View {
         let names = scale.spelledNames()
         let degrees = Modes.degreeLabels(of: scale.type)
-        let triads = scale.type.intervals.count == 7
-            ? Chord.diatonicTriads(in: scale) : []
+        let sevenths = HarmonizedScale.seventhChords(of: scale)
         return HStack(spacing: 6) {
             ForEach(0..<names.count, id: \.self) { degree in
                 Button {
-                    if triads.indices.contains(degree) {
-                        pads.play(triads[degree], durationMs: 1200)
+                    if sevenths.indices.contains(degree) {
+                        pads.play(sevenths[degree], durationMs: 1300)
                     } else {
                         pads.playVoicing([Note(scale.pitchClasses[degree], octave: 4)],
                                          durationMs: 500, restart: true)
                     }
                 } label: {
-                    VStack(spacing: 1) {
-                        Text(names[degree]).font(.callout.bold())
+                    VStack(spacing: 2) {
                         Text(degrees.indices.contains(degree) ? degrees[degree] : "")
-                            .font(.caption)
-                            .foregroundStyle(.orange.opacity(0.9))
-                        if triads.indices.contains(degree) {
-                            Text("\(names[degree])\(triads[degree].quality.symbol) · "
-                                 + Self.degreeNumeral(degree, triads[degree]))
-                                .font(.caption2)
-                                .foregroundStyle(.secondary)
+                            .font(.callout.bold())
+                            .foregroundStyle(.orange.opacity(0.95))
+                        if sevenths.indices.contains(degree) {
+                            Text("\(names[degree])\(sevenths[degree].quality.symbol)")
+                                .font(.caption)
                                 .lineLimit(1)
-                                .minimumScaleFactor(0.6)
+                                .minimumScaleFactor(0.55)
+                        } else {
+                            Text(names[degree]).font(.caption)
                         }
                     }
-                    .frame(minWidth: 62)
-                    .padding(.vertical, 5).padding(.horizontal, 4)
+                    .frame(minWidth: 64)
+                    .padding(.vertical, 6).padding(.horizontal, 4)
                     .background(.white.opacity(0.07), in: .rect(cornerRadius: 8))
                 }
                 .buttonStyle(.plain)

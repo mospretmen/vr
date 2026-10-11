@@ -53,3 +53,43 @@ public enum HarmonizedScale {
         return ladder
     }
 }
+
+
+extension HarmonizedScale {
+    /// The diatonic SEVENTH chord on every degree of a seven-note scale —
+    /// derived the textbook way (stack the scale in thirds, name the
+    /// result): C melodic minor → Cm(maj7) Dm7 E♭maj7♯5 F7 G7 Am7♭5 Bm7♭5.
+    public static func seventhChords(of scale: Scale) -> [Chord] {
+        let pcs = scale.pitchClasses
+        guard pcs.count == 7 else { return [] }
+        return pcs.indices.map { degree in
+            let root = pcs[degree]
+            let intervals = [0, 2, 4, 6].map {
+                root.semitones(to: pcs[(degree + $0) % 7])
+            }
+            return Chord(root: root, quality: Self.seventhQuality(intervals))
+        }
+    }
+
+    private static func seventhQuality(_ intervals: [Int]) -> ChordQuality {
+        switch intervals {
+        case [0, 4, 7, 11]: return .major7
+        case [0, 4, 7, 10]: return .dominant7
+        case [0, 3, 7, 10]: return .minor7
+        case [0, 3, 6, 10]: return .minor7b5
+        case [0, 3, 6, 9]: return .diminished7
+        case [0, 3, 7, 11]:
+            return ChordQuality(name: "Minor-major 7", symbol: "m(maj7)",
+                                intervals: [0, 3, 7, 11])
+        case [0, 4, 8, 11]:
+            return ChordQuality(name: "Major 7 ♯5", symbol: "maj7♯5",
+                                intervals: [0, 4, 8, 11])
+        case [0, 4, 8, 10]:
+            return ChordQuality(name: "Dominant 7 ♯5", symbol: "7♯5",
+                                intervals: [0, 4, 8, 10])
+        default:
+            return ChordQuality(name: "Custom", symbol: "7?",
+                                intervals: intervals.sorted())
+        }
+    }
+}

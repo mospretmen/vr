@@ -722,6 +722,23 @@ struct PublishedShapeTests {
     }
 }
 
+@Suite("Diatonic sevenths per degree")
+struct DiatonicSeventhTests {
+    @Test func textbookTablesFallOutOfThirdStacking() {
+        let major = HarmonizedScale.seventhChords(of: Scale(root: .c, type: .major))
+        #expect(major.map(\.symbol) ==
+                ["Cmaj7", "Dm7", "Em7", "Fmaj7", "G7", "Am7", "Bm7♭5"])
+        let melodic = HarmonizedScale.seventhChords(of: Scale(root: .c, type: .melodicMinor))
+        #expect(melodic.map(\.symbol) ==
+                ["Cm(maj7)", "Dm7", "D♯maj7♯5", "F7", "G7", "Am7♭5", "Bm7♭5"])
+        let harmonic = HarmonizedScale.seventhChords(of: Scale(root: .c, type: .harmonicMinor))
+        #expect(harmonic[0].symbol == "Cm(maj7)")
+        #expect(harmonic[6].symbol == "B°7")
+        // Non-seven-note scales harmonize to nothing.
+        #expect(HarmonizedScale.seventhChords(of: Scale(root: .c, type: .blues)).isEmpty)
+    }
+}
+
 @Suite("Degree spelling by position")
 struct DegreePositionTests {
     @Test func lydianRaisesTheFourthLocrianFlatsTheFifth() {
