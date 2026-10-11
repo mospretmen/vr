@@ -109,6 +109,11 @@ struct HarmonyWheelView: View {
     private var utilityBar: some View {
         HStack(spacing: 10) {
             Button {
+                openWindow(id: SceneID.compass3D)
+            } label: {
+                Label("3D", systemImage: "cube.transparent")
+            }
+            Button {
                 openWindow(id: SceneID.controlPanel)
             } label: {
                 Label("Controls", systemImage: "slider.horizontal.3")
