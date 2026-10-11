@@ -138,7 +138,10 @@ struct HarmonyContextCard: View {
                 return "→ \(to): sub of your V7 (♭II7) — then it slides a half-step back home."
             }
         case .deepen:
-            return "→ \(to): darken into the 7♭9 diminished."
+            if move.from.ring == .dominant {
+                return "→ \(to): darken into the 7♭9 diminished."
+            }
+            return "→ \(to): your vii°7 — leading-tone tension that resolves right back."
         case .dimFamily:
             return "→ \(to): same four notes respelled — pivot a minor third."
         }

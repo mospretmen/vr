@@ -248,6 +248,8 @@ public enum HarmonyWheel {
             add(.fifthSharpward, .majorKey, i + 1)
             add(.fifthFlatward, .majorKey, i + 11)
             add(.passingDim, .diminished, i + 11)      // F → F♯°7 (walk up)
+            add(.deepen, .diminished, i + 9)           // A → G♯°7 (its own vii°7 —
+                                                       // leading-tone neighbor, returns)
 
         case .relativeMinor:
             add(.relative, .majorKey, i)               // Am → C
@@ -257,6 +259,7 @@ public enum HarmonyWheel {
             add(.fifthSharpward, .relativeMinor, i + 1)
             add(.fifthFlatward, .relativeMinor, i + 11)
             add(.passingDim, .diminished, i + 2)       // Gm → G♯°7 (walk up)
+            add(.deepen, .diminished, i)               // Am → G♯°7 (its vii°7, returns)
 
         case .dominant:
             add(.resolve, .relativeMinor, i)           // E7 → Am (straight up)

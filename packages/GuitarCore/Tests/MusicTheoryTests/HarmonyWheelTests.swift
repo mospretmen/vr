@@ -428,6 +428,21 @@ struct ChordVoicingTests {
         #expect(amSubs.map(\.to.chord) == [Chord(root: .aSharp, quality: .dominant7)])
     }
 
+    @Test func keysStepOntoTheirOwnLeadingToneDim() {
+        // A ⇄ G♯°7 and Am ⇄ G♯°7: the vii°7 neighbor goes out AND comes home.
+        let a = HarmonyWheel.node(.majorKey, 3)
+        let out = HarmonyWheel.moves(from: a)
+            .filter { $0.kind == .deepen && $0.to.ring == .diminished }
+        #expect(out.map(\.to.chord) == [Chord(root: .gSharp, quality: .diminished7)])
+        #expect(out.first.map { HarmonyWheel.isTwoWay($0) } == true,
+                "the dim resolves right back — two-way pair")
+        let am = HarmonyWheel.node(.relativeMinor, 0)
+        let amOut = HarmonyWheel.moves(from: am)
+            .filter { $0.kind == .deepen }
+        #expect(amOut.map(\.to.chord) == [Chord(root: .gSharp, quality: .diminished7)])
+        #expect(amOut.first.map { HarmonyWheel.isTwoWay($0) } == true)
+    }
+
     @Test func sixToSubFiveToMinorOneIsAFullLitWalk() {
         // Owner's walk: A♭ (VI of Cm) → D♭7 (sub of Cm's V7) → Cm.
         let aFlat = HarmonyWheel.node(.majorKey, 8)
