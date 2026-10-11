@@ -19,6 +19,7 @@ struct ChordDetailView: View {
     @State private var gripIndex = 0
     @State private var shellIndex = 0
     @State private var bass: ChordTone = .root
+    @State private var guideTones = false
     @State private var stringSetIndex = 0
     @State private var labelStyle: LabelStyle = .degrees
     @State private var pads = ChordPadEngine()
@@ -58,6 +59,7 @@ struct ChordDetailView: View {
                 fretCount: 15,
                 labelStyle: labelStyle,
                 chord: chord,
+                highlightGuideTones: guideTones,
                 connections: shapeConnections
             )
             // A real neck's proportions — never stretched by the window.
@@ -80,6 +82,9 @@ struct ChordDetailView: View {
             }
             .buttonStyle(.borderedProminent)
             Spacer()
+            Toggle("Guide tones", isOn: $guideTones)
+                .toggleStyle(.button)
+                .font(.caption)
             Picker("Labels", selection: $labelStyle) {
                 Text("Tones").tag(LabelStyle.degrees)
                 Text("Notes").tag(LabelStyle.noteNames)

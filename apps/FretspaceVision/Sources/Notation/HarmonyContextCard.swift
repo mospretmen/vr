@@ -99,6 +99,9 @@ struct HarmonyContextCard: View {
         case .toDominant:
             return "→ \(to): raise tension on its dominant."
         case .twoFive:
+            if move.from.ring == .majorKey {
+                return "→ \(to): your ii — the first step of ii–V–I home."
+            }
             return "→ \(to): ii–V — you're the ii; this is your V."
         case .fifthSharpward:
             if move.from.ring == .dominant && move.to.ring == .dominant {
@@ -114,6 +117,8 @@ struct HarmonyContextCard: View {
             return "→ \(to): relative switch — same notes, new home."
         case .passingDim:
             return "→ \(to): chromatic walk-up through the passing dim."
+        case .soften:
+            return "→ \(to): soften — same root, the dominant relaxes into the ii of a coming ii–V."
         case .tritoneSub:
             switch (move.from.ring, move.to.ring) {
             case (.dominant, .dominant):

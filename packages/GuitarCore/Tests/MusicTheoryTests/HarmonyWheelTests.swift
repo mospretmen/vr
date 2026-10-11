@@ -323,7 +323,18 @@ struct ChordVoicingTests {
         let gm11 = Chord(root: .g, quality: ChordQuality(
             name: "m11", symbol: "m11", intervals: [0, 3, 7, 10, 14, 17]))
         let grips = ChordVoicings.voicings(for: gm11)
-        #expect(grips.first == Voicing(frets: [3, 3, 3, 3, 3, 3]))
+        #expect(grips.first == Voicing(frets: [3, nil, 3, 3, 1, nil]),
+                "the published compact Gm11 leads")
+        #expect(grips.contains(Voicing(frets: [3, 3, 3, 3, 3, 3])),
+                "the full barre is offered too")
+        // Published dictionary shapes for the staples:
+        let cm9 = ChordVoicings.voicings(for: Chord(root: .c, quality: ChordQuality(
+            name: "m9", symbol: "m9", intervals: [0, 3, 7, 10, 14])))
+        #expect(cm9.contains(Voicing(frets: [nil, 3, 1, 3, 3, 3])))
+        let cmaj7 = ChordVoicings.voicings(for: Chord(root: .c, quality: .major7))
+        #expect(cmaj7.contains(Voicing(frets: [nil, 3, 5, 4, 5, 3])))
+        let g7grips = ChordVoicings.voicings(for: Chord(root: .g, quality: .dominant7))
+        #expect(g7grips.contains(Voicing(frets: [3, 5, 3, 4, 3, 3])))
         // Open C still leads its own list — conventions must not dethrone
         // the open classics.
         let c = ChordVoicings.voicings(for: Chord(root: .c, quality: .major))
@@ -417,6 +428,37 @@ struct ChordVoicingTests {
         #expect(amSubs.map(\.to.chord) == [Chord(root: .aSharp, quality: .dominant7)])
     }
 
+    @Test func secondaryDominantSoftensIntoTheTwo() {
+        // C → D7 (V7/V) → Dm7 (soften, same root) → G7 → C.
+        let c = HarmonyWheel.node(.majorKey, 0)
+        let d7 = HarmonyWheel.moves(from: c)
+            .first { $0.kind == .toDominant && $0.to.chord.root == .d }
+        #expect(d7 != nil, "C reaches its V7/V")
+        let soften = HarmonyWheel.moves(from: d7!.to)
+            .filter { $0.kind == .soften }
+        #expect(soften.map(\.to.chord) == [Chord(root: .d, quality: .minor)],
+                "D7 relaxes into Dm on the same root")
+        let g7 = HarmonyWheel.moves(from: soften[0].to)
+            .first { $0.kind == .twoFive && $0.to.ring == .dominant }
+        #expect(g7?.to.chord == Chord(root: .g, quality: .dominant7))
+    }
+
+    @Test func twoFiveOneIsAFullLitChain() {
+        // C → Dm (ii) → G7 (V) → C: every link is a drawn pathway.
+        let c = HarmonyWheel.node(.majorKey, 0)
+        let toTwo = HarmonyWheel.moves(from: c)
+            .filter { $0.kind == .twoFive }
+        #expect(toTwo.map(\.to.chord) == [Chord(root: .d, quality: .minor)])
+        let dm = toTwo[0].to
+        let toFive = HarmonyWheel.moves(from: dm)
+            .filter { $0.kind == .twoFive && $0.to.ring == .dominant }
+        #expect(toFive.map(\.to.chord) == [Chord(root: .g, quality: .dominant7)])
+        let g7 = toFive[0].to
+        let home = HarmonyWheel.moves(from: g7)
+            .filter { $0.kind == .resolve && $0.to.ring == .majorKey }
+        #expect(home.map(\.to.id) == [c.id])
+    }
+
     @Test func dominantsChainAroundTheCircle() {
         // E7 → A7 → D7 → … : resolve down a fifth, stay dominant.
         let e7 = HarmonyWheel.node(.dominant, 0)
@@ -474,6 +516,29 @@ struct ChordVoicingTests {
         }
     }
 
+}
+
+@Suite("Scale spelling")
+struct ScaleSpellingTests {
+    @Test func sevenNoteScalesSpellDiatonically() {
+        let gMinor = Scale(root: .g, type: .naturalMinor)
+        #expect(gMinor.spelledNames() == ["G", "A", "B♭", "C", "D", "E♭", "F"])
+        let dMajor = Scale(root: .d, type: .major)
+        #expect(dMajor.spelledNames() == ["D", "E", "F♯", "G", "A", "B", "C♯"])
+        let fLydian = Scale(root: .f, type: .lydian)
+        #expect(fLydian.spelledNames() == ["F", "G", "A", "B", "C", "D", "E"])
+        let cAltered = Scale(root: .c, type: .altered)
+        #expect(cAltered.spelledNames() == ["C", "D♭", "E♭", "F♭", "G♭", "A♭", "B♭"])
+    }
+
+    @Test func bluesAndPentatonicsSpellFlatSide() {
+        let gBlues = Scale(root: .g, type: .blues)
+        #expect(gBlues.spelledNames() == ["G", "B♭", "C", "D♭", "D", "F"])
+        let aMinorPent = Scale(root: .a, type: .minorPentatonic)
+        #expect(aMinorPent.spelledNames() == ["A", "C", "D", "E", "G"])
+        let cMajorPent = Scale(root: .c, type: .majorPentatonic)
+        #expect(cMajorPent.spelledNames() == ["C", "D", "E", "G", "A"])
+    }
 }
 
 @Suite("Voice leading")

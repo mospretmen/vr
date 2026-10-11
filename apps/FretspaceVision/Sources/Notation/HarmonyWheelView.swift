@@ -13,6 +13,8 @@ struct HarmonyWheelView: View {
     /// all its diatonic chords) is haloed. Modulation = moving this.
     @State private var keyCenter: Int = 0
     @State private var keyIsMinor = false
+    /// Pathway families switched off via the tappable legend.
+    @State private var hiddenKinds: Set<HarmonyWheel.MoveKind> = []
     /// Tap a chord, hear the chord — same synth as the backing pads.
     @State private var pads = ChordPadEngine()
 
@@ -128,15 +130,29 @@ struct HarmonyWheelView: View {
         }
     }
 
+    /// The legend doubles as the pathway mixer: tap a family to hide or
+    /// show its lines on the wheel.
     private var legend: some View {
         HStack(spacing: 10) {
             ForEach(Array(MoveStyle.legendRows.enumerated()), id: \.offset) { _, row in
-                HStack(spacing: 3) {
-                    Circle().fill(row.color).frame(width: 8, height: 8)
-                    Text(row.label).font(.caption2)
+                let off = row.kinds.allSatisfy { hiddenKinds.contains($0) }
+                Button {
+                    if off {
+                        hiddenKinds.subtract(row.kinds)
+                    } else {
+                        hiddenKinds.formUnion(row.kinds)
+                    }
+                } label: {
+                    HStack(spacing: 3) {
+                        Circle().fill(row.color).frame(width: 8, height: 8)
+                        Text(row.label).font(.caption2)
+                            .strikethrough(off, color: .secondary)
+                    }
+                    .opacity(off ? 0.35 : 1)
                 }
+                .buttonStyle(.plain)
             }
-            Text("· → one-way · ⇄ returns").font(.caption2)
+            Text("· → one-way · ⇄ returns · tap to filter").font(.caption2)
         }
         .foregroundStyle(.secondary)
     }
@@ -295,11 +311,15 @@ struct HarmonyWheelView: View {
             2: (0.6, 3.0, 12),
             3: (0.3, 2.0, 8),
         ]
-        func priority(_ kind: HarmonyWheel.MoveKind) -> Int {
-            switch kind {
-            case .resolve: 3
-            case .deceptive: 2
-            default: 1
+        func priority(_ move: HarmonyWheel.Move) -> Int {
+            switch move.kind {
+            case .resolve: return 3
+            case .deceptive: return 2
+            case .tritoneSub:
+                // The resolution side (sub → home key) owns the big head;
+                // the outbound side (key → its sub) is the lesser arrow.
+                return move.from.ring == .dominant && move.to.ring != .dominant ? 2 : 1
+            default: return 1
             }
         }
 
@@ -310,13 +330,13 @@ struct HarmonyWheelView: View {
             var depth: Int
         }
         var pairs: [String: PairInfo] = [:]
-        for (move, depth) in gradedMoves {
+        for (move, depth) in gradedMoves where !hiddenKinds.contains(move.kind) {
             let key = [move.from.id, move.to.id].sorted().joined(separator: "|")
             if var info = pairs[key] {
                 info.depth = min(info.depth, depth)
                 if move.to.id == info.forward.from.id, info.backward == nil {
                     info.backward = move
-                } else if priority(move.kind) > priority(info.forward.kind) {
+                } else if priority(move) > priority(info.forward) {
                     info.backward = info.forward
                     info.forward = move
                 }
@@ -327,7 +347,7 @@ struct HarmonyWheelView: View {
         }
         // Promote: the higher-priority direction owns the big head.
         for (key, info) in pairs {
-            if let back = info.backward, priority(back.kind) > priority(info.forward.kind) {
+            if let back = info.backward, priority(back) > priority(info.forward) {
                 pairs[key] = PairInfo(forward: back, backward: info.forward, depth: info.depth)
             }
         }
@@ -599,6 +619,7 @@ private struct MoveStyle {
         .init(kind: .relative, color: Color.white.opacity(0.65), label: "Relative"),
         .init(kind: .twoFive, color: .mint, label: "ii–V"),
         .init(kind: .tritoneSub, color: .pink, label: "Tritone sub"),
+        .init(kind: .soften, color: .cyan, label: "Soften (V7→ii)"),
         .init(kind: .fifthSharpward, color: .blue, label: "Fifths"),
         .init(kind: .fifthFlatward, color: .blue, label: "Fifths"),
         // deepen/dimFamily inherit the diminished family's chip tint at
@@ -609,11 +630,14 @@ private struct MoveStyle {
     ]
 
     /// Legend rows (deduped — fifths share a color, dim paths share a row).
-    static let legendRows: [(color: Color, label: String)] = {
-        var rows: [(Color, String)] = []
-        var seen = Set<String>()
-        for style in ordered where seen.insert(style.label).inserted {
-            rows.append((style.color, style.label))
+    static let legendRows: [(color: Color, label: String, kinds: Set<HarmonyWheel.MoveKind>)] = {
+        var rows: [(Color, String, Set<HarmonyWheel.MoveKind>)] = []
+        for style in ordered {
+            if let index = rows.firstIndex(where: { $0.1 == style.label }) {
+                rows[index].2.insert(style.kind)
+            } else {
+                rows.append((style.color, style.label, [style.kind]))
+            }
         }
         return rows
     }()

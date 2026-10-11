@@ -194,6 +194,9 @@ public enum HarmonyWheel {
         case twoFive            // minor as ii → the V it precedes (Dm → G7)
         case passingDim         // key steps up a half-step into the passing
                                 // diminished (F → F♯°7, Gm → G♯°7)
+        case soften             // a dominant relaxes into the minor 7th on
+                                // the SAME root (D7 → Dm7), becoming the ii
+                                // of a coming ii–V
         case tritoneSub         // dominant ↔ the dominant a tritone away —
                                 // same 3rd & 7th swapped, resolves to the
                                 // same target a half-step down (G7 ↔ D♭7)
@@ -236,6 +239,8 @@ public enum HarmonyWheel {
             add(.relative, .relativeMinor, i)          // C → Am (adjacent)
             add(.toDominant, .dominant, i)             // C → E7 (straight down)
             add(.toDominant, .dominant, i + 9)         // C → G7 (its own V7)
+            add(.twoFive, .relativeMinor, i + 11)      // C → Dm (your ii — starts ii–V–I)
+            add(.toDominant, .dominant, i + 10)        // C → D7 (V7 of its V)
             add(.tritoneSub, .dominant, i + 3)         // C → D♭7 (sub of its V7)
             add(.fifthSharpward, .majorKey, i + 1)
             add(.fifthFlatward, .majorKey, i + 11)
@@ -255,6 +260,7 @@ public enum HarmonyWheel {
             add(.resolve, .majorKey, i + 3)            // E7 → A (cross-wheel)
             add(.deceptive, .relativeMinor, i + 3)     // E7 → F♯m (V → vi)
             add(.deepen, .diminished, i)               // E7 → G♯°7 (straight down)
+            add(.soften, .relativeMinor, i + 1)        // D7 → Dm (same root, now the ii)
             add(.tritoneSub, .dominant, i + 6)         // E7 ↔ B♭7 (straight across)
             add(.fifthFlatward, .dominant, i + 11)     // E7 → A7 (the dominant chain)
             add(.fifthSharpward, .dominant, i + 1)     // E7 → B7 (V7 of my V7)

@@ -9,7 +9,7 @@ struct ScaleDetailView: View {
 
     @State private var labelStyle: LabelStyle = .degrees
     @State private var boxIndex: Int? = nil
-    @State private var guideTonesOnly = false
+    @State private var guideTones = false
     @State private var pads = ChordPadEngine()
 
     private var board: FretboardModel { FretboardModel() }
@@ -22,13 +22,6 @@ struct ScaleDetailView: View {
                 for: scale, startingAt: board.boxStartFrets(for: scale)[boxIndex])
         } else {
             all = board.highlights(for: scale)
-        }
-        if guideTonesOnly {
-            // Guide tones: every 3rd and 7th, with roots kept as anchors.
-            let guide: Set<Int> = [0, 3, 4, 10, 11]
-            all = all.filter {
-                guide.contains(scale.root.semitones(to: $0.note.pitchClass))
-            }
         }
         return all
     }
@@ -76,7 +69,7 @@ struct ScaleDetailView: View {
                     }
                 }
                 .pickerStyle(.menu)
-                Toggle("Guide tones", isOn: $guideTonesOnly)
+                Toggle("Guide tones", isOn: $guideTones)
                     .toggleStyle(.button)
                     .font(.caption)
                 Spacer()
@@ -87,7 +80,8 @@ struct ScaleDetailView: View {
                 stringCount: 6,
                 fretCount: 15,
                 labelStyle: labelStyle,
-                scale: scale
+                scale: scale,
+                highlightGuideTones: guideTones
             )
             // A real neck's proportions — never stretched by the window.
             .aspectRatio(5.6, contentMode: .fit)
@@ -154,8 +148,7 @@ struct ScaleStaff: View {
                 at: CGPoint(x: left - 20, y: staffTop + 2 * lineGap)
             )
 
-            let useFlats = scale.name.contains("♭")
-            let names = scale.pitchClasses.map { $0.name(useFlats ? .flats : .sharps) }
+            let names = scale.spelledNames()
             let degrees = Modes.degreeLabels(of: scale.type)
             let letterSteps: [Character: Int] = ["C": 0, "D": 1, "E": 2, "F": 3,
                                                  "G": 4, "A": 5, "B": 6]
@@ -167,7 +160,7 @@ struct ScaleStaff: View {
             for index in 0..<count {
                 let name = names[index % names.count]
                 guard let letter = name.first, var step = letterSteps[letter] else { continue }
-                while step <= lastStep { step += 7 }
+                while step < lastStep { step += 7 }
                 lastStep = step
 
                 let x = left + 36 + CGFloat(index) * spacing

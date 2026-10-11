@@ -90,4 +90,44 @@ public struct Scale: Codable, Sendable, Hashable {
     }
 
     public var name: String { "\(root.name()) \(type.name)" }
+
+    /// Correctly spelled note names, degree by degree. Seven-note scales
+    /// spell diatonically — every degree takes the NEXT letter (G minor:
+    /// G A B♭ C D E♭ F, never A♯ after A). Other sizes avoid repeating
+    /// the previous letter where an enharmonic choice exists.
+    public func spelledNames() -> [String] {
+        let letters: [Character] = ["C", "D", "E", "F", "G", "A", "B"]
+        let naturals = [0, 2, 4, 5, 7, 9, 11]
+        let pcs = pitchClasses
+
+        if type.intervals.count == 7 {
+            let rootName = root.name()
+            guard let rootLetter = rootName.first,
+                  let rootIndex = letters.firstIndex(of: rootLetter) else {
+                return pcs.map { $0.name() }
+            }
+            return pcs.enumerated().map { degree, pc in
+                let letterIndex = (rootIndex + degree) % 7
+                var diff = (pc.rawValue - naturals[letterIndex] + 12) % 12
+                if diff > 6 { diff -= 12 }
+                let accidental: String
+                switch diff {
+                case -2: accidental = "𝄫"
+                case -1: accidental = "♭"
+                case 1: accidental = "♯"
+                case 2: accidental = "𝄪"
+                default: accidental = ""
+                }
+                return String(letters[letterIndex]) + accidental
+            }
+        }
+        // Pentatonics / 8-note scales: flat-side degrees (♭3 ♭5 ♭6 ♭7 ♭9)
+        // spell flat — G blues is G B♭ C D♭ D F, never A♯. Chromatic pairs
+        // (D♭→D) legitimately share a letter; the staff puts them on one
+        // line with different accidentals.
+        let flatDegrees: Set<Int> = [1, 3, 6, 8, 10]
+        return pcs.map { pc in
+            pc.name(flatDegrees.contains(root.semitones(to: pc)) ? .flats : .sharps)
+        }
+    }
 }

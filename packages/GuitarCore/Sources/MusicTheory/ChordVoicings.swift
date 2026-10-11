@@ -62,10 +62,26 @@ public enum ChordVoicings {
                          pcs: pcs, required: required, into: &best)
             }
         }
-        // Best grips first (the canonical shape leads), position breaks ties.
-        return best.values
+        // Published template shapes lead — they ARE how guitarists play
+        // these chords. The generative search fills neck positions no
+        // template covers (and is the only source for inversions and
+        // non-standard tunings).
+        var grips = bass == .root ? ChordGripTemplates.grips(for: chord, tuning: tuning) : []
+        let templatePositions = Set(grips.map(\.neckPosition))
+        let generated = best.values
+            .filter { !templatePositions.contains($0.voicing.neckPosition) }
             .sorted { ($0.score, $1.voicing.neckPosition) < ($1.score, $0.voicing.neckPosition) }
-            .prefix(limit).map(\.voicing)
+            .map(\.voicing)
+        grips.append(contentsOf: generated)
+        var seen = Set<Voicing>()
+        grips = grips.filter { seen.insert($0).inserted }
+        // Order along the neck; template shapes outrank generated ties.
+        let templateSet = Set(ChordGripTemplates.grips(for: chord, tuning: tuning))
+        grips.sort {
+            ($0.neckPosition, templateSet.contains($0) ? 0 : 1)
+                < ($1.neckPosition, templateSet.contains($1) ? 0 : 1)
+        }
+        return Array(grips.prefix(limit))
     }
 
     /// Shell voicings for seventh chords: root + the two guide tones (3rd

@@ -189,6 +189,8 @@ struct FretboardDiagram: View {
     var leftHanded = false
     var scale: Scale? = nil
     var chord: Chord? = nil
+    /// Recolor 3rds & 7ths gold (all notes stay visible).
+    var highlightGuideTones = false
     var connections: [[FretPosition]] = []
     var emphasizeAlterations = false
 
@@ -298,8 +300,17 @@ struct FretboardDiagram: View {
                 let radius: CGFloat = CGFloat(OverlayPalette.radius(for: h.role)) * 2200
                 let circle = Path(ellipseIn: CGRect(x: cx - radius, y: cy - radius,
                                                     width: radius * 2, height: radius * 2))
-                context.fill(circle, with: .color(OverlayPalette.color(
-                    for: h, scale: scale, emphasizeAlterations: emphasizeAlterations)))
+                let guideRoot = chord?.root ?? scale?.root
+                let isGuideTone = guideRoot.map {
+                    [3, 4, 10, 11].contains($0.semitones(to: h.note.pitchClass))
+                } ?? false
+                if highlightGuideTones && isGuideTone {
+                    context.fill(circle, with: .color(
+                        Color(red: 0.96, green: 0.78, blue: 0.22)))
+                } else {
+                    context.fill(circle, with: .color(OverlayPalette.color(
+                        for: h, scale: scale, emphasizeAlterations: emphasizeAlterations)))
+                }
 
                 if let label = OverlayPalette.label(for: h, style: labelStyle,
                                                     scale: scale, chord: chord) {
