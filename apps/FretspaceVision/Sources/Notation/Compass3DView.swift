@@ -13,13 +13,21 @@ struct Compass3DView: View {
     @State private var cache = Compass3DCache()
 
     var body: some View {
-        RealityView { content in
+        RealityView { content, attachments in
             let root = Entity()
             cache.build(into: root)
             cache.showMoves(for: selectedID)
             content.add(root)
-        } update: { _ in
+            if let card = attachments.entity(for: "card") {
+                card.position = [0.47, 0.02, 0.05]
+                root.addChild(card)
+            }
+        } update: { _, _ in
             cache.showMoves(for: selectedID)
+        } attachments: {
+            Attachment(id: "card") {
+                Compass3DCard(selectedID: selectedID)
+            }
         }
         .gesture(
             SpatialTapGesture()
@@ -40,6 +48,30 @@ struct Compass3DView: View {
             current = e.parent
         }
         return nil
+    }
+}
+
+/// The floating teaching card inside the volume — the selected chord and
+/// its pathways in the same plain words as the flat compass.
+private struct Compass3DCard: View {
+    let selectedID: String
+
+    var body: some View {
+        if let node = Compass3DCache.node(for: selectedID) {
+            VStack(alignment: .leading, spacing: 8) {
+                Text(node.label).font(.title2.bold())
+                ForEach(Array(HarmonyWheel.moves(from: node).prefix(7).enumerated()),
+                        id: \.offset) { _, move in
+                    Text(HarmonyContextCard.describe(move))
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            .padding(14)
+            .frame(width: 270, alignment: .leading)
+            .glassBackgroundEffect()
+        }
     }
 }
 
@@ -112,6 +144,7 @@ final class Compass3DCache {
         case .twoFive: UIColor(red: 0.37, green: 0.92, blue: 0.83, alpha: 1)
         case .soften: UIColor(red: 0.13, green: 0.83, blue: 0.93, alpha: 1)
         case .tritoneSub: UIColor(red: 0.96, green: 0.45, blue: 0.71, alpha: 1)
+        case .backdoor: UIColor(red: 0.98, green: 0.80, blue: 0.18, alpha: 1)
         case .fifthSharpward, .fifthFlatward: UIColor(red: 0.38, green: 0.65, blue: 0.98, alpha: 1)
         case .relative: UIColor(white: 0.92, alpha: 1)
         }

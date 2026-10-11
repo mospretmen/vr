@@ -92,6 +92,15 @@ suite("compass graph parity", () => {
     expect(pairs.some((p) => p.depth === 3)).toBe(true);
   });
 
+  it("the backdoor dominant sits straight across and slips home", () => {
+    const c = node("majorKey", 0);
+    const out = movesFrom(c).filter((m) => m.kind === "backdoor");
+    expect(out.map((m) => m.to.label)).toEqual(["A♯7"]);
+    const home = movesFrom(out[0].to).filter((m) => m.kind === "backdoor");
+    expect(home.map((m) => m.to.id)).toEqual([c.id]);
+    expect(isTwoWay(out[0])).toBe(true);
+  });
+
   it("chord pads sound the right tones", () => {
     expect(chordPitchClasses(node("dominant", 9))).toEqual([7, 11, 2, 5]); // G7
     expect(chordPitchClasses(node("relativeMinor", 0))).toEqual([9, 0, 4]); // Am

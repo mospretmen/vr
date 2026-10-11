@@ -16,6 +16,7 @@ export type MoveKind =
   | "twoFive"
   | "passingDim"
   | "soften"
+  | "backdoor"
   | "tritoneSub"
   | "deepen"
   | "dimFamily";
@@ -100,6 +101,7 @@ export function movesFrom(n: CompassNode): Move[] {
       add("toDominant", "dominant", i + 7); //        C → F7 (IV7 — blues)
       add("twoFive", "relativeMinor", i + 11); //     C → Dm (its ii)
       add("tritoneSub", "dominant", i + 3); //        C → D♭7 (sub of its V7)
+      add("backdoor", "dominant", i + 6); //          C → B♭7 (the back door out)
       add("fifthSharpward", "majorKey", i + 1);
       add("fifthFlatward", "majorKey", i + 11);
       add("passingDim", "diminished", i + 11); //     F → F♯°7 (walk up)
@@ -120,6 +122,7 @@ export function movesFrom(n: CompassNode): Move[] {
       add("resolve", "majorKey", i + 3); //           E7 → A
       add("deceptive", "relativeMinor", i + 3); //    E7 → F♯m
       add("soften", "relativeMinor", i + 1); //       D7 → Dm (same root, now the ii)
+      add("backdoor", "majorKey", i + 6); //          B♭7 → C (backdoor resolution)
       add("deepen", "diminished", i); //              E7 → G♯°7 (7♭9)
       add("tritoneSub", "dominant", i + 6); //        E7 ↔ B♭7
       add("tritoneSub", "majorKey", i + 9); //        as a sub: E7 → E♭
@@ -185,6 +188,10 @@ export function describe(m: Move): string {
       return `→ ${to}: chromatic walk-up through the passing dim.`;
     case "soften":
       return `→ ${to}: soften — same root, the dominant relaxes into the ii of a coming ii–V.`;
+    case "backdoor":
+      return m.to.ring === "majorKey"
+        ? `→ ${to}: the backdoor resolution — ♭VII7 slips up a whole step, home through the flat side.`
+        : `→ ${to}: the back door — its ♭VII7, usually reached through the borrowed iv.`;
     case "tritoneSub": {
       if (m.from.ring === "dominant" && m.to.ring === "dominant")
         return `→ ${to}: tritone sub — same 3rd & 7th, slides down a half-step into the same home.`;
@@ -226,6 +233,7 @@ function priority(m: Move): number {
     case "resolve": return 3;
     case "deceptive": return 2;
     case "tritoneSub":
+    case "backdoor":
       return m.from.ring === "dominant" && m.to.ring !== "dominant" ? 2 : 1;
     default: return 1;
   }

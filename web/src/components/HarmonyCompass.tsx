@@ -44,6 +44,7 @@ const KIND_COLOR: Record<MoveKind, string> = {
   twoFive: "#5eead4",
   soften: "#22d3ee",
   tritoneSub: "#f472b6",
+  backdoor: "#facc15",
   fifthSharpward: "#60a5fa",
   fifthFlatward: "#60a5fa",
   relative: "#e2e8f0",

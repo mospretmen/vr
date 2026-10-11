@@ -126,6 +126,11 @@ struct HarmonyContextCard: View {
             return "→ \(to): relative switch — same notes, new home."
         case .passingDim:
             return "→ \(to): chromatic walk-up through the passing dim."
+        case .backdoor:
+            if move.to.ring == .majorKey {
+                return "→ \(to): the backdoor resolution — ♭VII7 slips up a whole step, home through the flat side."
+            }
+            return "→ \(to): the back door — its ♭VII7, usually reached through the borrowed iv."
         case .soften:
             return "→ \(to): soften — same root, the dominant relaxes into the ii of a coming ii–V."
         case .tritoneSub:

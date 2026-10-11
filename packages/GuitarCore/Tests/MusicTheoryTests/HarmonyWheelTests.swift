@@ -428,6 +428,18 @@ struct ChordVoicingTests {
         #expect(amSubs.map(\.to.chord) == [Chord(root: .aSharp, quality: .dominant7)])
     }
 
+    @Test func theBackdoorDominantSlipsHome() {
+        // C ⇄ B♭7: the ♭VII7 sits straight across the wheel and resolves
+        // up a whole step into the key.
+        let c = HarmonyWheel.node(.majorKey, 0)
+        let out = HarmonyWheel.moves(from: c).filter { $0.kind == .backdoor }
+        #expect(out.map(\.to.chord) == [Chord(root: .aSharp, quality: .dominant7)])
+        let bFlat7 = out[0].to
+        let home = HarmonyWheel.moves(from: bFlat7).filter { $0.kind == .backdoor }
+        #expect(home.map(\.to.id) == [c.id])
+        #expect(out.first.map { HarmonyWheel.isTwoWay($0) } == true)
+    }
+
     @Test func keysStepOntoTheirOwnLeadingToneDim() {
         // A ⇄ G♯°7 and Am ⇄ G♯°7: the vii°7 neighbor goes out AND comes home.
         let a = HarmonyWheel.node(.majorKey, 3)

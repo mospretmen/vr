@@ -364,9 +364,9 @@ struct HarmonyWheelView: View {
             switch move.kind {
             case .resolve: return 3
             case .deceptive: return 2
-            case .tritoneSub:
-                // The resolution side (sub → home key) owns the big head;
-                // the outbound side (key → its sub) is the lesser arrow.
+            case .tritoneSub, .backdoor:
+                // The resolution side (into the key) owns the big head;
+                // the outbound side is the lesser arrow.
                 return move.from.ring == .dominant && move.to.ring != .dominant ? 2 : 1
             default: return 1
             }
@@ -669,6 +669,7 @@ private struct MoveStyle {
         .init(kind: .twoFive, color: .mint, label: "ii–V"),
         .init(kind: .tritoneSub, color: .pink, label: "Tritone sub"),
         .init(kind: .soften, color: .cyan, label: "Soften"),
+        .init(kind: .backdoor, color: .yellow, label: "Backdoor"),
         .init(kind: .fifthSharpward, color: .blue, label: "Fifths"),
         .init(kind: .fifthFlatward, color: .blue, label: "Fifths"),
         // deepen/dimFamily inherit the diminished family's chip tint at
