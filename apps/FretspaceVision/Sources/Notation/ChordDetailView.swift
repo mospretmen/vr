@@ -31,6 +31,7 @@ struct ChordDetailView: View {
         case shells = "Shells"
         case triads = "Triads"
         case drop2 = "Drop-2"
+        case movement = "Movement"
         var id: String { rawValue }
     }
 
@@ -62,7 +63,45 @@ struct ChordDetailView: View {
     private var hasSeventh: Bool { chord.quality.intervals.count >= 4 }
 
     private var modes: [Mode] {
-        hasSeventh ? [.grips, .shells, .triads, .drop2] : [.grips, .triads]
+        var list: [Mode] = hasSeventh ? [.grips, .shells, .triads, .drop2]
+                                      : [.grips, .triads]
+        if movementSixChord != nil { list.append(.movement) }
+        return list
+    }
+    @State private var rungIndex = 0
+    private var ladder: [SixthDiminished.Step] {
+        guard let six = movementSixChord else { return [] }
+        return SixthDiminished.ladder(root: six.root,
+                                      minor: six.quality.intervals.contains(3))
+    }
+    private var currentRung: SixthDiminished.Step? {
+        ladder.isEmpty ? nil : ladder[min(rungIndex, ladder.count - 1)]
+    }
+    /// The chord whose tones label the board: the rung's chord in Movement.
+    private var contextChord: Chord {
+        mode == .movement ? (currentRung?.chord ?? chord) : chord
+    }
+
+    private func rungVoicing(_ step: SixthDiminished.Step) -> SeventhVoicing? {
+        let set = drop2Sets[min(stringSetIndex, drop2Sets.count - 1)]
+        for span in [5, 6, 7] {
+            let shapes = SeventhVoicings.drop2(of: step.chord, strings: set,
+                                               on: board, maxSpan: span)
+            if let match = shapes.first(where: { $0.steps.first?.note.pitchClass == step.bass }) {
+                return match
+            }
+        }
+        return SeventhVoicings.drop2(of: step.chord, strings: set,
+                                     on: board, maxSpan: 7).first
+    }
+
+    private func rungLabel(_ step: SixthDiminished.Step) -> String {
+        guard let six = movementSixChord else { return step.chord.symbol }
+        let degree = six.root.semitones(to: step.bass)
+        let spelling: PitchClass.Spelling = [1, 3, 6, 8, 10].contains(degree) ? .flats : .sharps
+        return step.bass == step.chord.root
+            ? step.chord.symbol
+            : "\(step.chord.symbol)/\(step.bass.name(spelling))"
     }
     private var shellVoicings: [Voicing] { ChordVoicings.shells(for: chord) }
 
@@ -79,7 +118,7 @@ struct ChordDetailView: View {
                 stringCount: 6,
                 fretCount: 15,
                 labelStyle: labelStyle,
-                chord: chord,
+                chord: contextChord,
                 highlightGuideTones: guideTones,
                 connections: shapeConnections
             )
@@ -103,14 +142,6 @@ struct ChordDetailView: View {
             }
             .buttonStyle(.borderedProminent)
             Spacer()
-            if let six = movementSixChord {
-                Button {
-                    openWindow(id: SceneID.movement, value: six)
-                } label: {
-                    Label("Movement", systemImage: "arrow.up.right.circle")
-                }
-                .buttonStyle(.bordered)
-            }
             Toggle("Guide tones", isOn: $guideTones)
                 .toggleStyle(.button)
                 .font(.caption)
@@ -165,6 +196,49 @@ struct ChordDetailView: View {
                                      : "Tap a grip to hear it")
                     .font(.caption2).foregroundStyle(.tertiary)
             }
+        case .movement:
+            VStack(alignment: .leading, spacing: 8) {
+                HStack(spacing: 8) {
+                    Picker("Strings", selection: $stringSetIndex) {
+                        ForEach(drop2Sets.indices, id: \.self) { index in
+                            Text("Strings \(setLabel(drop2Sets[index]))").tag(index)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                    Button {
+                        pads.playProgression(ladder.map(\.chord), eachMs: 620)
+                    } label: {
+                        Label("Play ladder", systemImage: "play.fill")
+                    }
+                    .buttonStyle(.borderedProminent)
+                    Spacer()
+                    Text("Barry Harris: the 6th-diminished ladder")
+                        .font(.caption2).foregroundStyle(.tertiary)
+                }
+                HStack(spacing: 5) {
+                    ForEach(Array(ladder.enumerated()), id: \.offset) { index, step in
+                        Button {
+                            rungIndex = index
+                            if let v = rungVoicing(step) {
+                                pads.playRun(v.steps.map(\.note))
+                            }
+                        } label: {
+                            Text(rungLabel(step))
+                                .font(.caption)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.6)
+                                .padding(.horizontal, 8).padding(.vertical, 5)
+                                .background(index == rungIndex
+                                                ? (step.isDiminished ? .purple.opacity(0.5)
+                                                                     : .blue.opacity(0.5))
+                                                : .white.opacity(0.1),
+                                            in: .capsule)
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    Spacer()
+                }
+            }
         case .triads, .drop2:
             HStack(spacing: 8) {
                 Picker("Strings", selection: $stringSetIndex) {
@@ -209,6 +283,16 @@ struct ChordDetailView: View {
     /// together so the same chord is visible climbing the neck.
     private var currentInversions: [InversionShape] {
         switch mode {
+        case .movement:
+            guard let step = currentRung, let v = rungVoicing(step) else { return [] }
+            return [InversionShape(shape: v.positions,
+                                   label: rungLabel(step),
+                                   notes: v.steps.map(\.note))]
+        case .movement:
+            guard let step = currentRung, let v = rungVoicing(step) else { return [] }
+            return [InversionShape(shape: v.positions,
+                                   label: rungLabel(step),
+                                   notes: v.steps.map(\.note))]
         case .grips, .shells:
             let shapes = mode == .grips ? grips : shellVoicings
             let index = mode == .grips ? gripIndex : shellIndex
@@ -239,9 +323,10 @@ struct ChordDetailView: View {
     }
 
     private var shapeHighlights: [FretboardHighlight] {
-        currentInversions.flatMap(\.shape).compactMap { position in
+        let context = contextChord
+        return currentInversions.flatMap(\.shape).compactMap { position in
             let note = board.note(at: position)
-            guard let tone = chord.tone(of: note.pitchClass) else { return nil }
+            guard let tone = context.tone(of: note.pitchClass) else { return nil }
             return FretboardHighlight(position: position, note: note,
                                       role: .chordTone(tone))
         }
