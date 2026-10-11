@@ -244,7 +244,7 @@ export function HarmonyCompass() {
 
         {/* graded three-hop web, pair-collapsed; resolution owns the head */}
         {web.map(({ move: m, depth, twoWay }, i) => {
-          const look = { 1: [0.95, 2.4], 2: [0.42, 1.4], 3: [0.16, 0.8] }[depth]!;
+          const look = { 1: [0.95, 2.4], 2: [0.28, 1.3], 3: [0.08, 0.7] }[depth]!;
           return (
             <path
               key={i}

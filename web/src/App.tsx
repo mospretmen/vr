@@ -246,6 +246,57 @@ function Section({ id, title, description, children }: SectionHeadingProps) {
   );
 }
 
+const SHOTS = [
+  {
+    src: "/media/shot-compass.jpg",
+    alt: "The Harmony Compass floating in a living room through Apple Vision Pro",
+    caption: "The compass in the room — C selected, its pathways blazing, the rest a whisper.",
+  },
+  {
+    src: "/media/shot-windows.jpg",
+    alt: "Scale and chord windows open beside the compass in Apple Vision Pro",
+    caption: "Tap a scale or a grip and it opens beside the wheel — staff, degrees, rosewood neck.",
+  },
+  {
+    src: "/media/shot-3d.jpg",
+    alt: "The volumetric 3D compass next to the 2D wheel in Apple Vision Pro",
+    caption: "The volumetric compass: keys nearest, dominants behind, diminisheds deepest.",
+  },
+];
+
+function GallerySection() {
+  return (
+    <section id="gallery" className="scroll-mt-20 border-t border-line">
+      <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
+        <h2 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
+          Seen through the headset.
+        </h2>
+        <p className="mt-2 max-w-2xl text-sm text-ink-dim sm:text-base">
+          Straight captures from the visionOS build — no mockups.
+        </p>
+        <div className="mt-8 grid gap-4 lg:grid-cols-3">
+          {SHOTS.map((shot) => (
+            <figure
+              key={shot.src}
+              className="overflow-hidden rounded-2xl border border-line bg-raise"
+            >
+              <img
+                src={shot.src}
+                alt={shot.alt}
+                loading="lazy"
+                className="aspect-video w-full object-cover"
+              />
+              <figcaption className="p-4 text-xs leading-relaxed text-ink-dim">
+                {shot.caption}
+              </figcaption>
+            </figure>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
 function Footer() {
   return (
     <footer className="border-t border-line">
@@ -265,6 +316,7 @@ export default function App() {
         <Hero />
         <Features />
         <VisionProSection />
+        <GallerySection />
         <Section
           id="explorer"
           title="Fretboard Explorer"

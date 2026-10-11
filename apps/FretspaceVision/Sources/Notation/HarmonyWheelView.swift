@@ -7,6 +7,23 @@ import MusicTheory
 /// destination to travel — the breadcrumb below becomes your progression.
 struct HarmonyWheelView: View {
     @Environment(\.openWindow) private var openWindow
+
+    /// Debug screenshot tour: `simctl launch … -tour windows|3d` opens the
+    /// showcase windows automatically so the simulator can be photographed.
+    private func runTourIfRequested() {
+        guard let i = ProcessInfo.processInfo.arguments.firstIndex(of: "-tour"),
+              ProcessInfo.processInfo.arguments.count > i + 1 else { return }
+        let mode = ProcessInfo.processInfo.arguments[i + 1]
+        if mode == "windows" || mode == "all" {
+            openWindow(id: SceneID.scaleDetail,
+                       value: Scale(root: .c, type: .harmonicMinor))
+            openWindow(id: SceneID.chordDetail,
+                       value: Chord(root: .g, quality: .dominant7))
+        }
+        if mode == "3d" || mode == "all" {
+            openWindow(id: SceneID.compass3D)
+        }
+    }
     @State private var selected: HarmonyWheel.Node = HarmonyWheel.node(.majorKey, 0)
     @State private var path: [HarmonyWheel.Node] = [HarmonyWheel.node(.majorKey, 0)]
     /// The column you harmonically live in — its neighborhood (which holds
@@ -66,6 +83,7 @@ struct HarmonyWheelView: View {
     var body: some View {
         VStack(spacing: 12) {
             header
+                .onAppear { runTourIfRequested() }
             HStack(alignment: .top, spacing: 14) {
                 GeometryReader { proxy in
                     wheel(size: proxy.size)
@@ -136,10 +154,35 @@ struct HarmonyWheelView: View {
     }
 
     /// The legend doubles as the pathway mixer: tap a family to hide or
-    /// show its lines on the wheel.
+    /// show its lines. Two tidy fixed-size rows — never wrapped syllables.
     private var legend: some View {
+        let rows = MoveStyle.legendRows
+        let split = (rows.count + 1) / 2
+        return VStack(alignment: .trailing, spacing: 3) {
+            legendRow(Array(rows.prefix(split)))
+            HStack(spacing: 10) {
+                legendRow(Array(rows.dropFirst(split)))
+                if hiddenKinds.isEmpty {
+                    Text("tap to filter").font(.caption2).fixedSize()
+                } else {
+                    Button {
+                        hiddenKinds = []
+                    } label: {
+                        Text("Show all")
+                            .font(.caption2.bold())
+                            .padding(.horizontal, 8).padding(.vertical, 3)
+                            .background(.orange.opacity(0.35), in: .capsule)
+                    }
+                    .buttonStyle(.plain)
+                }
+            }
+        }
+        .foregroundStyle(.secondary)
+    }
+
+    private func legendRow(_ rows: [(color: Color, label: String, kinds: Set<HarmonyWheel.MoveKind>)]) -> some View {
         HStack(spacing: 10) {
-            ForEach(Array(MoveStyle.legendRows.enumerated()), id: \.offset) { _, row in
+            ForEach(Array(rows.enumerated()), id: \.offset) { _, row in
                 let off = row.kinds.allSatisfy { hiddenKinds.contains($0) }
                 Button {
                     if off {
@@ -150,28 +193,14 @@ struct HarmonyWheelView: View {
                 } label: {
                     HStack(spacing: 3) {
                         Circle().fill(row.color).frame(width: 8, height: 8)
-                        Text(row.label).font(.caption2)
+                        Text(row.label).font(.caption2).fixedSize()
                             .strikethrough(off, color: .secondary)
                     }
                     .opacity(off ? 0.35 : 1)
                 }
                 .buttonStyle(.plain)
             }
-            if hiddenKinds.isEmpty {
-                Text("· → one-way · ⇄ returns · tap to filter").font(.caption2)
-            } else {
-                Button {
-                    hiddenKinds = []
-                } label: {
-                    Text("Show all")
-                        .font(.caption2.bold())
-                        .padding(.horizontal, 8).padding(.vertical, 3)
-                        .background(.orange.opacity(0.35), in: .capsule)
-                }
-                .buttonStyle(.plain)
-            }
         }
-        .foregroundStyle(.secondary)
     }
 
     private var breadcrumb: some View {
@@ -323,10 +352,13 @@ struct HarmonyWheelView: View {
     /// kind color. One-way streets keep a single head. Deceptive motion
     /// draws dashed.
     private func drawActiveMoves(context: GraphicsContext, layout: WheelLayout) {
+        // Calm grading: the selected chord blazes, the second hop hints,
+        // the third barely breathes — the wheel must never read as a web
+        // of everything (owner: "cluttered").
         let appearance: [Int: (opacity: Double, width: CGFloat, head: CGFloat)] = [
             1: (1.0, 4.5, 16),
-            2: (0.6, 3.0, 12),
-            3: (0.3, 2.0, 8),
+            2: (0.30, 2.2, 9),
+            3: (0.10, 1.2, 0),
         ]
         func priority(_ move: HarmonyWheel.Move) -> Int {
             switch move.kind {
@@ -631,12 +663,12 @@ private struct MoveStyle {
 
     static let ordered: [MoveStyle] = [
         .init(kind: .resolve, color: .green, label: "Resolve"),
-        .init(kind: .deceptive, color: Color.green.opacity(0.7), label: "Deceptive (dashed)"),
+        .init(kind: .deceptive, color: Color.green.opacity(0.7), label: "Deceptive"),
         .init(kind: .toDominant, color: .orange, label: "To V7"),
         .init(kind: .relative, color: Color.white.opacity(0.65), label: "Relative"),
         .init(kind: .twoFive, color: .mint, label: "ii–V"),
         .init(kind: .tritoneSub, color: .pink, label: "Tritone sub"),
-        .init(kind: .soften, color: .cyan, label: "Soften (V7→ii)"),
+        .init(kind: .soften, color: .cyan, label: "Soften"),
         .init(kind: .fifthSharpward, color: .blue, label: "Fifths"),
         .init(kind: .fifthFlatward, color: .blue, label: "Fifths"),
         // deepen/dimFamily inherit the diminished family's chip tint at

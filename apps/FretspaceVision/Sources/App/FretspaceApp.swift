@@ -31,6 +31,12 @@ struct FretspaceApp: App {
         }
         .windowStyle(.volumetric)
         .defaultSize(width: 0.75, height: 0.75, depth: 0.45, in: .meters)
+        .defaultWindowPlacement { _, context in
+            if let compass = context.windows.first(where: { $0.id == SceneID.harmony }) {
+                return WindowPlacement(.trailing(compass))
+            }
+            return WindowPlacement()
+        }
 
         WindowGroup(id: SceneID.scaleDetail, for: Scale.self) { $scale in
             if let scale {
@@ -38,6 +44,13 @@ struct FretspaceApp: App {
             }
         }
         .defaultSize(width: 1040, height: 560)
+        .defaultWindowPlacement { _, context in
+            // Scales open beside the compass, not on top of it.
+            if let compass = context.windows.first(where: { $0.id == SceneID.harmony }) {
+                return WindowPlacement(.trailing(compass))
+            }
+            return WindowPlacement()
+        }
 
         WindowGroup(id: SceneID.chordDetail, for: Chord.self) { $chord in
             if let chord {
@@ -45,6 +58,12 @@ struct FretspaceApp: App {
             }
         }
         .defaultSize(width: 1040, height: 560)
+        .defaultWindowPlacement { _, context in
+            if let compass = context.windows.first(where: { $0.id == SceneID.harmony }) {
+                return WindowPlacement(.leading(compass))
+            }
+            return WindowPlacement()
+        }
 
         ImmersiveSpace(id: SceneID.immersive) {
             ImmersiveView()
