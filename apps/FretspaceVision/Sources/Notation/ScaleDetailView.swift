@@ -26,6 +26,65 @@ struct ScaleDetailView: View {
         return all
     }
 
+    /// The book formula: note names over spelled degrees (1 2 ♭3 …), and —
+    /// for seven-note scales — the chord each degree carries, tappable.
+    private var formulaRow: some View {
+        let names = scale.spelledNames()
+        let degrees = Modes.degreeLabels(of: scale.type)
+        let triads = scale.type.intervals.count == 7
+            ? Chord.diatonicTriads(in: scale) : []
+        return VStack(alignment: .leading, spacing: 6) {
+            HStack(spacing: 6) {
+                ForEach(Array(zip(names, degrees).enumerated()), id: \.offset) { _, pair in
+                    VStack(spacing: 1) {
+                        Text(pair.0).font(.callout.bold())
+                        Text(pair.1).font(.caption)
+                            .foregroundStyle(.orange.opacity(0.9))
+                    }
+                    .frame(minWidth: 40)
+                    .padding(.vertical, 5)
+                    .background(.white.opacity(0.07), in: .rect(cornerRadius: 8))
+                }
+                Spacer()
+            }
+            if !triads.isEmpty {
+                HStack(spacing: 6) {
+                    Text("Chords").font(.caption2).foregroundStyle(.tertiary)
+                    ForEach(Array(triads.enumerated()), id: \.offset) { degree, chord in
+                        Button {
+                            pads.play(chord, durationMs: 1200)
+                        } label: {
+                            VStack(spacing: 1) {
+                                Text("\(names[degree])\(chord.quality.symbol)")
+                                    .font(.caption)
+                                    .lineLimit(1)
+                                    .minimumScaleFactor(0.6)
+                                Text(Self.degreeNumeral(degree, chord))
+                                    .font(.caption2).foregroundStyle(.secondary)
+                            }
+                            .frame(minWidth: 42)
+                            .padding(.horizontal, 6).padding(.vertical, 4)
+                            .background(.white.opacity(0.1), in: .rect(cornerRadius: 8))
+                        }
+                        .buttonStyle(.plain)
+                    }
+                    Spacer()
+                }
+            }
+        }
+    }
+
+    private static func degreeNumeral(_ degree: Int, _ chord: Chord) -> String {
+        let base = ["I", "II", "III", "IV", "V", "VI", "VII"][degree]
+        switch chord.quality {
+        case .major: return base
+        case .minor: return base.lowercased()
+        case .diminished: return base.lowercased() + "°"
+        case .augmented: return base + "+"
+        default: return base
+        }
+    }
+
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 14) {
@@ -54,6 +113,8 @@ struct ScaleDetailView: View {
                 .font(.callout)
                 .foregroundStyle(.primary.opacity(0.85))
                 .fixedSize(horizontal: false, vertical: true)
+
+            formulaRow
 
             ScaleStaff(scale: scale)
                 .frame(height: 110)
