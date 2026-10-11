@@ -1,9 +1,11 @@
 import type { ReactNode } from "react";
 import { FretboardExplorer } from "./components/FretboardExplorer";
+import { HarmonyCompass } from "./components/HarmonyCompass";
 import { PracticeStats } from "./components/PracticeStats";
 import { TrackLibrary } from "./components/TrackLibrary";
 
 const NAV_LINKS = [
+  { label: "Compass", href: "#compass" },
   { label: "Explorer", href: "#explorer" },
   { label: "Library", href: "#library" },
   { label: "Stats", href: "#stats" },
@@ -55,27 +57,28 @@ function Hero() {
               aria-hidden="true"
               className="size-1.5 rounded-full bg-accent"
             />
-            Coming to the App Store for Apple Vision Pro
+            Apple Vision Pro · iOS · Web — one theory engine
           </p>
           <h1 className="rise-in rise-in-1 mt-6 font-display text-5xl font-bold tracking-[-0.03em] text-balance sm:text-7xl">
-            See the fretboard.
+            The map of harmony.
             <br />
             <span className="bg-gradient-to-br from-accent via-accent-strong to-accent/60 bg-clip-text text-transparent">
-              In the room.
+              In your hands.
             </span>
           </h1>
           <p className="rise-in rise-in-2 mx-auto mt-6 max-w-xl text-base text-pretty text-ink-dim sm:text-lg">
-            Fretspace locks scales, modes, and triads onto your real guitar
-            through Apple Vision Pro — every note of the shape glowing on the
-            neck in your hands, not on a screen across the room.
+            The Harmony Compass is a navigable map of functional harmony —
+            every key, its relative minor, the dominants and diminisheds that
+            bind them, and every legal move between. Tap a chord below: hear
+            it, and see where music can go.
           </p>
         </div>
 
-        <div id="explorer" className="rise-in rise-in-3 mx-auto mt-14 max-w-5xl scroll-mt-24">
+        <div id="compass" className="rise-in rise-in-3 mx-auto mt-14 max-w-5xl scroll-mt-24">
           <p className="mb-3 text-center text-[11px] font-medium uppercase tracking-[0.18em] text-ink-mute">
-            Live demo — the same engine that drives the headset overlay
+            Live demo — the same graph that drives the Vision Pro app, note for note
           </p>
-          <FretboardExplorer />
+          <HarmonyCompass />
         </div>
       </div>
     </section>
@@ -116,50 +119,51 @@ const ICON_PROPS = {
 
 const FEATURES: FeatureProps[] = [
   {
-    title: "Overlay on your real guitar",
+    title: "The Harmony Compass",
     description:
-      "Two pinches — nut, then 12th fret — and the shape is locked to your actual neck in about 30 seconds. Any guitar, any scale length.",
+      "Keys, relative minors, dominants, and diminished families on one wheel — ii–V–I, tritone subs, the dominant chain, passing dims: every pathway drawn, explained, and playable.",
     icon: (
       <svg {...ICON_PROPS}>
-        <circle cx="12" cy="12" r="7.5" />
-        <circle cx="12" cy="12" r="1.4" fill="currentColor" stroke="none" />
-        <path d="M12 1.5v4M12 18.5v4M1.5 12h4M18.5 12h4" />
+        <circle cx="12" cy="12" r="8.5" />
+        <circle cx="12" cy="12" r="4.5" opacity="0.5" />
+        <path d="M12 3.5v4M12 16.5v4M3.5 12h4M16.5 12h4" opacity="0.6" />
       </svg>
     ),
   },
   {
-    title: "Scales, modes, triads & inversions",
+    title: "Grips as charts print them",
     description:
-      "Twelve scales and modes, triads in every quality and inversion — roles color-coded on the neck so your eyes learn the shapes, not the diagrams.",
+      "Voicings come from a curated dictionary of published shapes — open classics, barres, shells, drop-2, triads in every inversion — never a shape no hand plays.",
     icon: (
       <svg {...ICON_PROPS}>
-        <path d="M3 7h18M3 12h18M3 17h18" opacity="0.45" />
-        <circle cx="7" cy="7" r="2.4" fill="currentColor" stroke="none" />
-        <circle cx="13" cy="12" r="2.4" fill="currentColor" stroke="none" />
-        <circle cx="17" cy="17" r="2.4" fill="currentColor" stroke="none" />
+        <path d="M4 5v14M9 5v14M14 5v14M19 5v14" opacity="0.4" />
+        <circle cx="9" cy="9" r="2.2" fill="currentColor" stroke="none" />
+        <circle cx="14" cy="13" r="2.2" fill="currentColor" stroke="none" />
+        <circle cx="19" cy="9" r="2.2" fill="currentColor" stroke="none" />
       </svg>
     ),
   },
   {
-    title: "Drills that hear you play",
+    title: "Voice leading you can see",
     description:
-      "The headset listens as you practice, matching what you fret against the target chord in real time — no cable, no pedal, no interface.",
+      "Tap a resolution and watch the voices travel — half-step pulls in green, common tones held — on a staff, with the sound of the move a beat behind your finger.",
     icon: (
       <svg {...ICON_PROPS}>
-        <path d="M4 10v4M8 7v10M12 4v16M16 8v8M20 10.5v3" />
+        <path d="M3 7h18M3 12h18M3 17h18" opacity="0.4" />
+        <circle cx="7" cy="12" r="2.2" fill="currentColor" stroke="none" />
+        <circle cx="17" cy="7" r="2.2" fill="currentColor" stroke="none" />
+        <path d="M9 11l6-3.5" />
       </svg>
     ),
   },
   {
-    title: "Backing progressions",
+    title: "Scales, modes & alterations",
     description:
-      "Play over a chord timeline that drives the overlay: as the progression moves, the highlighted shape moves with it, a beat ahead of the change.",
+      "Twenty scales from Ionian to the altered and symmetric colors, chord-matched and spelled correctly — plus every tension a chord carries, with the sound that covers it.",
     icon: (
       <svg {...ICON_PROPS}>
-        <rect x="3" y="9" width="6.5" height="6" rx="1.6" />
-        <rect x="11" y="9" width="4.5" height="6" rx="1.6" />
-        <rect x="17" y="9" width="4" height="6" rx="1.6" />
-        <path d="M3 4.5h18M3 19.5h18" opacity="0.35" />
+        <path d="M4 17c2.5-6 5-9 8-9s5.5 3 8 9" />
+        <circle cx="12" cy="8" r="1.6" fill="currentColor" stroke="none" />
       </svg>
     ),
   },
@@ -170,11 +174,12 @@ function Features() {
     <section className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-24">
       <div className="max-w-2xl">
         <h2 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">
-          Practice in the space the music happens.
+          A reference that plays back.
         </h2>
         <p className="mt-3 text-base text-ink-dim">
-          Not another fretboard app behind glass. Fretspace puts the theory on
-          the instrument itself.
+          Every fact is tested, every pathway sounds, every shape comes from
+          how guitarists actually play — one engine across Vision Pro, iOS,
+          and the web.
         </p>
       </div>
       <div className="mt-10 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
@@ -227,6 +232,13 @@ export default function App() {
       <main>
         <Hero />
         <Features />
+        <Section
+          id="explorer"
+          title="Fretboard Explorer"
+          description="Scales, modes, and triads rendered on a live fretboard — the web face of the same tested engine."
+        >
+          <FretboardExplorer />
+        </Section>
         <Section
           id="library"
           title="Track Library"
