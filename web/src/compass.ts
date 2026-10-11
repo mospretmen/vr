@@ -210,3 +210,58 @@ export function chordPitchClasses(n: CompassNode): number[] {
     : [0, 3, 6, 9];
   return intervals.map((s) => mod12(n.root + s));
 }
+
+
+// MARK: Graded web — the 2D app's rendering grammar, shared verbatim.
+
+export interface GradedPair {
+  move: Move;
+  /** 1 = blaze (the selected chord's own moves), 2 = glow, 3 = whisper. */
+  depth: 1 | 2 | 3;
+  twoWay: boolean;
+}
+
+function priority(m: Move): number {
+  switch (m.kind) {
+    case "resolve": return 3;
+    case "deceptive": return 2;
+    case "tritoneSub":
+      return m.from.ring === "dominant" && m.to.ring !== "dominant" ? 2 : 1;
+    default: return 1;
+  }
+}
+
+/** Three-hop web from a node, one entry per unordered pair at its
+ *  shallowest depth; the forward direction is the harmonic priority
+ *  (a resolution always owns the arrowhead). */
+export function gradedPairs(start: CompassNode): GradedPair[] {
+  let frontier = [start];
+  const seen = new Set([start.id]);
+  const pairs = new Map<string, { move: Move; depth: 1 | 2 | 3 }>();
+  for (const depth of [1, 2, 3] as const) {
+    const next: CompassNode[] = [];
+    for (const node of frontier) {
+      for (const move of movesFrom(node)) {
+        const key = [move.from.id, move.to.id].sort().join("|");
+        const existing = pairs.get(key);
+        if (existing) {
+          if (priority(move) > priority(existing.move)) {
+            pairs.set(key, { move, depth: existing.depth });
+          }
+        } else {
+          pairs.set(key, { move, depth });
+        }
+        if (!seen.has(move.to.id)) {
+          seen.add(move.to.id);
+          next.push(move.to);
+        }
+      }
+    }
+    frontier = next;
+  }
+  return [...pairs.values()].map(({ move, depth }) => ({
+    move,
+    depth,
+    twoWay: isTwoWay(move),
+  }));
+}

@@ -4,6 +4,7 @@ import { describe as suite, expect, it } from "vitest";
 import {
   ALL_MOVES,
   chordPitchClasses,
+  gradedPairs,
   isTwoWay,
   movesFrom,
   node,
@@ -77,6 +78,18 @@ suite("compass graph parity", () => {
     const dim = node("diminished", 0);
     const family = movesFrom(dim).filter((m) => m.kind === "dimFamily");
     expect(family.map((m) => m.to.index).sort((a, b) => a - b)).toEqual([3, 6, 9]);
+  });
+
+  it("graded web: the resolution owns the arrowhead on the C–G7 pair", () => {
+    const pairs = gradedPairs(node("majorKey", 0));
+    const cg7 = pairs.find(
+      (p) => [p.move.from.label, p.move.to.label].sort().join() === "C,G7",
+    )!;
+    expect(cg7.depth).toBe(1);
+    expect(cg7.move.kind).toBe("resolve");
+    expect(cg7.move.to.label).toBe("C");
+    expect(cg7.twoWay).toBe(true);
+    expect(pairs.some((p) => p.depth === 3)).toBe(true);
   });
 
   it("chord pads sound the right tones", () => {

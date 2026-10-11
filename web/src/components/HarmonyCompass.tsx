@@ -7,7 +7,7 @@ import {
   ALL_NODES,
   chordPitchClasses,
   describe,
-  isTwoWay,
+  gradedPairs,
   movesFrom,
   node,
   type CompassNode,
@@ -148,6 +148,11 @@ export function HarmonyCompass() {
   const audio = useRef<AudioContext | null>(null);
   const lattice = useMemo(latticePairs, []);
   const moves = useMemo(() => movesFrom(selected), [selected]);
+  // The 2D app's grammar: a three-hop web, blaze → glow → whisper.
+  const web = useMemo(
+    () => gradedPairs(selected).sort((a, b) => b.depth - a.depth),
+    [selected],
+  );
   const litIds = useMemo(
     () => new Set(moves.flatMap((m) => [m.from.id, m.to.id])),
     [moves],
@@ -168,9 +173,9 @@ export function HarmonyCompass() {
         aria-label="Interactive Harmony Compass"
       >
         <defs>
-          {Object.entries(KIND_COLOR).map(([kind, color]) => (
+          {Object.entries(KIND_COLOR).flatMap(([kind, color]) => [
             <marker
-              key={kind}
+              key={`h-${kind}`}
               id={`head-${kind}`}
               viewBox="0 0 10 10"
               refX="8"
@@ -180,8 +185,20 @@ export function HarmonyCompass() {
               orient="auto-start-reverse"
             >
               <path d="M 0 0 L 10 5 L 0 10 z" fill={color} />
-            </marker>
-          ))}
+            </marker>,
+            <marker
+              key={`t-${kind}`}
+              id={`tail-${kind}`}
+              viewBox="0 0 10 10"
+              refX="8"
+              refY="5"
+              markerWidth="4.5"
+              markerHeight="4.5"
+              orient="auto-start-reverse"
+            >
+              <path d="M 0 0 L 10 5 L 0 10 z" fill={color} />
+            </marker>,
+          ])}
         </defs>
 
         {/* resting lattice */}
@@ -195,20 +212,38 @@ export function HarmonyCompass() {
           />
         ))}
 
-        {/* the selected chord's departures */}
-        {moves.map((m, i) => (
-          <path
-            key={i}
-            d={edgePath(m.from, m.to)}
-            stroke={KIND_COLOR[m.kind]}
-            strokeWidth={2.6}
-            strokeDasharray={m.kind === "deceptive" ? "8 6" : undefined}
-            fill="none"
-            markerEnd={`url(#head-${m.kind})`}
-            markerStart={isTwoWay(m) ? `url(#head-${m.kind})` : undefined}
-            opacity={0.95}
-          />
-        ))}
+        {/* graded three-hop web, pair-collapsed; resolution owns the head */}
+        {web.map(({ move: m, depth, twoWay }, i) => {
+          const look = { 1: [0.95, 2.8], 2: [0.5, 1.8], 3: [0.25, 1.1] }[depth]!;
+          return (
+            <path
+              key={i}
+              d={edgePath(m.from, m.to)}
+              stroke={KIND_COLOR[m.kind]}
+              strokeWidth={look[1]}
+              strokeDasharray={m.kind === "deceptive" ? "8 6" : undefined}
+              fill="none"
+              markerEnd={depth < 3 ? `url(#head-${m.kind})` : undefined}
+              markerStart={depth === 1 && twoWay ? `url(#tail-${m.kind})` : undefined}
+              opacity={look[0]}
+            />
+          );
+        })}
+
+        {/* selection halo */}
+        {(() => {
+          const p = position(selected);
+          return (
+            <circle
+              cx={p.x}
+              cy={p.y}
+              r={CHIP_RADIUS[selected.ring] + 6}
+              fill="none"
+              stroke="rgba(255,255,255,0.65)"
+              strokeWidth={1.5}
+            />
+          );
+        })()}
 
         {/* chips */}
         {ALL_NODES.map((n) => {

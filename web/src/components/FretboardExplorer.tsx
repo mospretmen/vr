@@ -504,10 +504,11 @@ export function FretboardExplorer() {
           onMouseLeave={() => setHovered(null)}
         >
           <defs>
+            {/* Warm rosewood — the same tones as the Vision Pro fretboard. */}
             <linearGradient id="fb-wood" x1="0" y1="0" x2="0" y2="1">
-              <stop offset="0" stopColor="#1a1510" />
-              <stop offset="0.5" stopColor="#141009" />
-              <stop offset="1" stopColor="#0e0b07" />
+              <stop offset="0" stopColor="#422617" />
+              <stop offset="0.5" stopColor="#5c3821" />
+              <stop offset="1" stopColor="#4d2e1c" />
             </linearGradient>
             <radialGradient id="fb-halo">
               <stop offset="0" stopColor="var(--color-accent-strong)" stopOpacity="0.5" />
@@ -534,7 +535,7 @@ export function FretboardExplorer() {
               cx={noteX(f)}
               cy={boardMidY}
               r={6.5}
-              fill="rgba(255,255,255,0.055)"
+              fill="rgba(224,219,204,0.5)"
             />
           ))}
           {[boardMidY - STRING_GAP, boardMidY + STRING_GAP].map((y) => (
@@ -543,7 +544,7 @@ export function FretboardExplorer() {
               cx={noteX(12)}
               cy={y}
               r={6.5}
-              fill="rgba(255,255,255,0.055)"
+              fill="rgba(224,219,204,0.5)"
             />
           ))}
 
@@ -555,8 +556,8 @@ export function FretboardExplorer() {
               y1={STRING_TOP - BOARD_PAD_Y}
               x2={x}
               y2={STRING_BOTTOM + BOARD_PAD_Y}
-              stroke="rgba(203,206,215,0.22)"
-              strokeWidth={2}
+              stroke="rgba(200,200,205,0.75)"
+              strokeWidth={2.2}
             />
           ))}
 
@@ -581,7 +582,7 @@ export function FretboardExplorer() {
               y2={stringY(s)}
               stroke={s < 3 ? "#9d9588" : "#c9c7bd"}
               strokeWidth={STRING_WIDTHS[s]}
-              opacity={0.6}
+              opacity={0.85}
             />
           ))}
 
