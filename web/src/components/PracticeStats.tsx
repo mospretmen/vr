@@ -43,7 +43,7 @@ export function PracticeStats() {
   }
 
   return (
-    <div className="rounded-2xl border border-white/10 bg-raise p-6 transition-colors duration-300 hover:border-white/20">
+    <div className="rounded-2xl border border-line bg-raise p-6 transition-colors duration-300 hover:border-white/20">
       <h2 className="font-display text-lg font-semibold text-ink">Session Summary</h2>
 
       <form onSubmit={handleSubmit} className="mt-3">
@@ -62,12 +62,12 @@ export function PracticeStats() {
             placeholder="00000000-0000-0000-0000-000000000000"
             spellCheck={false}
             autoComplete="off"
-            className="min-w-0 flex-1 rounded-lg border border-white/10 bg-base px-3 py-1.5 font-mono text-xs text-ink placeholder:text-ink-mute/60 transition-colors focus:border-accent/50 focus:outline-none"
+            className="min-w-0 flex-1 rounded-lg border border-line bg-base px-3 py-1.5 font-mono text-xs text-ink placeholder:text-ink-mute/60 transition-colors focus:border-accent/50 focus:outline-none"
           />
           <button
             type="submit"
             disabled={!draft.trim()}
-            className="rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-ink transition-colors hover:border-white/25 hover:bg-white/10 disabled:cursor-not-allowed disabled:opacity-40"
+            className="rounded-lg border border-line bg-fill-soft px-3 py-1.5 text-xs font-medium text-ink transition-colors hover:border-white/25 hover:bg-fill disabled:cursor-not-allowed disabled:opacity-40"
           >
             Load
           </button>
@@ -82,7 +82,7 @@ export function PracticeStats() {
         {deviceId ? (
           <SummaryView key={deviceId} deviceId={deviceId} />
         ) : (
-          <p className="rounded-xl border border-dashed border-white/15 p-4 text-center text-xs text-ink-mute">
+          <p className="rounded-xl border border-dashed border-line p-4 text-center text-xs text-ink-mute">
             Enter a device ID to see session history, streaks, and time on the
             fretboard.
           </p>
@@ -102,7 +102,7 @@ function SummaryView({ deviceId }: { deviceId: string }) {
   if (state.status === "loading") {
     return (
       <div
-        className="h-40 animate-pulse rounded-xl bg-white/5"
+        className="h-40 animate-pulse rounded-xl bg-fill-soft"
         aria-busy="true"
         aria-label="Loading practice stats"
       />
@@ -119,7 +119,7 @@ function SummaryView({ deviceId }: { deviceId: string }) {
 function SummaryContent({ summary }: { summary: PracticeSummary }) {
   if (summary.sessionCount === 0) {
     return (
-      <div className="rounded-xl border border-dashed border-white/15 p-4 text-center">
+      <div className="rounded-xl border border-dashed border-line p-4 text-center">
         <p className="text-sm text-ink-dim">No practice yet.</p>
         <p className="mt-1 text-xs text-ink-mute">
           Sessions logged in the headset will show up here.
@@ -157,7 +157,7 @@ function SummaryContent({ summary }: { summary: PracticeSummary }) {
                     {humanizeDuration(seconds)}
                   </span>
                 </div>
-                <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-white/5">
+                <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-fill-soft">
                   <div
                     className="h-full rounded-full bg-accent-strong/90 transition-[width] duration-500"
                     style={{
@@ -176,7 +176,7 @@ function SummaryContent({ summary }: { summary: PracticeSummary }) {
 
 function Stat({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-xl border border-white/10 bg-base/60 p-3">
+    <div className="rounded-xl border border-line bg-base/60 p-3">
       <dt className="text-xs text-ink-mute">{label}</dt>
       <dd className="mt-0.5 font-display text-base font-semibold tabular-nums text-ink">
         {value}

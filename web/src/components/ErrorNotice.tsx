@@ -16,7 +16,7 @@ export function ErrorNotice({ message, onRetry, compact }: ErrorNoticeProps) {
       <button
         type="button"
         onClick={onRetry}
-        className="mt-3 rounded-lg border border-white/10 bg-white/5 px-3 py-1.5 text-xs font-medium text-ink transition-colors hover:border-white/25 hover:bg-white/10"
+        className="mt-3 rounded-lg border border-line bg-fill-soft px-3 py-1.5 text-xs font-medium text-ink transition-colors hover:border-white/25 hover:bg-fill"
       >
         Retry
       </button>

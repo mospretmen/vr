@@ -83,6 +83,13 @@ async function getJson<T>(
         : `Request failed: HTTP ${res.status}`,
     );
   }
+  // On static hosting the SPA fallback answers every path with index.html —
+  // that means the backend simply isn't deployed alongside this preview.
+  if (!res.headers.get("content-type")?.includes("application/json")) {
+    throw new Error(
+      "The track library syncs with the Fretspace backend, which isn't online in this preview yet — it ships with the beta.",
+    );
+  }
   return (await res.json()) as T;
 }
 

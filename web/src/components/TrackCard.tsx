@@ -10,7 +10,7 @@ interface TrackCardProps {
 
 function Badge({ children }: { children: React.ReactNode }) {
   return (
-    <span className="rounded-full border border-white/10 bg-white/5 px-2.5 py-0.5 text-xs font-medium tabular-nums text-ink-dim">
+    <span className="rounded-full border border-line bg-fill-soft px-2.5 py-0.5 text-xs font-medium tabular-nums text-ink-dim">
       {children}
     </span>
   );
@@ -22,7 +22,7 @@ export function TrackCard({ track, expanded, onToggle }: TrackCardProps) {
       className={`rounded-2xl border bg-raise transition-colors duration-300 ${
         expanded
           ? "border-accent/30"
-          : "border-white/10 hover:border-white/20"
+          : "border-line hover:border-white/20"
       }`}
     >
       <button
@@ -53,7 +53,7 @@ export function TrackCard({ track, expanded, onToggle }: TrackCardProps) {
         </div>
       </button>
       {expanded && (
-        <div className="border-t border-white/10 px-5 pb-5">
+        <div className="border-t border-line px-5 pb-5">
           <ChordTimeline trackId={track.id} />
         </div>
       )}

@@ -80,3 +80,14 @@ The wow layer: the app hears what you play.
 - Non-guitar instruments (bass works already via tunings; ukulele/mandolin
   need geometry presets)
 - Android/Quest — native visionOS bet is intentional
+
+## Phrase repository (planned — owner request 2026-10-10)
+Short vocabulary phrases in the style of the masters (Parker, Coltrane,
+Django, Joe Pass, Wes…) AND the owner's personal licks, added incrementally.
+Each phrase: chord context, note sequence (string/fret + rhythm), the
+guide tones it targets, and a one-line functional explanation ("ii–V
+descent landing on the 3rd"). Rendered on the wood fretboard + staff,
+playable, reachable from the compass ("phrases over this chord").
+Needs a personal-phrase editor and Neon sync across platforms. Prefer
+style-of originals over verbatim transcriptions (copyright). Builds on
+the progression recorder's playback substrate.

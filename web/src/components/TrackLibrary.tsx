@@ -14,7 +14,7 @@ export function TrackLibrary() {
         {Array.from({ length: 3 }, (_, i) => (
           <div
             key={i}
-            className="h-[74px] animate-pulse rounded-2xl border border-white/10 bg-raise"
+            className="h-[74px] animate-pulse rounded-2xl border border-line bg-raise"
           />
         ))}
       </div>
@@ -27,7 +27,7 @@ export function TrackLibrary() {
 
   if (state.data.length === 0) {
     return (
-      <div className="rounded-2xl border border-dashed border-white/15 p-8 text-center">
+      <div className="rounded-2xl border border-dashed border-line p-8 text-center">
         <p className="text-sm text-ink-dim">No tracks in the library yet.</p>
         <p className="mt-1 text-xs text-ink-mute">
           Seeded tracks will appear here once the backend has content.

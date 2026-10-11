@@ -4,7 +4,7 @@ import { useState, type FormEvent } from "react";
 
 export function VisionProSection() {
   return (
-    <section id="visionpro" className="scroll-mt-20 border-t border-white/10">
+    <section id="visionpro" className="scroll-mt-20 border-t border-line">
       <div className="mx-auto max-w-6xl px-4 py-20 sm:px-6 sm:py-24">
         <div className="grid items-center gap-10 lg:grid-cols-2">
           <div>
@@ -82,7 +82,7 @@ function FunnelDiagram() {
 
 export function PricingSection() {
   return (
-    <section id="pricing" className="scroll-mt-20 border-t border-white/10">
+    <section id="pricing" className="scroll-mt-20 border-t border-line">
       <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
         <h2 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
           Simple plan, one engine everywhere.
@@ -92,7 +92,7 @@ export function PricingSection() {
           members get the founding price.
         </p>
         <div className="mt-8 grid max-w-3xl gap-4 sm:grid-cols-2">
-          <div className="rounded-2xl border border-white/10 bg-raise p-6">
+          <div className="rounded-2xl border border-line bg-raise p-6">
             <h3 className="font-display text-lg font-semibold">Explore — free</h3>
             <ul className="mt-3 space-y-2 text-sm text-ink-dim">
               <li>The 2D Harmony Compass, every pathway</li>
@@ -136,7 +136,7 @@ export function WaitlistSection() {
   };
 
   return (
-    <section id="waitlist" className="scroll-mt-20 border-t border-white/10">
+    <section id="waitlist" className="scroll-mt-20 border-t border-line">
       <div className="mx-auto max-w-3xl px-4 py-16 text-center sm:px-6 sm:py-20">
         <h2 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
           Be first on the fretboard.
@@ -159,12 +159,12 @@ export function WaitlistSection() {
               value={email}
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@example.com"
-              className="flex-1 rounded-xl border border-white/15 bg-white/5 px-4 py-3 text-sm text-ink placeholder:text-ink-mute focus:border-accent/60 focus:outline-none"
+              className="flex-1 rounded-xl border border-line bg-fill-soft px-4 py-3 text-sm text-ink placeholder:text-ink-mute focus:border-accent/60 focus:outline-none"
             />
             <select
               value={platform}
               onChange={(e) => setPlatform(e.target.value)}
-              className="rounded-xl border border-white/15 bg-white/5 px-3 py-3 text-sm text-ink focus:outline-none"
+              className="rounded-xl border border-line bg-fill-soft px-3 py-3 text-sm text-ink focus:outline-none"
               aria-label="Preferred platform"
             >
               <option value="visionpro">Vision Pro</option>

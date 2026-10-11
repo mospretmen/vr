@@ -210,9 +210,9 @@ export function FretboardExplorer() {
   const boardMidY = (STRING_TOP + STRING_BOTTOM) / 2;
 
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/10 bg-raise/80 shadow-[0_24px_80px_-32px_rgba(0,0,0,0.9)] backdrop-blur-sm">
+    <div className="overflow-hidden rounded-2xl border border-line bg-raise/80 shadow-[0_24px_80px_-32px_rgba(0,0,0,0.9)] backdrop-blur-sm">
       {/* Controls */}
-      <div className="flex flex-col gap-4 border-b border-white/10 p-4 sm:p-5">
+      <div className="flex flex-col gap-4 border-b border-line p-4 sm:p-5">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
           <span className="w-10 shrink-0 text-[11px] font-medium uppercase tracking-[0.14em] text-ink-mute">
             Root
@@ -231,7 +231,7 @@ export function FretboardExplorer() {
                 className={`h-8 min-w-8 rounded-lg px-1.5 text-sm font-medium tabular-nums transition-colors duration-200 ${
                   root === pc
                     ? "bg-accent-strong text-accent-deep"
-                    : "text-ink-dim hover:bg-white/5 hover:text-ink"
+                    : "text-ink-dim hover:bg-fill-soft hover:text-ink"
                 }`}
               >
                 {name}
@@ -247,7 +247,7 @@ export function FretboardExplorer() {
           <div
             role="group"
             aria-label="Display mode"
-            className="flex rounded-lg border border-white/10 p-0.5"
+            className="flex rounded-lg border border-line p-0.5"
           >
             {(["scale", "triad", "voicings"] as const).map((m) => (
               <button
@@ -257,7 +257,7 @@ export function FretboardExplorer() {
                 onClick={() => setMode(m)}
                 className={`rounded-md px-3 py-1.5 text-sm font-medium capitalize transition-colors duration-200 ${
                   mode === m
-                    ? "bg-white/10 text-ink"
+                    ? "bg-fill text-ink"
                     : "text-ink-dim hover:text-ink"
                 }`}
               >
@@ -272,7 +272,7 @@ export function FretboardExplorer() {
               <select
                 value={scaleIndex}
                 onChange={(e) => setScaleIndex(Number(e.target.value))}
-                className="h-9 rounded-lg border border-white/10 bg-raise-2 px-3 pr-8 text-sm text-ink transition-colors hover:border-white/20"
+                className="h-9 rounded-lg border border-line bg-raise-2 px-3 pr-8 text-sm text-ink transition-colors hover:border-white/20"
               >
                 {SCALE_TYPES.map((scale, i) => (
                   <option key={scale.name} value={i}>
@@ -295,8 +295,8 @@ export function FretboardExplorer() {
                   onClick={() => setTriadIndex(i)}
                   className={`h-8 rounded-lg px-3 text-sm font-medium transition-colors duration-200 ${
                     triadIndex === i
-                      ? "bg-white/10 text-ink"
-                      : "text-ink-dim hover:bg-white/5 hover:text-ink"
+                      ? "bg-fill text-ink"
+                      : "text-ink-dim hover:bg-fill-soft hover:text-ink"
                   }`}
                 >
                   {quality.name}
@@ -308,7 +308,7 @@ export function FretboardExplorer() {
               <div
                 role="group"
                 aria-label="Voicing style"
-                className="flex rounded-lg border border-white/10 p-0.5"
+                className="flex rounded-lg border border-line p-0.5"
               >
                 {VOICING_STYLES.map((style) => (
                   <button
@@ -318,7 +318,7 @@ export function FretboardExplorer() {
                     onClick={() => pickVoicingStyle(style.id)}
                     className={`rounded-md px-3 py-1.5 text-sm font-medium transition-colors duration-200 ${
                       voicingStyle === style.id
-                        ? "bg-white/10 text-ink"
+                        ? "bg-fill text-ink"
                         : "text-ink-dim hover:text-ink"
                     }`}
                   >
@@ -334,7 +334,7 @@ export function FretboardExplorer() {
                     onChange={(e) =>
                       setHarmonizedScaleIndex(Number(e.target.value))
                     }
-                    className="h-9 rounded-lg border border-white/10 bg-raise-2 px-3 pr-8 text-sm text-ink transition-colors hover:border-white/20"
+                    className="h-9 rounded-lg border border-line bg-raise-2 px-3 pr-8 text-sm text-ink transition-colors hover:border-white/20"
                   >
                     {SEVEN_NOTE_SCALES.map((scale, i) => (
                       <option key={scale.name} value={i}>
@@ -366,8 +366,8 @@ export function FretboardExplorer() {
                           }
                           className={`h-8 rounded-lg px-3 text-sm font-medium transition-colors duration-200 ${
                             active
-                              ? "bg-white/10 text-ink"
-                              : "text-ink-dim hover:bg-white/5 hover:text-ink"
+                              ? "bg-fill text-ink"
+                              : "text-ink-dim hover:bg-fill-soft hover:text-ink"
                           }`}
                         >
                           {quality.name}
@@ -401,8 +401,8 @@ export function FretboardExplorer() {
                   }
                   className={`h-8 rounded-lg px-2.5 text-sm font-medium tabular-nums transition-colors duration-200 ${
                     setIndex === i
-                      ? "bg-white/10 text-ink"
-                      : "text-ink-dim hover:bg-white/5 hover:text-ink"
+                      ? "bg-fill text-ink"
+                      : "text-ink-dim hover:bg-fill-soft hover:text-ink"
                   }`}
                 >
                   {stringSetLabel(set)}
@@ -424,8 +424,8 @@ export function FretboardExplorer() {
                       onClick={() => setInversionFilter(inv)}
                       className={`h-8 rounded-lg px-2.5 text-sm font-medium transition-colors duration-200 ${
                         inversionFilter === inv
-                          ? "bg-white/10 text-ink"
-                          : "text-ink-dim hover:bg-white/5 hover:text-ink"
+                          ? "bg-fill text-ink"
+                          : "text-ink-dim hover:bg-fill-soft hover:text-ink"
                       }`}
                     >
                       {inv === null ? "All" : INVERSION_LABELS[inv]}

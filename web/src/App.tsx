@@ -28,21 +28,47 @@ function Wordmark() {
   );
 }
 
+function ThemeToggle() {
+  const toggle = () => {
+    const el = document.documentElement;
+    const systemDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+    const current =
+      el.dataset.theme ?? (systemDark ? "dark" : "light");
+    const next = current === "dark" ? "light" : "dark";
+    el.dataset.theme = next;
+    try {
+      localStorage.setItem("theme", next);
+    } catch {
+      /* private mode */
+    }
+  };
+  return (
+    <button
+      onClick={toggle}
+      aria-label="Toggle light or dark mode"
+      className="rounded-lg border border-line px-2.5 py-1.5 text-sm text-ink-dim transition-colors hover:bg-fill-soft hover:text-ink"
+    >
+      ◐
+    </button>
+  );
+}
+
 function Nav() {
   return (
-    <header className="sticky top-0 z-40 border-b border-white/10 bg-base/70 backdrop-blur-xl">
+    <header className="sticky top-0 z-40 border-b border-line bg-base/70 backdrop-blur-xl">
       <nav className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
         <Wordmark />
-        <div className="flex items-center gap-1 sm:gap-2">
+        <div className="no-scrollbar flex items-center gap-1 overflow-x-auto sm:gap-2">
           {NAV_LINKS.map(({ label, href }) => (
             <a
               key={href}
               href={href}
-              className="rounded-lg px-2.5 py-1.5 text-sm font-medium text-ink-dim transition-colors hover:bg-white/5 hover:text-ink sm:px-3"
+              className="rounded-lg px-2.5 py-1.5 text-sm font-medium text-ink-dim transition-colors hover:bg-fill-soft hover:text-ink sm:px-3"
             >
               {label}
             </a>
           ))}
+          <ThemeToggle />
         </div>
       </nav>
     </header>
@@ -80,7 +106,7 @@ function Hero() {
           </p>
         </div>
 
-        <div id="compass" className="rise-in rise-in-3 mx-auto mt-14 max-w-5xl scroll-mt-24">
+        <div id="compass" className="stage-panel rise-in rise-in-3 mx-auto mt-14 max-w-5xl scroll-mt-24 rounded-3xl border border-line p-4 sm:p-6">
           <p className="mb-3 text-center text-[11px] font-medium uppercase tracking-[0.18em] text-ink-mute">
             Live demo — the same graph that drives the Vision Pro app, note for note
           </p>
@@ -99,8 +125,8 @@ interface FeatureProps {
 
 function FeatureCard({ title, description, icon }: FeatureProps) {
   return (
-    <div className="group rounded-2xl border border-white/10 bg-raise p-6 transition-colors duration-300 hover:border-accent/30">
-      <div className="flex size-10 items-center justify-center rounded-xl border border-white/10 bg-raise-2 text-accent transition-colors duration-300 group-hover:border-accent/30">
+    <div className="group rounded-2xl border border-line bg-raise p-6 transition-colors duration-300 hover:border-accent/30">
+      <div className="flex size-10 items-center justify-center rounded-xl border border-line bg-raise-2 text-accent transition-colors duration-300 group-hover:border-accent/30">
         {icon}
       </div>
       <h3 className="mt-4 font-display text-base font-semibold text-ink">
@@ -206,7 +232,7 @@ interface SectionHeadingProps {
 
 function Section({ id, title, description, children }: SectionHeadingProps) {
   return (
-    <section id={id} className="scroll-mt-20 border-t border-white/10">
+    <section id={id} className="scroll-mt-20 border-t border-line">
       <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
         <h2 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
           {title}
@@ -222,7 +248,7 @@ function Section({ id, title, description, children }: SectionHeadingProps) {
 
 function Footer() {
   return (
-    <footer className="border-t border-white/10">
+    <footer className="border-t border-line">
       <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-4 px-4 py-8 sm:px-6">
         <Wordmark />
         <p className="text-xs text-ink-mute">© 2026 Fretspace</p>
@@ -244,7 +270,9 @@ export default function App() {
           title="Fretboard Explorer"
           description="Scales, modes, and triads rendered on a live fretboard — the web face of the same tested engine."
         >
-          <FretboardExplorer />
+          <div className="stage-panel rounded-3xl border border-line p-3 sm:p-5">
+            <FretboardExplorer />
+          </div>
         </Section>
         <Section
           id="library"

@@ -18,9 +18,9 @@ export function ChordTimeline({ trackId }: ChordTimelineProps) {
 
   if (state.status === "loading") {
     return (
-      <div className="mt-4 flex gap-px overflow-hidden rounded-xl border border-white/10">
+      <div className="mt-4 flex gap-px overflow-hidden rounded-xl border border-line">
         {Array.from({ length: 8 }, (_, i) => (
-          <div key={i} className="h-14 w-16 shrink-0 animate-pulse bg-white/5" />
+          <div key={i} className="h-14 w-16 shrink-0 animate-pulse bg-fill-soft" />
         ))}
       </div>
     );
@@ -52,7 +52,7 @@ export function ChordTimeline({ trackId }: ChordTimelineProps) {
         </p>
       )}
       <div className="overflow-x-auto pb-1">
-        <div className="flex min-w-max gap-px rounded-xl border border-white/10 bg-white/10">
+        <div className="flex min-w-max gap-px rounded-xl border border-line bg-fill">
           {events.map((event, i) => (
             <div
               key={event.startMs}

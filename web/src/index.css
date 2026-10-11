@@ -25,6 +25,11 @@
   --color-accent-strong: #f97316; /* fills */
   --color-accent-deep: #431407; /* ink on accent fills */
 
+  /* Hairlines & tinted fills — theme-aware (white-based in dark mode). */
+  --color-line: rgba(255, 255, 255, 0.1);
+  --color-fill: rgba(255, 255, 255, 0.1);
+  --color-fill-soft: rgba(255, 255, 255, 0.05);
+
   /* Chord-tone colors for voicing shapes. The root keeps the accent orange;
      3rd/5th/7th get their own hues (matches the headset overlay roles). */
   --color-tone-third: #22d3ee; /* cyan */
@@ -34,6 +39,61 @@
 
 :root {
   color-scheme: dark;
+}
+
+/* ---------------------------------------------------------------------------
+   Light theme: same tokens remapped. Follows the system unless the person
+   picks a side with the nav toggle ([data-theme]).
+--------------------------------------------------------------------------- */
+:root[data-theme="light"] {
+  color-scheme: light;
+  --color-base: #f6f6f8;
+  --color-raise: #ffffff;
+  --color-raise-2: #ededf1;
+  --color-ink: #16161a;
+  --color-ink-dim: #52525b;
+  --color-ink-mute: #8e8e96;
+  --color-line: rgba(10, 10, 20, 0.12);
+  --color-fill: rgba(10, 10, 20, 0.07);
+  --color-fill-soft: rgba(10, 10, 20, 0.045);
+}
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    color-scheme: light;
+    --color-base: #f6f6f8;
+    --color-raise: #ffffff;
+    --color-raise-2: #ededf1;
+    --color-ink: #16161a;
+    --color-ink-dim: #52525b;
+    --color-ink-mute: #8e8e96;
+    --color-line: rgba(10, 10, 20, 0.12);
+    --color-fill: rgba(10, 10, 20, 0.07);
+    --color-fill-soft: rgba(10, 10, 20, 0.045);
+  }
+}
+
+/* The instrument surfaces stay dark in both themes — the compass lattice
+   and the rosewood fretboard are designed on a stage, not on paper. */
+.stage-panel {
+  color-scheme: dark;
+  --color-base: #09090b;
+  --color-raise: #101013;
+  --color-raise-2: #17171b;
+  --color-ink: #fafafa;
+  --color-ink-dim: #a1a1aa;
+  --color-ink-mute: #70707a;
+  --color-line: rgba(255, 255, 255, 0.1);
+  --color-fill: rgba(255, 255, 255, 0.1);
+  --color-fill-soft: rgba(255, 255, 255, 0.05);
+  background: #0a0a0d;
+  color: var(--color-ink);
+}
+
+.no-scrollbar {
+  scrollbar-width: none;
+}
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
 }
 
 html {

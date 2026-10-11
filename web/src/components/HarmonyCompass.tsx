@@ -283,7 +283,7 @@ export function HarmonyCompass() {
       </svg>
 
       {/* teaching card */}
-      <aside className="w-full max-w-sm shrink-0 rounded-2xl border border-white/10 bg-white/5 p-5 backdrop-blur">
+      <aside className="w-full max-w-sm shrink-0 rounded-2xl border border-line bg-fill-soft p-5 backdrop-blur">
         <h3 className="font-display text-2xl font-bold text-ink">
           {selected.label}
         </h3>
@@ -301,7 +301,7 @@ export function HarmonyCompass() {
             </li>
           ))}
         </ul>
-        <p className="mt-5 border-t border-white/10 pt-4 text-xs text-ink-dim">
+        <p className="mt-5 border-t border-line pt-4 text-xs text-ink-dim">
           In the full app every pathway opens scales, real grips, voice
           leading, and alterations — on a fretboard in front of you.
         </p>
