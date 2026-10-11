@@ -84,3 +84,46 @@ public enum Modes {
         return line
     }
 }
+
+
+extension Modes {
+    /// Canonical names for seven-note interval patterns — the modes of
+    /// major, melodic minor, and harmonic minor, as the literature names
+    /// them. Keys are intervals-from-root.
+    private static let modeCatalog: [[Int]: String] = [
+        [0, 2, 4, 5, 7, 9, 11]: "Ionian",
+        [0, 2, 3, 5, 7, 9, 10]: "Dorian",
+        [0, 1, 3, 5, 7, 8, 10]: "Phrygian",
+        [0, 2, 4, 6, 7, 9, 11]: "Lydian",
+        [0, 2, 4, 5, 7, 9, 10]: "Mixolydian",
+        [0, 2, 3, 5, 7, 8, 10]: "Aeolian",
+        [0, 1, 3, 5, 6, 8, 10]: "Locrian",
+        [0, 2, 3, 5, 7, 9, 11]: "Melodic minor",
+        [0, 1, 3, 5, 7, 9, 10]: "Dorian ♭2",
+        [0, 2, 4, 6, 8, 9, 11]: "Lydian augmented",
+        [0, 2, 4, 6, 7, 9, 10]: "Lydian dominant",
+        [0, 2, 4, 5, 7, 8, 10]: "Mixolydian ♭6",
+        [0, 2, 3, 5, 6, 8, 10]: "Locrian ♮2",
+        [0, 1, 3, 4, 6, 8, 10]: "Altered",
+        [0, 2, 3, 5, 7, 8, 11]: "Harmonic minor",
+        [0, 1, 3, 5, 6, 9, 10]: "Locrian ♮6",
+        [0, 2, 4, 5, 8, 9, 11]: "Ionian ♯5",
+        [0, 2, 3, 6, 7, 9, 10]: "Dorian ♯4",
+        [0, 1, 4, 5, 7, 8, 10]: "Phrygian dominant",
+        [0, 3, 4, 6, 7, 9, 11]: "Lydian ♯2",
+        [0, 1, 3, 4, 6, 8, 9]: "Super Locrian 𝄫7",
+    ]
+
+    /// The mode living on each degree of a seven-note scale — degree 2 of
+    /// major is Dorian, degree 4 of melodic minor is Lydian dominant.
+    /// nil per degree when the rotation has no standard name.
+    public static func degreeModeNames(of type: ScaleType) -> [String?] {
+        guard type.intervals.count == 7 else { return [] }
+        return type.intervals.indices.map { degree in
+            let start = type.intervals[degree]
+            let rotated = (0..<7)
+                .map { (type.intervals[(degree + $0) % 7] - start + 12) % 12 }
+            return modeCatalog[rotated]
+        }
+    }
+}

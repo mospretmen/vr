@@ -71,6 +71,7 @@ struct ScaleDetailView: View {
         let names = scale.spelledNames()
         let degrees = Modes.degreeLabels(of: scale.type)
         let sevenths = HarmonizedScale.seventhChords(of: scale)
+        let modeNames = Modes.degreeModeNames(of: scale.type)
         return HStack(spacing: 6) {
             ForEach(0..<names.count, id: \.self) { degree in
                 Button {
@@ -93,8 +94,15 @@ struct ScaleDetailView: View {
                         } else {
                             Text(names[degree]).font(.caption)
                         }
+                        if modeNames.indices.contains(degree), let mode = modeNames[degree] {
+                            Text(mode)
+                                .font(.system(size: 9))
+                                .foregroundStyle(.tertiary)
+                                .lineLimit(1)
+                                .minimumScaleFactor(0.6)
+                        }
                     }
-                    .frame(minWidth: 64)
+                    .frame(minWidth: 70)
                     .padding(.vertical, 6).padding(.horizontal, 4)
                     .background(.white.opacity(0.07), in: .rect(cornerRadius: 8))
                 }

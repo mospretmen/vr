@@ -722,6 +722,23 @@ struct PublishedShapeTests {
     }
 }
 
+@Suite("Degree modes")
+struct DegreeModeTests {
+    @Test func rotationsNameThemselves() {
+        let major = Modes.degreeModeNames(of: .major)
+        #expect(major == ["Ionian", "Dorian", "Phrygian", "Lydian",
+                          "Mixolydian", "Aeolian", "Locrian"])
+        let melodic = Modes.degreeModeNames(of: .melodicMinor)
+        #expect(melodic[3] == "Lydian dominant")
+        #expect(melodic[6] == "Altered")
+        #expect(melodic[2] == "Lydian augmented")
+        let harmonic = Modes.degreeModeNames(of: .harmonicMinor)
+        #expect(harmonic[4] == "Phrygian dominant")
+        #expect(harmonic[0] == "Harmonic minor")
+        #expect(Modes.degreeModeNames(of: .blues).isEmpty)
+    }
+}
+
 @Suite("Diatonic sevenths per degree")
 struct DiatonicSeventhTests {
     @Test func textbookTablesFallOutOfThirdStacking() {
