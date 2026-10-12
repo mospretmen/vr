@@ -298,6 +298,9 @@ struct ChordVoicingTests {
         let cMajor = ChordAlterations.options(for: Chord(root: .c, quality: .major))
         #expect(cMajor.contains { $0.label == "Cmaj9" })
         #expect(cMajor.contains { $0.label == "Cmaj7♯5" })
+        // Owner convention: no implied 9ths — maj13 sounds 1 3 5 7 13.
+        let maj13 = cMajor.first { $0.label == "Cmaj13" }
+        #expect(maj13?.chord.quality.intervals == [0, 4, 7, 11, 21])
         let dim = ChordAlterations.options(for: Chord(root: .gSharp, quality: .diminished7))
         #expect(dim.count == 1)
     }

@@ -1,5 +1,10 @@
 /// Context-correct alterations and extensions for a chord: what a player may
 /// add on top, why, and the scale that covers the sound. Ordered mild → spicy.
+///
+/// Notation convention (owner decision 2026-10-11): a chip sounds EXACTLY
+/// the figures its symbol names — no implied extensions. "maj13" is
+/// 1·3·5·7·13; wanting the 9 too is "maj9"'s job or your own stacking.
+/// The cumulative-symbol reading stays visible through the formula line.
 public struct ChordAlteration: Sendable, Hashable {
     /// Chord-symbol suffix spelled out, e.g. "7♭9".
     public let label: String
@@ -25,16 +30,16 @@ public enum ChordAlterations {
         case .dominant7:
             return [
                 alt("9", [0, 4, 7, 10, 14], "smooth and settled — heading to a major home.", .mixolydian),
-                alt("13", [0, 4, 7, 10, 14, 21], "the full bright dominant — classic to a major home.", .mixolydian),
+                alt("13", [0, 4, 7, 10, 21], "the full bright dominant — classic to a major home.", .mixolydian),
                 alt("7sus4", [0, 5, 7, 10], "suspended dominant — the 4 waits to fall to the 3rd.", .mixolydian),
                 alt("9sus4", [0, 5, 7, 10, 14], "suspended dominant — modern, floats until the 3rd lands.", .mixolydian),
-                alt("13sus4", [0, 5, 7, 10, 14, 21], "the full suspended stack — gospel and neo-soul.", .mixolydian),
+                alt("13sus4", [0, 5, 7, 10, 21], "the full suspended stack — gospel and neo-soul.", .mixolydian),
                 alt("7♭9", [0, 4, 7, 10, 13], "the pull into a minor home — or any home, harder.", .halfWholeDiminished),
                 alt("13♭9", [0, 4, 7, 10, 13, 21], "♭9 bite with a bright 13 — the half-whole sound in one grip.", .halfWholeDiminished),
                 alt("7♯9", [0, 4, 10, 15], "blues grit — the Hendrix bite over major or minor.", .altered),
                 alt("7♯11", [0, 4, 7, 10, 18], "lydian-dominant shimmer — the tritone-sub flavor.", .lydianDominant),
                 alt("9♯11", [0, 4, 7, 10, 14, 18], "shimmer plus a smooth 9 — full lydian dominant.", .lydianDominant),
-                alt("13♯11", [0, 4, 7, 10, 14, 18, 21], "everything lydian dominant offers in one chord.", .lydianDominant),
+                alt("13♯11", [0, 4, 7, 10, 18, 21], "everything lydian dominant offers in one chord.", .lydianDominant),
                 alt("7♭5", [0, 4, 6, 10], "flattened core — whole-tone ambiguity before resolving.", .wholeTone),
                 alt("9♭5", [0, 4, 6, 10, 14], "♭5 with a smooth 9 — floating whole-tone dominant.", .wholeTone),
                 alt("7♯5", [0, 4, 8, 10], "augmented dominant — pushes up hard into the next chord.", .wholeTone),
@@ -48,7 +53,7 @@ public enum ChordAlterations {
             return [
                 alt("maj7", [0, 4, 7, 11], "the resting color of a key center.", .major),
                 alt("maj9", [0, 4, 7, 11, 14], "maj7 with a silky 9 on top — lush and settled.", .major),
-                alt("maj13", [0, 4, 7, 11, 14, 21], "the whole key stacked — maximum lush, still at rest.", .major),
+                alt("maj13", [0, 4, 7, 11, 21], "the whole key stacked — maximum lush, still at rest.", .major),
                 alt("6", [0, 4, 7, 9], "resolved but warmer than maj7 — great on the final chord.", .major),
                 alt("6/9", [0, 4, 7, 9, 14], "the gentlest ending in music — 6 and 9, no leading tone.", .major),
                 alt("add9", [0, 2, 4, 7], "open, modern sparkle without the 7.", .major),
@@ -60,7 +65,7 @@ public enum ChordAlterations {
                 alt("m7", [0, 3, 7, 10], "the everyday minor seventh.", .dorian),
                 alt("m9", [0, 3, 7, 10, 14], "silky — the pretty minor.", .dorian),
                 alt("m11", [0, 3, 7, 10, 14, 17], "stacked and modern — the quartal minor wash.", .dorian),
-                alt("m13", [0, 3, 7, 10, 14, 21], "the full dorian color in one chord.", .dorian),
+                alt("m13", [0, 3, 7, 10, 21], "the full dorian color in one chord.", .dorian),
                 alt("m6", [0, 3, 7, 9], "bright minor — dorian in one chord.", .dorian),
                 alt("m6/9", [0, 3, 7, 9, 14], "bright and silky at once — the suave minor ending.", .dorian),
                 alt("m(add9)", [0, 2, 3, 7], "open minor sparkle without the 7.", .dorian),
@@ -87,7 +92,7 @@ public enum ChordAlterations {
             return [
                 alt("7sus4", [0, 5, 7, 10], "suspended dominant — the 4 waits to fall.", .mixolydian),
                 alt("9sus4", [0, 5, 7, 10, 14], "modern floating dominant.", .mixolydian),
-                alt("13sus4", [0, 5, 7, 10, 14, 21], "the full suspended stack.", .mixolydian),
+                alt("13sus4", [0, 5, 7, 10, 21], "the full suspended stack.", .mixolydian),
             ]
         default:
             return []
