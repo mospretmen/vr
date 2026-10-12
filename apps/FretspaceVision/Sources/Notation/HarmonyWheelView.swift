@@ -142,10 +142,9 @@ struct HarmonyWheelView: View {
                                    keyCenter: keyCenter,
                                    keyIsMinor: keyIsMinor,
                                    onSetKey: { column, minor in
-                                       withAnimation(.easeInOut(duration: 0.3)) {
-                                           keyCenter = column
-                                           keyIsMinor = minor
-                                       }
+                                       select(HarmonyWheel.node(
+                                           minor ? .relativeMinor : .majorKey,
+                                           column))
                                    },
                                    moveColor: { self.moveColor($0) },
                                    onSelectScale: { scale in
@@ -369,6 +368,13 @@ struct HarmonyWheelView: View {
 
     private func handleTap(at point: CGPoint, layout: WheelLayout) {
         guard let node = layout.node(at: point) else { return }
+        select(node)
+    }
+
+    /// The one selection routine — wheel taps and the card's key switcher
+    /// both land here, so every surface (staff, pathways, numerals, halo,
+    /// breadcrumb, sound) moves together.
+    private func select(_ node: HarmonyWheel.Node) {
         let isDestination = moves.contains { $0.to == node }
         selected = node
         pads.play(node.chord, durationMs: 1400)
