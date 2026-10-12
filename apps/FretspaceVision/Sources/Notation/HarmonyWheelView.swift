@@ -18,8 +18,8 @@ struct HarmonyWheelView: View {
         if mode == "windows" || mode == "all" {
             model.presentedScale = Scale(root: .c, type: .melodicMinor)
             model.presentedChord = Chord(root: .g, quality: .dominant7)
-            openWindow(id: SceneID.scaleDetail)
-            openWindow(id: SceneID.chordDetail)
+            openWindow(id: SceneID.scaleDetail, value: 0)
+            openWindow(id: SceneID.chordDetail, value: 0)
         }
     }
     @State private var selected: HarmonyWheel.Node = HarmonyWheel.node(.majorKey, 0)
@@ -150,16 +150,16 @@ struct HarmonyWheelView: View {
                                    moveColor: { self.moveColor($0) },
                                    onSelectScale: { scale in
                                        model.presentedScale = scale
-                                       openWindow(id: SceneID.scaleDetail)
+                                       openWindow(id: SceneID.scaleDetail, value: 0)
                                    },
                                    onShowVoicings: {
                                        model.presentedChord = selected.chord
-                                       openWindow(id: SceneID.chordDetail)
+                                       openWindow(id: SceneID.chordDetail, value: 0)
                                    },
                                    onHearChord: { pads.play($0, durationMs: 1400) },
                                    onOpenChord: { chord in
                                        model.presentedChord = chord
-                                       openWindow(id: SceneID.chordDetail)
+                                       openWindow(id: SceneID.chordDetail, value: 0)
                                    },
                                    onHearProgression: { pads.playProgression($0) })
             }
@@ -246,7 +246,7 @@ struct HarmonyWheelView: View {
     private var utilityBar: some View {
         HStack(spacing: 10) {
             Button {
-                openWindow(id: SceneID.phrases)
+                openWindow(id: SceneID.phrases, value: 0)
             } label: {
                 Label("Phrases", systemImage: "music.quarternote.3")
             }

@@ -28,10 +28,10 @@ struct FretspaceApp: App {
         .defaultSize(width: 700, height: 420)
         .restorationBehavior(.disabled)
 
-        WindowGroup(id: SceneID.scaleDetail) {
+        WindowGroup(id: SceneID.scaleDetail, for: Int.self) { _ in
             ScaleDetailHost()
                 .environment(model)
-        }
+        } defaultValue: { 0 }
         .defaultSize(width: 1080, height: 690)
         .restorationBehavior(.disabled)
         .defaultWindowPlacement { _, context in
@@ -42,10 +42,10 @@ struct FretspaceApp: App {
             return WindowPlacement()
         }
 
-        WindowGroup(id: SceneID.chordDetail) {
+        WindowGroup(id: SceneID.chordDetail, for: Int.self) { _ in
             ChordDetailHost()
                 .environment(model)
-        }
+        } defaultValue: { 0 }
         .defaultSize(width: 1040, height: 620)
         .restorationBehavior(.disabled)
         .defaultWindowPlacement { _, context in
@@ -55,10 +55,10 @@ struct FretspaceApp: App {
             return WindowPlacement()
         }
 
-        WindowGroup(id: SceneID.phrases) {
+        WindowGroup(id: SceneID.phrases, for: Int.self) { _ in
             PhraseLibraryView()
                 .environment(model)
-        }
+        } defaultValue: { 0 }
         .defaultSize(width: 1100, height: 640)
         .restorationBehavior(.disabled)
         .defaultWindowPlacement { _, context in
