@@ -8,6 +8,7 @@ struct PhraseLibraryView: View {
     @State private var pads = ChordPadEngine()
     @State private var selectedID: Phrase.ID? = nil
     @State private var recording = false
+    @State private var editing: Phrase? = nil
 
     private var selected: Phrase? {
         model.phrases.phrases.first { $0.id == selectedID }
@@ -23,6 +24,7 @@ struct PhraseLibraryView: View {
                 }
                 Spacer()
                 Button {
+                    editing = nil
                     recording.toggle()
                 } label: {
                     Label(recording ? "Close recorder" : "New phrase",
@@ -32,8 +34,13 @@ struct PhraseLibraryView: View {
             }
 
             if recording {
-                PhraseRecorder(pads: pads) { phrase in
-                    model.phrases.add(phrase)
+                PhraseRecorder(pads: pads, editing: editing) { phrase in
+                    if editing == nil {
+                        model.phrases.add(phrase)
+                    } else {
+                        model.phrases.update(phrase)
+                    }
+                    editing = nil
                     recording = false
                     selectedID = phrase.id
                 }
@@ -76,6 +83,13 @@ struct PhraseLibraryView: View {
                                             in: .rect(cornerRadius: 10))
                             }
                             .buttonStyle(.plain)
+                            Button {
+                                editing = phrase
+                                recording = true
+                            } label: {
+                                Image(systemName: "pencil")
+                            }
+                            .buttonStyle(.borderless)
                             Button(role: .destructive) {
                                 model.phrases.delete(phrase)
                             } label: {
@@ -122,12 +136,19 @@ struct PhraseLibraryView: View {
 /// Record a phrase by tapping notes onto the neck, in order.
 private struct PhraseRecorder: View {
     let pads: ChordPadEngine
+    var editing: Phrase? = nil
     let onSave: (Phrase) -> Void
 
     @State private var steps: [ExerciseStep] = []
     @State private var name = ""
     @State private var remark = ""
+    @State private var contextRoot: PitchClass? = nil
+    @State private var contextQuality: Int = 0
     private let board = FretboardModel()
+
+    private var contextChord: Chord? {
+        contextRoot.map { Chord(root: $0, quality: ChordQuality.all[contextQuality]) }
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 10) {
@@ -145,13 +166,49 @@ private struct PhraseRecorder: View {
                     pads.playRun(steps.map(\.note), noteMs: 230)
                 }
                 .disabled(steps.isEmpty)
-                Button("Save") {
+                Button(editing == nil ? "Save" : "Save changes") {
                     let trimmed = name.trimmingCharacters(in: .whitespaces)
-                    onSave(Phrase(name: trimmed.isEmpty ? "Untitled phrase" : trimmed,
-                                  steps: steps, remark: remark))
+                    onSave(Phrase(id: editing?.id ?? UUID(),
+                                  name: trimmed.isEmpty ? "Untitled phrase" : trimmed,
+                                  chord: contextChord,
+                                  steps: steps, remark: remark,
+                                  createdAt: editing?.createdAt ?? .now))
                 }
                 .buttonStyle(.borderedProminent)
                 .disabled(steps.isEmpty)
+            }
+
+            HStack(spacing: 8) {
+                Text("Over").font(.caption).foregroundStyle(.secondary)
+                Picker("Root", selection: $contextRoot) {
+                    Text("No chord").tag(PitchClass?.none)
+                    ForEach(PitchClass.allCases, id: \.self) { pc in
+                        Text(pc.name()).tag(PitchClass?.some(pc))
+                    }
+                }
+                .pickerStyle(.menu)
+                if contextRoot != nil {
+                    Picker("Quality", selection: $contextQuality) {
+                        ForEach(Array(ChordQuality.all.enumerated()), id: \.offset) { i, q in
+                            Text(q.name).tag(i)
+                        }
+                    }
+                    .pickerStyle(.menu)
+                }
+                if let chord = contextChord {
+                    Text(chord.symbol).font(.caption.bold()).foregroundStyle(.orange)
+                }
+                Spacer()
+            }
+            .onAppear {
+                guard let editing else { return }
+                steps = editing.steps
+                name = editing.name
+                remark = editing.remark
+                if let chord = editing.chord {
+                    contextRoot = chord.root
+                    contextQuality = ChordQuality.all.firstIndex(of: chord.quality) ?? 0
+                }
             }
 
             Text(steps.isEmpty

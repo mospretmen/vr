@@ -26,6 +26,15 @@ final class PhraseStore {
         save()
     }
 
+    func update(_ phrase: Phrase) {
+        guard let index = phrases.firstIndex(where: { $0.id == phrase.id }) else {
+            add(phrase)
+            return
+        }
+        phrases[index] = phrase
+        save()
+    }
+
     func delete(_ phrase: Phrase) {
         phrases.removeAll { $0.id == phrase.id }
         save()
