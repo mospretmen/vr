@@ -2,5 +2,5 @@
 /// never doubt about which build is being reviewed. Update the value in
 /// the same commit as the change it ships.
 enum BuildStamp {
-    static let value = "v70 · the key row taps the wheel for you"
+    static let value = "v71 · dyads everywhere, 48 classics"
 }

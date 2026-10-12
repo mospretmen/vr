@@ -97,8 +97,8 @@ public enum ChordVoicings {
         let stringCount = tuning.stringCount
 
         var shells: [Voicing] = []
-        for bass in 0...1 {   // root on the 6th or 5th string
-            for rootFret in 0...maxFret {
+        for bass in 0...2 {   // root on the 6th, 5th, or 4th string
+            for rootFret in 0...(maxFret + 2) {
                 let rootPos = FretPosition(string: bass, fret: rootFret)
                 guard board.note(at: rootPos).pitchClass == chord.root else { continue }
                 // Skip strings: guide tones sit on bass+2 and bass+3.
@@ -123,6 +123,47 @@ public enum ChordVoicings {
         var seen = Set<Voicing>()
         return shells.filter { seen.insert($0).inserted }
                      .sorted { $0.neckPosition < $1.neckPosition }
+    }
+
+    /// Two-note voicings of a chosen pair of chord tones, walked across
+    /// the neck — R·3, R·6, the 3·7 guide-tone dyad, and friends. The
+    /// first tone is the bass.
+    public static func dyads(
+        for chord: Chord, toneIndices: (Int, Int),
+        tuning: Tuning = .standard, maxFret: Int = 14
+    ) -> [Voicing] {
+        let board = FretboardModel(tuning: tuning)
+        let intervals = chord.quality.intervals
+        guard toneIndices.0 < intervals.count, toneIndices.1 < intervals.count
+        else { return [] }
+        let lowPC = chord.root.transposed(by: intervals[toneIndices.0])
+        let highPC = chord.root.transposed(by: intervals[toneIndices.1])
+        let stringCount = tuning.stringCount
+
+        var out: [Voicing] = []
+        for bass in 0..<(stringCount - 1) {
+            for fret in 0...maxFret {
+                let bassPos = FretPosition(string: bass, fret: fret)
+                guard board.note(at: bassPos).pitchClass == lowPC else { continue }
+                let bassMidi = board.note(at: bassPos).midi
+                for offset in 1...2 where bass + offset < stringCount {
+                    let string = bass + offset
+                    guard let partner = (0...maxFret).first(where: { f in
+                        let note = board.note(at: FretPosition(string: string, fret: f))
+                        return note.pitchClass == highPC && note.midi > bassMidi
+                            && abs(f - fret) <= 4
+                    }) else { continue }
+                    var frets = [Int?](repeating: nil, count: stringCount)
+                    frets[bass] = fret
+                    frets[string] = partner
+                    out.append(Voicing(frets: frets))
+                }
+            }
+        }
+        var seen = Set<Voicing>()
+        return out.filter { seen.insert($0).inserted }
+                  .sorted { $0.neckPosition < $1.neckPosition }
+                  .prefix(10).map { $0 }
     }
 
     // MARK: - Voicing search internals

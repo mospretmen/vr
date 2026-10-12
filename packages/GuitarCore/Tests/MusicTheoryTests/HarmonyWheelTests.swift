@@ -413,6 +413,24 @@ struct ChordVoicingTests {
         #expect(ChordVoicings.shells(for: Chord(root: .c, quality: .major)).isEmpty)
     }
 
+    @Test func dyadsWalkTheNeckInPairs() {
+        let c6 = Chord(root: .c, quality: ChordQuality(
+            name: "6", symbol: "6", intervals: [0, 4, 7, 9]))
+        let board = FretboardModel()
+        let rootSix = ChordVoicings.dyads(for: c6, toneIndices: (0, 3))
+        #expect(rootSix.count >= 5, "R·6 dyads cover the neck")
+        for dyad in rootSix {
+            let notes = dyad.positions.map { board.note(at: $0) }
+            #expect(notes.count == 2)
+            #expect(notes[0].pitchClass == .c)
+            #expect(notes[1].pitchClass == .a)
+            #expect(notes[1].midi > notes[0].midi)
+        }
+        // Shells now reach three bass strings.
+        let shells = ChordVoicings.shells(for: Chord(root: .c, quality: .dominant7))
+        #expect(Set(shells.compactMap { $0.positions.first?.string }).count >= 3)
+    }
+
     @Test func keysReachTheirSubstituteDominantDirectly() {
         // In the key of C, the tritone sub of G7 is D♭7 — visible from C itself.
         let c = HarmonyWheel.node(.majorKey, 0)
@@ -936,7 +954,7 @@ struct PhraseAnalysisTests {
 @Suite("Built-in classics")
 struct BuiltInPhraseTests {
     @Test func everyClassicTellsTheTruth() {
-        #expect(BuiltInPhrases.all.count == 23)
+        #expect(BuiltInPhrases.all.count == 48)
         // Verbatim PD pins: the openings are the openings.
         let elise = BuiltInPhrases.all.first { $0.name.contains("Für Elise") }!
         #expect(elise.steps.map(\.note.pitchClass) ==

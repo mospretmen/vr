@@ -31,6 +31,7 @@ struct ChordDetailView: View {
         case shells = "Shells"
         case triads = "Triads"
         case drop2 = "Inversions"
+        case dyads = "Dyads"
         case movement = "Movement"
         var id: String { rawValue }
     }
@@ -42,6 +43,30 @@ struct ChordDetailView: View {
     @State private var guideTones = false
     /// nil = show all inversions climbing the neck.
     @State private var inversionFilter: Int? = nil
+    @State private var dyadPair = 0
+
+    /// Tone-index pairs offered for dyads, by chord size.
+    private var dyadPairs: [(Int, Int)] {
+        let count = chord.quality.intervals.count
+        return count >= 4
+            ? [(0, 1), (0, 2), (0, 3), (1, 3), (2, 3)]
+            : [(0, 1), (0, 2), (1, 2)]
+    }
+
+    private func dyadLabel(_ pair: (Int, Int)) -> String {
+        let figures = chord.quality.intervals.map(Self.figure)
+        return "\(figures[pair.0])·\(figures[pair.1])"
+    }
+
+    private static func figure(_ interval: Int) -> String {
+        switch interval {
+        case 0: "R"
+        case 2: "2"; case 3: "♭3"; case 4: "3"; case 5: "4"
+        case 6: "♭5"; case 7: "5"; case 8: "♯5"; case 9: "6"
+        case 10: "♭7"; case 11: "7"
+        default: "\(interval)"
+        }
+    }
     @State private var stringSetIndex = 0
     @State private var labelStyle: LabelStyle = .degrees
     @State private var pads = ChordPadEngine()
@@ -63,8 +88,8 @@ struct ChordDetailView: View {
     private var hasSeventh: Bool { chord.quality.intervals.count >= 4 }
 
     private var modes: [Mode] {
-        var list: [Mode] = hasSeventh ? [.grips, .shells, .triads, .drop2]
-                                      : [.grips, .triads]
+        var list: [Mode] = hasSeventh ? [.grips, .shells, .triads, .drop2, .dyads]
+                                      : [.grips, .triads, .dyads]
         if movementSixChord != nil { list.append(.movement) }
         return list
     }
@@ -215,6 +240,31 @@ struct ChordDetailView: View {
                                      : "Tap a grip to hear it")
                     .font(.caption2).foregroundStyle(.tertiary)
             }
+        case .dyads:
+            HStack(spacing: 6) {
+                Text("Pair").font(.caption).foregroundStyle(.secondary)
+                ForEach(Array(dyadPairs.enumerated()), id: \.offset) { index, pair in
+                    Button {
+                        dyadPair = index
+                        if let first = ChordVoicings.dyads(
+                            for: chord, toneIndices: pair).first {
+                            pads.playRun(first.positions.map { board.note(at: $0) },
+                                         noteMs: 260)
+                        }
+                    } label: {
+                        Text(dyadLabel(pair))
+                            .font(.caption)
+                            .padding(.horizontal, 9).padding(.vertical, 5)
+                            .background(index == dyadPair ? .blue.opacity(0.45)
+                                                          : .white.opacity(0.1),
+                                        in: .capsule)
+                    }
+                    .buttonStyle(.plain)
+                }
+                Spacer()
+                Text("Every spot shown — walk them up the neck")
+                    .font(.caption2).foregroundStyle(.tertiary)
+            }
         case .movement:
             VStack(alignment: .leading, spacing: 8) {
                 HStack(spacing: 8) {
@@ -302,6 +352,13 @@ struct ChordDetailView: View {
     /// together so the same chord is visible climbing the neck.
     private var currentInversions: [InversionShape] {
         switch mode {
+        case .dyads:
+            let pair = dyadPairs[min(dyadPair, dyadPairs.count - 1)]
+            return ChordVoicings.dyads(for: chord, toneIndices: pair).map { dyad in
+                InversionShape(shape: dyad.positions,
+                               label: dyad.positionLabel,
+                               notes: dyad.positions.map { board.note(at: $0) })
+            }
         case .movement:
             guard let step = currentRung, let v = rungVoicing(step) else { return [] }
             return [InversionShape(shape: v.positions,

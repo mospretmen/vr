@@ -210,6 +210,7 @@ struct ScaleDetailView: View {
                     }
                 }
                 .pickerStyle(.menu)
+                .fixedSize()
                 Toggle("Guide tones", isOn: $guideTones)
                     .toggleStyle(.button)
                     .font(.caption)
