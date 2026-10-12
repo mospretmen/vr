@@ -19,18 +19,21 @@ struct FretspaceApp: App {
                 .environment(model)
         }
         .defaultSize(width: 560, height: 700)
+        .restorationBehavior(.disabled)
 
         WindowGroup(id: SceneID.notation) {
             NotationPanelView()
                 .environment(model)
         }
         .defaultSize(width: 700, height: 420)
+        .restorationBehavior(.disabled)
 
         WindowGroup(id: SceneID.scaleDetail) {
             ScaleDetailHost()
                 .environment(model)
         }
         .defaultSize(width: 1080, height: 690)
+        .restorationBehavior(.disabled)
         .defaultWindowPlacement { _, context in
             // Scales open beside the compass, not on top of it.
             if let compass = context.windows.first(where: { $0.id == SceneID.harmony }) {
@@ -44,6 +47,7 @@ struct FretspaceApp: App {
                 .environment(model)
         }
         .defaultSize(width: 1040, height: 620)
+        .restorationBehavior(.disabled)
         .defaultWindowPlacement { _, context in
             if let compass = context.windows.first(where: { $0.id == SceneID.harmony }) {
                 return WindowPlacement(.leading(compass))

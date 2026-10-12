@@ -16,10 +16,10 @@ struct HarmonyWheelView: View {
               ProcessInfo.processInfo.arguments.count > i + 1 else { return }
         let mode = ProcessInfo.processInfo.arguments[i + 1]
         if mode == "windows" || mode == "all" {
-            openWindow(id: SceneID.scaleDetail,
-                       value: Scale(root: .c, type: .harmonicMinor))
-            openWindow(id: SceneID.chordDetail,
-                       value: Chord(root: .g, quality: .dominant7))
+            model.presentedScale = Scale(root: .c, type: .melodicMinor)
+            model.presentedChord = Chord(root: .g, quality: .dominant7)
+            openWindow(id: SceneID.scaleDetail)
+            openWindow(id: SceneID.chordDetail)
         }
     }
     @State private var selected: HarmonyWheel.Node = HarmonyWheel.node(.majorKey, 0)
