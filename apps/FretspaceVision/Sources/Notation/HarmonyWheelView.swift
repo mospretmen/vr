@@ -23,7 +23,45 @@ struct HarmonyWheelView: View {
         }
     }
     @State private var selected: HarmonyWheel.Node = HarmonyWheel.node(.majorKey, 0)
-    @State private var path: [HarmonyWheel.Node] = [HarmonyWheel.node(.majorKey, 0)]
+    @State private var path: [HarmonyWheel.Node] = Self.restoredPath()
+    @State private var walkTask: Task<Void, Never>? = nil
+
+    private static func restoredPath() -> [HarmonyWheel.Node] {
+        let ids = UserDefaults.standard.stringArray(forKey: "compass.path") ?? []
+        let nodes = ids.compactMap(Self.node(for:))
+        return nodes.isEmpty ? [HarmonyWheel.node(.majorKey, 0)] : nodes
+    }
+
+    private static func node(for id: String) -> HarmonyWheel.Node? {
+        let parts = id.split(separator: ":")
+        guard parts.count == 2, let index = Int(parts[1]) else { return nil }
+        let ring: HarmonyWheel.Ring? = switch parts[0] {
+        case "majorKey": .majorKey
+        case "relativeMinor": .relativeMinor
+        case "dominant": .dominant
+        case "diminished": .diminished
+        default: nil
+        }
+        return ring.map { HarmonyWheel.node($0, index) }
+    }
+
+    /// Perform the walked path: each chord strums as its chip relights —
+    /// your journey played back as a progression.
+    private func playWalk() {
+        walkTask?.cancel()
+        let steps = path
+        walkTask = Task { @MainActor in
+            for (index, node) in steps.enumerated() {
+                if Task.isCancelled { return }
+                withAnimation(.easeInOut(duration: 0.2)) { selected = node }
+                pads.playVoicing(
+                    [Note(node.chord.root, octave: 3)]
+                        + node.chord.pitchClasses.map { Note($0, octave: 4) },
+                    durationMs: 780, restart: index == 0)
+                try? await Task.sleep(nanoseconds: 820_000_000)
+            }
+        }
+    }
     /// The column you harmonically live in — its neighborhood (which holds
     /// all its diatonic chords) is haloed. Modulation = moving this.
     @State private var keyCenter: Int =
@@ -122,6 +160,9 @@ struct HarmonyWheelView: View {
         }
         .onChange(of: keyIsMinor) {
             UserDefaults.standard.set(keyIsMinor, forKey: "compass.keyIsMinor")
+        }
+        .onChange(of: path) {
+            UserDefaults.standard.set(path.map(\.id), forKey: "compass.path")
         }
         .onChange(of: hiddenKinds) {
             UserDefaults.standard.set(hiddenKinds.map(\.rawValue).sorted(),
@@ -234,7 +275,15 @@ struct HarmonyWheelView: View {
                 }
             }
             if path.count > 1 {
+                Button {
+                    playWalk()
+                } label: {
+                    Label("Play walk", systemImage: "play.fill")
+                }
+                .font(.caption)
+                .buttonStyle(.bordered)
                 Button("Clear") {
+                    walkTask?.cancel()
                     path = [selected]
                 }
                 .font(.caption)
