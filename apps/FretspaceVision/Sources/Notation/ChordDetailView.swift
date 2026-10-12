@@ -30,7 +30,7 @@ struct ChordDetailView: View {
         case grips = "Grips"
         case shells = "Shells"
         case triads = "Triads"
-        case drop2 = "Drop-2"
+        case drop2 = "Inversions"
         case movement = "Movement"
         var id: String { rawValue }
     }

@@ -18,9 +18,17 @@ struct ScaleDetailView: View {
     /// see the thirds move, not just hear them.
     private func playDrill(intervalDegrees: Int) {
         drillTask?.cancel()
+        // Respect the position the player chose in the box picker.
+        let starts = board.boxStartFrets(for: scale)
+        let start: Int
+        if let boxIndex, starts.indices.contains(boxIndex) {
+            start = starts[boxIndex]
+        } else {
+            start = starts.first ?? 5
+        }
         let drill = ExerciseGenerator.scaleInIntervals(
             scale: scale,
-            box: board.boxStartFrets(for: scale).first ?? 5,
+            box: start,
             intervalDegrees: intervalDegrees,
             on: board)
         drillSteps = drill.steps
@@ -241,6 +249,11 @@ struct ScaleDetailView: View {
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
         }
         .padding(22)
+        .onDisappear {
+            // Never leave an ownerless drill playing after the window
+            // switches scales or closes.
+            drillTask?.cancel()
+        }
     }
 }
 

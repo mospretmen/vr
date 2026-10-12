@@ -810,6 +810,37 @@ struct IntervalExerciseTests {
         }
     }
 
+    @Test func drillsClimbInPitchWithoutRepeats() {
+        for root in [PitchClass.c, .g, .e] {
+            let drill = ExerciseGenerator.scaleInIntervals(
+                scale: Scale(root: root, type: .major), box: 5,
+                intervalDegrees: 3, on: FretboardModel())
+            let midis = drill.steps.map(\.note.midi)
+            let half = midis.count / 2
+            // Ascending half: every pair's LOW voice climbs monotonically.
+            let lows = stride(from: 0, to: half - 1, by: 2).map { midis[$0] }
+            #expect(lows == lows.sorted())
+            #expect(Set(zip(midis, midis.dropFirst()).map { $0 == $1 })
+                        .contains(true) == false, "no immediate repeats")
+        }
+    }
+
+    @Test func everySeventhChordHasAllFourDrop2Inversions() {
+        // The official tables: four inversions per 4-string set, basses
+        // walking root → 3rd → 5th → 7th. Anything missing is an engine bug.
+        let board = FretboardModel()
+        for node in HarmonyWheel.nodes where node.chord.quality.intervals.count == 4 {
+            for set in SeventhVoicings.stringSets {
+                let voicings = SeventhVoicings.drop2(of: node.chord, strings: set, on: board)
+                #expect(voicings.count == 4,
+                        "\(node.chord.symbol) on \(set): \(voicings.count) inversions")
+                let basses = Set(voicings.compactMap { $0.steps.first?.note.pitchClass })
+                #expect(basses == Set(node.chord.pitchClasses),
+                        "\(node.chord.symbol) on \(set) basses")
+            }
+        }
+    }
+
     @Test func sixthsAreWideAndDiatonic() {
         let drill = ExerciseGenerator.scaleInIntervals(
             scale: Scale(root: .g, type: .major), box: 2,

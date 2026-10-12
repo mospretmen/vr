@@ -50,10 +50,10 @@ public enum ExerciseGenerator {
         span: Int = 5,
         on model: FretboardModel
     ) -> Exercise {
+        var seenMidis = Set<Int>()
         let box = model.positionBox(for: scale, startingAt: startFret, span: span)
-            .sorted {
-                ($0.position.string, $0.position.fret) < ($1.position.string, $1.position.fret)
-            }
+            .sorted { ($0.note.midi, $0.position.string) < ($1.note.midi, $1.position.string) }
+            .filter { seenMidis.insert($0.note.midi).inserted } // no unison repeats
         let gap = intervalDegrees - 1
         guard box.count > gap else {
             return Exercise(name: "\(scale.name) in \(intervalDegrees)ths", steps: [])
