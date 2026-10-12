@@ -25,6 +25,9 @@ struct HarmonyWheelView: View {
     @State private var selected: HarmonyWheel.Node = HarmonyWheel.node(.majorKey, 0)
     @State private var path: [HarmonyWheel.Node] = Self.restoredPath()
     @State private var walkTask: Task<Void, Never>? = nil
+    /// First-launch guided walk; nil once completed or skipped.
+    @State private var onboardingStep: Int? =
+        UserDefaults.standard.bool(forKey: "compass.onboarded") ? nil : 0
 
     private static func restoredPath() -> [HarmonyWheel.Node] {
         let ids = UserDefaults.standard.stringArray(forKey: "compass.path") ?? []
@@ -155,6 +158,21 @@ struct HarmonyWheelView: View {
             breadcrumb
         }
         .padding(20)
+        .overlay(alignment: .bottom) {
+            if let step = onboardingStep {
+                onboardingCard(step: step)
+                    .padding(.bottom, 52)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+            }
+        }
+        .onChange(of: selected) {
+            guard let step = onboardingStep else { return }
+            if step == 0, selected.id == "dominant:9" {
+                withAnimation { onboardingStep = 1 }
+            } else if step == 1, selected.id == "majorKey:0" {
+                withAnimation { onboardingStep = 2 }
+            }
+        }
         .onChange(of: keyCenter) {
             UserDefaults.standard.set(keyCenter, forKey: "compass.keyCenter")
         }
@@ -183,6 +201,37 @@ struct HarmonyWheelView: View {
             utilityBar
             legend
         }
+    }
+
+    private func onboardingCard(step: Int) -> some View {
+        let lines = [
+            "Welcome. This wheel is a map of harmony — every chord, every road. "
+                + "Start by tapping G7, the orange chip below C.",
+            "That pull you hear is tension. The green pathway shows where it "
+                + "wants to go — tap C to let it land.",
+            "Home again. Tap the pathway text on the right to watch the voices "
+                + "move — then wander anywhere. Every road explains itself.",
+        ]
+        return HStack(spacing: 12) {
+            Text(lines[min(step, lines.count - 1)])
+                .font(.callout)
+                .fixedSize(horizontal: false, vertical: true)
+            if step >= 2 {
+                Button("Let's play") { finishOnboarding() }
+                    .buttonStyle(.borderedProminent)
+            } else {
+                Button("Skip") { finishOnboarding() }
+                    .font(.caption)
+            }
+        }
+        .padding(14)
+        .frame(maxWidth: 560)
+        .background(.regularMaterial, in: .rect(cornerRadius: 14))
+    }
+
+    private func finishOnboarding() {
+        withAnimation { onboardingStep = nil }
+        UserDefaults.standard.set(true, forKey: "compass.onboarded")
     }
 
     /// Everything that used to live on the main menu, one tap away.
