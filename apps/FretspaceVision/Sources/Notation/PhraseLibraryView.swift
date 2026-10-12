@@ -9,6 +9,15 @@ struct PhraseLibraryView: View {
     @State private var selectedID: Phrase.ID? = nil
     @State private var recording = false
     @State private var editing: Phrase? = nil
+    /// Ephemeral transposition of the selected phrase (semitones).
+    @State private var transpose = 0
+    private let board = FretboardModel()
+
+    /// The selected phrase as currently viewed (possibly transposed).
+    private var viewedPhrase: Phrase? {
+        guard let selected else { return nil }
+        return selected.transposed(by: transpose, on: board) ?? selected
+    }
 
     private var selected: Phrase? {
         model.phrases.phrases.first { $0.id == selectedID }
@@ -65,6 +74,7 @@ struct PhraseLibraryView: View {
                     ForEach(model.phrases.phrases) { phrase in
                         HStack(spacing: 8) {
                             Button {
+                                if selectedID != phrase.id { transpose = 0 }
                                 selectedID = phrase.id
                                 pads.playRun(phrase.steps.map(\.note), noteMs: 230)
                             } label: {
@@ -102,18 +112,79 @@ struct PhraseLibraryView: View {
             }
             .frame(maxHeight: 190)
 
-            if let selected {
+            if let phrase = viewedPhrase {
+                analysisRow(phrase)
                 FretboardDiagram(
-                    highlights: phraseHighlights(selected),
+                    highlights: phraseHighlights(phrase),
                     stringCount: 6,
                     fretCount: 15,
                     labelStyle: .noteNames,
-                    chord: selected.chord
+                    chord: phrase.chord
                 )
                 .aspectRatio(5.6, contentMode: .fit)
                 .frame(maxWidth: .infinity, alignment: .top)
             }
         }
+    }
+
+    /// Harmonic reading + transposition controls for the selected phrase.
+    private func analysisRow(_ phrase: Phrase) -> some View {
+        let notes = phrase.steps.map(\.note)
+        let devices = PhraseAnalysis.devices(notes: notes, chord: phrase.chord)
+        return VStack(alignment: .leading, spacing: 4) {
+            HStack(spacing: 10) {
+                if !devices.isEmpty {
+                    Text(devices.joined(separator: " · "))
+                        .font(.caption)
+                        .foregroundStyle(.cyan.opacity(0.9))
+                }
+                Spacer()
+                Menu {
+                    ForEach(0..<12, id: \.self) { delta in
+                        let label = delta == 0 ? "Original"
+                            : "+\(delta) (\(transposedLabel(phrase, delta)))"
+                        Button(label) {
+                            transpose = delta
+                            if let moved = selected?.transposed(by: delta, on: board) {
+                                pads.playRun(moved.steps.map(\.note), noteMs: 230)
+                            }
+                        }
+                    }
+                } label: {
+                    Label(transpose == 0 ? "Transpose"
+                          : "Transposed +\(transpose)",
+                          systemImage: "arrow.up.arrow.down")
+                        .font(.caption)
+                }
+                if transpose != 0 {
+                    Button("Save as copy") {
+                        guard let moved = viewedPhrase else { return }
+                        var copy = moved
+                        copy.id = UUID()
+                        copy.name = moved.name + " (+\(transpose))"
+                        copy.createdAt = .now
+                        model.phrases.add(copy)
+                        transpose = 0
+                        selectedID = copy.id
+                    }
+                    .font(.caption)
+                    .buttonStyle(.bordered)
+                }
+            }
+            if let chord = phrase.chord {
+                Text("Over \(chord.symbol): "
+                     + PhraseAnalysis.degreePath(notes: notes, chord: chord))
+                    .font(.caption2)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.6)
+            }
+        }
+    }
+
+    private func transposedLabel(_ phrase: Phrase, _ delta: Int) -> String {
+        let anchor = phrase.chord?.root ?? phrase.steps.first?.note.pitchClass ?? .c
+        return anchor.transposed(by: delta).name()
     }
 
     private func phraseSubtitle(_ phrase: Phrase) -> String {

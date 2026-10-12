@@ -97,3 +97,11 @@ SixthDiminished: the 6th-diminished scale + the eight-rung ladder
 (C6 · B°7 · C6/E · B°7/D …) that gives a static chord motion. UI to
 come: a "Movement" view from the chord window — the ladder voiced as
 drop-2s climbing a string set, playable rung by rung.
+
+## Global phrase repository (planned — owner request 2026-10-11)
+Personal library stays local-first; a shared tier lets users publish
+phrases (name, chord context, steps, analysis) to a global catalog and
+import others'. Neon schema mirrors the local Phrase JSON + author
+handle + public flag; browse by chord from the compass. Needs accounts
+(lightweight), moderation stance TBD. Analysis/transpose (v64) are the
+foundation: shared phrases arrive readable and playable in any key.

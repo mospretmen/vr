@@ -865,3 +865,36 @@ struct PhraseTests {
         #expect(back[0].steps[0].note.pitchClass == .g)
     }
 }
+
+@Suite("Phrase analysis")
+struct PhraseAnalysisTests {
+    @Test func classicDevicesAreDetected() {
+        let c = Chord(root: .c, quality: .major)
+        // D4 – B3 – C4: the textbook enclosure of the root.
+        let enclosure = [Note(.d, octave: 4), Note(.b, octave: 3), Note(.c, octave: 4)]
+        #expect(PhraseAnalysis.devices(notes: enclosure, chord: c)
+            .contains("enclosure of the R"))
+        // D♯4 → E4: chromatic approach to the 3rd.
+        let approach = [Note(.dSharp, octave: 4), Note(.e, octave: 4)]
+        #expect(PhraseAnalysis.devices(notes: approach, chord: c)
+            .contains("chromatic approach to the 3"))
+        // C E G up: arpeggio.
+        let arp = [Note(.c, octave: 4), Note(.e, octave: 4), Note(.g, octave: 4)]
+        #expect(PhraseAnalysis.devices(notes: arp, chord: c).contains("arpeggio up"))
+        #expect(PhraseAnalysis.degreePath(notes: arp, chord: c) == "R → 3 → 5")
+    }
+
+    @Test func transpositionSlidesFretsAndRetags() {
+        let board = FretboardModel()
+        let steps = [FretPosition(string: 1, fret: 3), FretPosition(string: 2, fret: 2)]
+            .map { ExerciseStep(position: $0, note: board.note(at: $0)) } // C, E
+        let phrase = Phrase(name: "cell", chord: Chord(root: .c, quality: .major),
+                            steps: steps)
+        let up = phrase.transposed(by: 2, on: board)
+        #expect(up?.steps.map(\.note.pitchClass) == [.d, .fSharp])
+        #expect(up?.chord?.root == .d)
+        // Octave fold keeps the pitch class when the neck runs out.
+        let far = phrase.transposed(by: 14, on: board)
+        #expect(far?.steps[0].note.pitchClass == .d)
+    }
+}
