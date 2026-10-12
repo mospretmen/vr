@@ -139,6 +139,14 @@ struct HarmonyWheelView: View {
                 }
                 HarmonyContextCard(selected: selected, moves: moves,
                                    frameTonic: frameTonic,
+                                   keyCenter: keyCenter,
+                                   keyIsMinor: keyIsMinor,
+                                   onSetKey: { column, minor in
+                                       withAnimation(.easeInOut(duration: 0.3)) {
+                                           keyCenter = column
+                                           keyIsMinor = minor
+                                       }
+                                   },
                                    moveColor: { self.moveColor($0) },
                                    onSelectScale: { scale in
                                        model.presentedScale = scale

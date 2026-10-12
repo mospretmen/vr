@@ -11,12 +11,13 @@ struct PhraseLibraryView: View {
     @State private var editing: Phrase? = nil
     /// Ephemeral transposition of the selected phrase (semitones).
     @State private var transpose = 0
+    @State private var selectedClassic: Phrase? = nil
     private let board = FretboardModel()
 
     /// The selected phrase as currently viewed (possibly transposed).
     private var viewedPhrase: Phrase? {
-        guard let selected else { return nil }
-        return selected.transposed(by: transpose, on: board) ?? selected
+        guard let base = selectedClassic ?? selected else { return nil }
+        return base.transposed(by: transpose, on: board) ?? base
     }
 
     private var selected: Phrase? {
@@ -53,13 +54,6 @@ struct PhraseLibraryView: View {
                     recording = false
                     selectedID = phrase.id
                 }
-            } else if model.phrases.phrases.isEmpty {
-                ContentUnavailableView(
-                    "No phrases yet",
-                    systemImage: "music.quarternote.3",
-                    description: Text("Tap New phrase and play a line onto the "
-                                      + "fretboard — your repertoire starts here."))
-                    .frame(maxHeight: .infinity)
             } else {
                 browser
             }
@@ -71,10 +65,15 @@ struct PhraseLibraryView: View {
         VStack(alignment: .leading, spacing: 10) {
             ScrollView {
                 VStack(alignment: .leading, spacing: 6) {
+                    if model.phrases.phrases.isEmpty {
+                        Text("No phrases of your own yet — record one, or pull a classic from the shelf below.")
+                            .font(.caption).foregroundStyle(.secondary)
+                    }
                     ForEach(model.phrases.phrases) { phrase in
                         HStack(spacing: 8) {
                             Button {
                                 if selectedID != phrase.id { transpose = 0 }
+                                selectedClassic = nil
                                 selectedID = phrase.id
                                 pads.playRun(phrase.steps.map(\.note), noteMs: 230)
                             } label: {
@@ -108,9 +107,48 @@ struct PhraseLibraryView: View {
                             .buttonStyle(.borderless)
                         }
                     }
+                    Divider().padding(.vertical, 4)
+                    Text("Classics — style-of lines & public-domain themes")
+                        .font(.caption.bold()).foregroundStyle(.secondary)
+                    ForEach(BuiltInPhrases.all) { classic in
+                        HStack(spacing: 8) {
+                            Button {
+                                selectedID = nil
+                                transpose = 0
+                                selectedClassic = classic
+                                pads.playRun(classic.steps.map(\.note), noteMs: 230)
+                            } label: {
+                                HStack(spacing: 8) {
+                                    Image(systemName: "play.circle")
+                                    VStack(alignment: .leading, spacing: 1) {
+                                        Text(classic.name).font(.callout.bold())
+                                        Text(phraseSubtitle(classic))
+                                            .font(.caption2).foregroundStyle(.secondary)
+                                    }
+                                    Spacer()
+                                }
+                                .padding(.vertical, 6).padding(.horizontal, 10)
+                                .background(classic.id == selectedClassic?.id
+                                                ? .blue.opacity(0.3) : .white.opacity(0.04),
+                                            in: .rect(cornerRadius: 10))
+                            }
+                            .buttonStyle(.plain)
+                            Button {
+                                var copy = classic
+                                copy.id = UUID()
+                                copy.createdAt = .now
+                                model.phrases.add(copy)
+                                selectedClassic = nil
+                                selectedID = copy.id
+                            } label: {
+                                Image(systemName: "plus.circle")
+                            }
+                            .buttonStyle(.borderless)
+                        }
+                    }
                 }
             }
-            .frame(maxHeight: 190)
+            .frame(maxHeight: 230)
 
             if let phrase = viewedPhrase {
                 analysisRow(phrase)
@@ -189,7 +227,11 @@ struct PhraseLibraryView: View {
 
     private func phraseSubtitle(_ phrase: Phrase) -> String {
         var parts: [String] = ["\(phrase.steps.count) notes"]
-        if let chord = phrase.chord { parts.append("over \(chord.symbol)") }
+        if let context = phrase.context, !context.isEmpty {
+            parts.append(context)
+        } else if let chord = phrase.chord {
+            parts.append("over \(chord.symbol)")
+        }
         if !phrase.remark.isEmpty { parts.append(phrase.remark) }
         return parts.joined(separator: " · ")
     }

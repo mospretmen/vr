@@ -7,6 +7,10 @@ struct HarmonyContextCard: View {
     let selected: HarmonyWheel.Node
     let moves: [HarmonyWheel.Move]
     let frameTonic: PitchClass
+    let keyCenter: Int
+    let keyIsMinor: Bool
+    /// Another avenue of navigation: set the key frame from the card.
+    let onSetKey: (Int, Bool) -> Void
     let moveColor: (HarmonyWheel.Move) -> Color
     let onSelectScale: (Scale) -> Void
     let onShowVoicings: () -> Void
@@ -29,6 +33,7 @@ struct HarmonyContextCard: View {
                  ?? HarmonyWheel.functionalLabel(for: selected, inKeyFrame: frameTonic))
                 .font(.title2.bold())
                 .frame(maxWidth: .infinity)
+            keyRow
             Divider()
             Button {
                 onShowVoicings()
@@ -93,6 +98,39 @@ struct HarmonyContextCard: View {
         .background(.thinMaterial, in: .rect(cornerRadius: 14))
         .frame(width: 300)
         .frame(maxHeight: .infinity)
+    }
+
+    /// Key-frame switcher: pick any tonic, flip major/minor — the wheel
+    /// re-reads instantly, no chip tap needed.
+    private var keyRow: some View {
+        HStack(spacing: 8) {
+            Text("Key").font(.caption).foregroundStyle(.secondary)
+            Menu {
+                ForEach(0..<12, id: \.self) { column in
+                    Button(keyIsMinor
+                           ? HarmonyWheel.node(.relativeMinor, column).label
+                           : HarmonyWheel.node(.majorKey, column).label) {
+                        onSetKey(column, keyIsMinor)
+                    }
+                }
+            } label: {
+                Text(keyIsMinor
+                     ? HarmonyWheel.node(.relativeMinor, keyCenter).label
+                     : HarmonyWheel.node(.majorKey, keyCenter).label)
+                    .font(.callout.bold())
+                    .padding(.horizontal, 10).padding(.vertical, 4)
+                    .background(.blue.opacity(0.25), in: .capsule)
+            }
+            Picker("", selection: Binding(
+                get: { keyIsMinor },
+                set: { onSetKey(keyCenter, $0) })) {
+                Text("Major").tag(false)
+                Text("Minor").tag(true)
+            }
+            .pickerStyle(.segmented)
+            .frame(width: 140)
+            Spacer()
+        }
     }
 
     /// Plain-English meaning of a pathway, for the player not the theorist.

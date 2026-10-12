@@ -932,3 +932,54 @@ struct PhraseAnalysisTests {
         #expect(far?.steps[0].note.pitchClass == .d)
     }
 }
+
+@Suite("Built-in classics")
+struct BuiltInPhraseTests {
+    @Test func everyClassicTellsTheTruth() {
+        #expect(BuiltInPhrases.all.count == 23)
+        // Verbatim PD pins: the openings are the openings.
+        let elise = BuiltInPhrases.all.first { $0.name.contains("Für Elise") }!
+        #expect(elise.steps.map(\.note.pitchClass) ==
+                [.e, .dSharp, .e, .dSharp, .e, .b, .d, .c, .a])
+        let ode = BuiltInPhrases.all.first { $0.name.contains("Ode to Joy") }!
+        #expect(ode.steps.map(\.note.pitchClass) ==
+                [.e, .e, .f, .g, .g, .f, .e, .d])
+        // Legacy phrase JSON (no context key) still decodes.
+        let legacy = Data("""
+        [{"id":"11111111-1111-1111-1111-111111111111","name":"old","steps":[],
+          "remark":"","createdAt":0}]
+        """.utf8)
+        let decoder = JSONDecoder()
+        decoder.dateDecodingStrategy = .secondsSince1970
+        #expect((try? decoder.decode([Phrase].self, from: legacy))?.first?.context == nil)
+        let pocket = BuiltInPhrases.all.first { $0.name.contains("ii–V–I pocket") }!
+        #expect(pocket.context == "ii–V–I in C")
+        let pocketDevices = PhraseAnalysis.devices(notes: pocket.steps.map(\.note),
+                                                   chord: pocket.chord)
+        #expect(pocketDevices.contains { $0.hasPrefix("enclosure") })
+        // The Bach Prelude cell is verbatim C-E-G-C-E.
+        let prelude = BuiltInPhrases.all.first { $0.name.contains("BWV 846") }!
+        #expect(prelude.steps.map(\.note.pitchClass) == [.c, .e, .g, .c, .e])
+        for phrase in BuiltInPhrases.all {
+            #expect(!phrase.steps.isEmpty)
+            #expect(!phrase.remark.isEmpty)
+            for step in phrase.steps {
+                #expect((0...15).contains(step.position.fret))
+            }
+            // The landing note belongs to the tagged chord.
+            if let chord = phrase.chord, let last = phrase.steps.last {
+                #expect(chord.contains(last.note.pitchClass),
+                        "\(phrase.name) lands outside \(chord.symbol)")
+            }
+        }
+        // The named devices are DETECTED, not asserted.
+        func devices(_ name: String) -> [String] {
+            let p = BuiltInPhrases.all.first { $0.name.contains(name) }!
+            return PhraseAnalysis.devices(notes: p.steps.map(\.note), chord: p.chord)
+        }
+        #expect(devices("Enclosure").contains { $0.hasPrefix("enclosure") })
+        #expect(devices("Chromatic drop").contains { $0.hasPrefix("chromatic approach") })
+        #expect(devices("♯9 bite").contains { $0.hasPrefix("chromatic approach") })
+        #expect(devices("Falling sigh").contains("stepwise run down"))
+    }
+}
