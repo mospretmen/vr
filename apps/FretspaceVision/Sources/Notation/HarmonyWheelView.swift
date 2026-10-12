@@ -26,8 +26,10 @@ struct HarmonyWheelView: View {
     @State private var path: [HarmonyWheel.Node] = [HarmonyWheel.node(.majorKey, 0)]
     /// The column you harmonically live in — its neighborhood (which holds
     /// all its diatonic chords) is haloed. Modulation = moving this.
-    @State private var keyCenter: Int = 0
-    @State private var keyIsMinor = false
+    @State private var keyCenter: Int =
+        UserDefaults.standard.integer(forKey: "compass.keyCenter")
+    @State private var keyIsMinor =
+        UserDefaults.standard.bool(forKey: "compass.keyIsMinor")
 
     /// The tonic the wheel is currently read from — spelling follows it.
     private var frameTonic: PitchClass {
@@ -35,7 +37,9 @@ struct HarmonyWheelView: View {
         return keyIsMinor ? major.transposed(by: -3) : major
     }
     /// Pathway families switched off via the tappable legend.
-    @State private var hiddenKinds: Set<HarmonyWheel.MoveKind> = []
+    @State private var hiddenKinds: Set<HarmonyWheel.MoveKind> = Set(
+        (UserDefaults.standard.stringArray(forKey: "compass.hiddenKinds") ?? [])
+            .compactMap(HarmonyWheel.MoveKind.init(rawValue:)))
     /// Tap a chord, hear the chord — same synth as the backing pads.
     @State private var pads = ChordPadEngine()
 
@@ -113,6 +117,16 @@ struct HarmonyWheelView: View {
             breadcrumb
         }
         .padding(20)
+        .onChange(of: keyCenter) {
+            UserDefaults.standard.set(keyCenter, forKey: "compass.keyCenter")
+        }
+        .onChange(of: keyIsMinor) {
+            UserDefaults.standard.set(keyIsMinor, forKey: "compass.keyIsMinor")
+        }
+        .onChange(of: hiddenKinds) {
+            UserDefaults.standard.set(hiddenKinds.map(\.rawValue).sorted(),
+                                      forKey: "compass.hiddenKinds")
+        }
     }
 
     private var header: some View {
@@ -133,6 +147,11 @@ struct HarmonyWheelView: View {
     /// Everything that used to live on the main menu, one tap away.
     private var utilityBar: some View {
         HStack(spacing: 10) {
+            Button {
+                openWindow(id: SceneID.phrases)
+            } label: {
+                Label("Phrases", systemImage: "music.quarternote.3")
+            }
         }
         .buttonStyle(.bordered)
         .font(.callout)

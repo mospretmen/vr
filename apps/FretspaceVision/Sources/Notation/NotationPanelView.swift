@@ -191,10 +191,53 @@ struct FretboardDiagram: View {
     var chord: Chord? = nil
     /// Recolor 3rds & 7ths gold (all notes stay visible).
     var highlightGuideTones = false
+    /// When set, taps resolve to the nearest string/fret and call back —
+    /// the phrase recorder's input surface.
+    var onTap: ((FretPosition) -> Void)? = nil
     var connections: [[FretPosition]] = []
     var emphasizeAlterations = false
 
     var body: some View {
+        GeometryReader { proxy in
+            canvas
+                .onTapGesture(coordinateSpace: .local) { location in
+                    guard let onTap,
+                          let position = Self.hitTest(location, in: proxy.size,
+                                                      stringCount: stringCount,
+                                                      fretCount: fretCount,
+                                                      leftHanded: leftHanded)
+                    else { return }
+                    onTap(position)
+                }
+        }
+    }
+
+    /// Inverse of the drawing math: point → (string, fret), or nil off-board.
+    static func hitTest(_ point: CGPoint, in size: CGSize,
+                        stringCount: Int, fretCount: Int,
+                        leftHanded: Bool) -> FretPosition? {
+        let inset: CGFloat = 28
+        let rect = CGRect(x: inset, y: inset,
+                          width: size.width - inset * 2,
+                          height: size.height - inset * 2)
+        let stringGap = rect.height / CGFloat(max(stringCount - 1, 1))
+        let raw = (rect.maxY - point.y) / stringGap
+        let string = leftHanded
+            ? Int(((point.y - rect.minY) / stringGap).rounded())
+            : Int(raw.rounded())
+        guard (0..<stringCount).contains(string) else { return nil }
+
+        let geo = FretboardGeometry(fretCount: fretCount)
+        let span = geo.fretDistance(fretCount)
+        if point.x < rect.minX - 2 { return FretPosition(string: string, fret: 0) }
+        for fret in 1...fretCount {
+            let wire = rect.minX + rect.width * CGFloat(geo.fretDistance(fret) / span)
+            if point.x <= wire { return FretPosition(string: string, fret: fret) }
+        }
+        return nil
+    }
+
+    private var canvas: some View {
         Canvas { context, size in
             let inset: CGFloat = 28
             let rect = CGRect(x: inset, y: inset,

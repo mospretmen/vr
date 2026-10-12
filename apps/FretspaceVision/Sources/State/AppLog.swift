@@ -10,4 +10,5 @@ enum AppLog {
     static let overlay = Logger(subsystem: subsystem, category: "overlay")
     static let audio = Logger(subsystem: subsystem, category: "audio")
     static let network = Logger(subsystem: subsystem, category: "network")
+    static let state = Logger(subsystem: subsystem, category: "state")
 }

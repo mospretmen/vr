@@ -69,6 +69,8 @@ final class AppModel {
     /// a new chip SWITCHES the open window instead of spawning another.
     var presentedScale: Scale? = nil
     var presentedChord: Chord? = nil
+    /// The on-device phrase library.
+    let phrases = PhraseStore()
 
     // MARK: - Musical selection
     var displayMode: DisplayMode = .scale

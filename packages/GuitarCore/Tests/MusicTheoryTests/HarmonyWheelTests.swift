@@ -1,4 +1,5 @@
 import Testing
+import Foundation
 @testable import MusicTheory
 
 @Suite("Harmony wheel graph")
@@ -846,5 +847,21 @@ struct SixthDiminishedTests {
         #expect(ladder[0].chord.symbol == "Cm6")
         #expect(ladder[1].chord.symbol == "B°7")
         #expect(SixthDiminished.scale(root: .c, minor: true).contains(.dSharp))
+    }
+}
+
+@Suite("Phrases")
+struct PhraseTests {
+    @Test func phrasesRoundTripThroughJSON() throws {
+        let board = FretboardModel()
+        let steps = [FretPosition(string: 2, fret: 5), FretPosition(string: 3, fret: 4)]
+            .map { ExerciseStep(position: $0, note: board.note(at: $0)) }
+        let phrase = Phrase(name: "ii–V pickup",
+                            chord: Chord(root: .g, quality: .dominant7),
+                            steps: steps, remark: "lands on the 3rd")
+        let data = try JSONEncoder().encode([phrase])
+        let back = try JSONDecoder().decode([Phrase].self, from: data)
+        #expect(back == [phrase])
+        #expect(back[0].steps[0].note.pitchClass == .g)
     }
 }
