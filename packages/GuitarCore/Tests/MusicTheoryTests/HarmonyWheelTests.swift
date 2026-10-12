@@ -954,7 +954,11 @@ struct PhraseAnalysisTests {
 @Suite("Built-in classics")
 struct BuiltInPhraseTests {
     @Test func everyClassicTellsTheTruth() {
-        #expect(BuiltInPhrases.all.count == 48)
+        #expect(BuiltInPhrases.all.count == 69)
+        // Verbatim pin: the Cello Suite bloom.
+        let cello = BuiltInPhrases.all.first { $0.name.contains("BWV 1007") }!
+        #expect(cello.steps.map(\.note.pitchClass) ==
+                [.g, .d, .b, .a, .b, .d, .b, .d])
         // Verbatim PD pins: the openings are the openings.
         let elise = BuiltInPhrases.all.first { $0.name.contains("Für Elise") }!
         #expect(elise.steps.map(\.note.pitchClass) ==

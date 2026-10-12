@@ -12,6 +12,16 @@ struct PhraseLibraryView: View {
     /// Ephemeral transposition of the selected phrase (semitones).
     @State private var transpose = 0
     @State private var selectedClassic: Phrase? = nil
+    @State private var search = ""
+
+    private func matches(_ phrase: Phrase) -> Bool {
+        guard !search.isEmpty else { return true }
+        let haystack = [phrase.name, phrase.remark,
+                        phrase.context ?? "", phrase.chord?.symbol ?? ""]
+            .joined(separator: " ")
+            .lowercased()
+        return haystack.contains(search.lowercased())
+    }
     private let board = FretboardModel()
 
     /// The selected phrase as currently viewed (possibly transposed).
@@ -63,13 +73,17 @@ struct PhraseLibraryView: View {
 
     private var browser: some View {
         VStack(alignment: .leading, spacing: 10) {
+            TextField("Search phrases — name, chord, context, idiom…",
+                      text: $search)
+                .textFieldStyle(.roundedBorder)
+                .frame(maxWidth: 420)
             ScrollView {
                 VStack(alignment: .leading, spacing: 6) {
                     if model.phrases.phrases.isEmpty {
                         Text("No phrases of your own yet — record one, or pull a classic from the shelf below.")
                             .font(.caption).foregroundStyle(.secondary)
                     }
-                    ForEach(model.phrases.phrases) { phrase in
+                    ForEach(model.phrases.phrases.filter(matches)) { phrase in
                         HStack(spacing: 8) {
                             Button {
                                 if selectedID != phrase.id { transpose = 0 }
@@ -110,7 +124,7 @@ struct PhraseLibraryView: View {
                     Divider().padding(.vertical, 4)
                     Text("Classics — style-of lines & public-domain themes")
                         .font(.caption.bold()).foregroundStyle(.secondary)
-                    ForEach(BuiltInPhrases.all) { classic in
+                    ForEach(BuiltInPhrases.all.filter(matches)) { classic in
                         HStack(spacing: 8) {
                             Button {
                                 selectedID = nil
