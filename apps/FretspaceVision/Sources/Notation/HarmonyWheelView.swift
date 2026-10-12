@@ -659,10 +659,17 @@ private struct WheelLayout {
     }
 
     func node(at point: CGPoint) -> HarmonyWheel.Node? {
-        HarmonyWheel.nodes
-            .map { ($0, hypot(position(of: $0).x - point.x, position(of: $0).y - point.y)) }
-            .filter { $0.1 < chipRadius(for: $0.0.ring) + 10 }
-            .min { $0.1 < $1.1 }?.0
+        var best: HarmonyWheel.Node? = nil
+        var bestDistance = CGFloat.greatestFiniteMagnitude
+        for node in HarmonyWheel.nodes {
+            let p = position(of: node)
+            let distance = hypot(p.x - point.x, p.y - point.y)
+            if distance < chipRadius(for: node.ring) + 10, distance < bestDistance {
+                best = node
+                bestDistance = distance
+            }
+        }
+        return best
     }
 
     private func point(angle: CGFloat, radius: CGFloat) -> CGPoint {

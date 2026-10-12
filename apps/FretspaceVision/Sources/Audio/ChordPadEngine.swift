@@ -24,8 +24,12 @@ final class ChordPadEngine {
     func play(_ chord: Chord, durationMs: Int) {
         guard ensureRunning() else { return }
         let seconds = min(Double(durationMs) / 1000.0, 6.0)
-        guard let buffer = Self.padBuffer(for: chord, seconds: seconds,
-                                          sampleRate: sampleRate, format: format) else { return }
+        var midis = [Note(chord.root, octave: 3).midi]
+        midis += chord.pitchClasses.map { Note($0, octave: 4).midi }
+        guard let buffer = Self.strumBuffer(midis: midis, seconds: seconds,
+                                            stagger: 0.016,
+                                            sampleRate: sampleRate,
+                                            format: format) else { return }
         player.scheduleBuffer(buffer, at: nil)
         if !player.isPlaying { player.play() }
     }
@@ -58,8 +62,12 @@ final class ChordPadEngine {
         player.play()
         let seconds = Double(eachMs) / 1000.0
         for chord in chords {
-            if let buffer = Self.padBuffer(for: chord, seconds: seconds,
-                                           sampleRate: sampleRate, format: format) {
+            var midis = [Note(chord.root, octave: 3).midi]
+            midis += chord.pitchClasses.map { Note($0, octave: 4).midi }
+            if let buffer = Self.strumBuffer(midis: midis, seconds: seconds,
+                                             stagger: 0.014,
+                                             sampleRate: sampleRate,
+                                             format: format) {
                 player.scheduleBuffer(buffer, at: nil)
             }
         }
@@ -78,20 +86,12 @@ final class ChordPadEngine {
               let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frames),
               let samples = buffer.floatChannelData?[0] else { return }
         buffer.frameLength = frames
-        let freqs = notes.map { 440.0 * pow(2.0, (Double($0.midi) - 69.0) / 12.0) }
-        let gain = 0.22 / Double(max(freqs.count, 1))
-        for frame in 0..<Int(frames) {
-            let t = Double(frame) / sampleRate
-            var envelope = min(t / 0.03, 1.0)
-            let tail = seconds - t
-            if tail < 0.12 { envelope *= max(0, tail / 0.12) }
-            var value = 0.0
-            for f in freqs {
-                value += sin(2 * .pi * f * t) + 0.3 * sin(2 * .pi * f * 2 * t)
-            }
-            samples[frame] = Float(value * gain * envelope)
-        }
-        player.scheduleBuffer(buffer, at: nil)
+        _ = samples // silenced: the strum buffer below carries the audio
+        guard let strummed = Self.strumBuffer(midis: notes.map(\.midi),
+                                              seconds: seconds, stagger: 0.012,
+                                              sampleRate: sampleRate,
+                                              format: format) else { return }
+        player.scheduleBuffer(strummed, at: nil)
     }
 
     /// Arpeggiate exact sounding notes (a grip or triad shape, bottom to top).
@@ -116,14 +116,59 @@ final class ChordPadEngine {
               let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frames),
               let samples = buffer.floatChannelData?[0] else { return nil }
         buffer.frameLength = frames
-        let f = 440.0 * pow(2.0, (Double(midi) - 69.0) / 12.0)
-        for frame in 0..<Int(frames) {
-            let t = Double(frame) / sampleRate
-            let attack = min(t / 0.01, 1.0)
-            let release = min((seconds - t) / 0.08, 1.0)
-            var v = sin(2 * .pi * f * t) + 0.3 * sin(2 * .pi * f * 2 * t)
-            v *= 0.24 * attack * max(release, 0)
-            samples[frame] = Float(v)
+        let pluck = pluckSamples(midi: midi, seconds: seconds,
+                                 sampleRate: sampleRate, amplitude: 0.5)
+        for (i, v) in pluck.enumerated() where i < Int(frames) {
+            samples[i] = v
+        }
+        return buffer
+    }
+
+    /// Karplus–Strong plucked string: a noise burst through an averaging
+    /// delay line — the closest thing to a guitar with zero samples.
+    private static func pluckSamples(
+        midi: Int, seconds: Double, sampleRate: Double, amplitude: Double
+    ) -> [Float] {
+        let frequency = 440.0 * pow(2.0, (Double(midi) - 69.0) / 12.0)
+        let period = max(2, Int(sampleRate / frequency))
+        var delayLine = (0..<period).map { _ in Double.random(in: -1...1) }
+        let count = Int(sampleRate * seconds)
+        var out = [Float](repeating: 0, count: count)
+        var index = 0
+        let damping = 0.996
+        for frame in 0..<count {
+            let next = (index + 1) % period
+            let sample = delayLine[index]
+            delayLine[index] = damping * 0.5 * (delayLine[index] + delayLine[next])
+            index = next
+            // Gentle fade tail so phrases never click off.
+            let tail = seconds - Double(frame) / sampleRate
+            let env = tail < 0.05 ? tail / 0.05 : 1.0
+            out[frame] = Float(sample * amplitude * env)
+        }
+        return out
+    }
+
+    /// Mix plucks into one buffer, each voice offset like a strum.
+    private static func strumBuffer(
+        midis: [Int], seconds: Double, stagger: Double,
+        sampleRate: Double, format: AVAudioFormat
+    ) -> AVAudioPCMBuffer? {
+        let frames = AVAudioFrameCount(sampleRate * seconds)
+        guard frames > 0,
+              let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frames),
+              let samples = buffer.floatChannelData?[0] else { return nil }
+        buffer.frameLength = frames
+        let amplitude = 0.75 / Double(max(midis.count, 1)).squareRoot()
+        for (voice, midi) in midis.enumerated() {
+            let offset = Int(sampleRate * stagger * Double(voice))
+            let remaining = Double(Int(frames) - offset) / sampleRate
+            guard remaining > 0.05 else { continue }
+            let pluck = pluckSamples(midi: midi, seconds: remaining,
+                                     sampleRate: sampleRate, amplitude: amplitude)
+            for (i, v) in pluck.enumerated() {
+                samples[offset + i] += v
+            }
         }
         return buffer
     }
