@@ -1,6 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { FretboardExplorer } from "./components/FretboardExplorer";
 import { HarmonyCompass } from "./components/HarmonyCompass";
+import { ClassicsShowcase } from "./components/ClassicsShowcase";
 import {
   PricingSection,
   VisionProSection,
@@ -12,6 +13,7 @@ import { TrackLibrary } from "./components/TrackLibrary";
 const NAV_LINKS = [
   { label: "Compass", href: "#compass" },
   { label: "Vision Pro", href: "#visionpro" },
+  { label: "Classics", href: "#classics" },
   { label: "Explorer", href: "#explorer" },
   { label: "Pricing", href: "#pricing" },
   { label: "Waitlist", href: "#waitlist" },
@@ -361,6 +363,7 @@ export default function App() {
         <Hero />
         <Features />
         <VisionProSection />
+        <ClassicsShowcase />
         <VideoSection />
         <GallerySection />
         <Section

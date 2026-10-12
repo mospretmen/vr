@@ -1,10 +1,11 @@
 // The live Harmony Compass demo — the showcase heart of the landing page.
 // A faithful 2D rendering of the visionOS compass: tap any chord, hear it,
 // and watch its legal departures light up over the quiet lattice.
-import { useMemo, useRef, useState } from "react";
+import { useMemo, useState } from "react";
 import {
   ALL_MOVES,
   ALL_NODES,
+  SPOKES,
   chordPitchClasses,
   describe,
   functionalLabel,
@@ -24,6 +25,7 @@ import {
 } from "../demoVoicings";
 import { voiceMoves } from "../voiceLeading";
 import { degreeCells } from "../degreeCells";
+import { playProgression, playRun, strum } from "../audio";
 
 const SIZE = 720;
 const CENTER = SIZE / 2;
@@ -134,31 +136,16 @@ function latticePairs(): [CompassNode, CompassNode][] {
   return pairs;
 }
 
-/** Soft chord pad via WebAudio — no samples, instant. */
-function playChord(ctx: AudioContext, n: CompassNode) {
-  const now = ctx.currentTime;
-  const master = ctx.createGain();
-  master.gain.setValueAtTime(0.0001, now);
-  master.gain.exponentialRampToValueAtTime(0.16, now + 0.05);
-  master.gain.exponentialRampToValueAtTime(0.0001, now + 1.5);
-  master.connect(ctx.destination);
-  const midis = [n.root + 48, ...chordPitchClasses(n).map((pc) => pc + 60)];
-  for (const midi of midis) {
-    const osc = ctx.createOscillator();
-    osc.type = "triangle";
-    osc.frequency.value = 440 * Math.pow(2, (midi - 69) / 12);
-    const gain = ctx.createGain();
-    gain.gain.value = 1 / midis.length;
-    osc.connect(gain).connect(master);
-    osc.start(now);
-    osc.stop(now + 1.6);
-  }
+/** Chord voicing for the pads: root in octave 3, tones in octave 4. */
+function chordMidis(n: CompassNode): number[] {
+  return [n.root + 48, ...chordPitchClasses(n).map((pc) => pc + 60)];
 }
 
 export function HarmonyCompass() {
   const [selected, setSelected] = useState<CompassNode>(() => node("majorKey", 0));
   const [frameTonic, setFrameTonic] = useState(0);
-  const audio = useRef<AudioContext | null>(null);
+  const [frameMinor, setFrameMinor] = useState(false);
+  const [path, setPath] = useState<CompassNode[]>([node("majorKey", 0)]);
   const lattice = useMemo(latticePairs, []);
   const moves = useMemo(() => movesFrom(selected), [selected]);
   // The 2D app's grammar: a three-hop web, blaze → glow → whisper.
@@ -172,32 +159,28 @@ export function HarmonyCompass() {
   );
 
   const tap = (n: CompassNode) => {
+    const wasDestination = moves.some((m) => m.to.id === n.id);
     setSelected(n);
-    if (n.ring === "majorKey" || n.ring === "relativeMinor") setFrameTonic(n.root);
-    audio.current ??= new AudioContext();
-    playChord(audio.current, n);
+    setPath((p) => (wasDestination ? [...p, n] : [n]));
+    if (n.ring === "majorKey" || n.ring === "relativeMinor") {
+      setFrameTonic(n.root);
+      setFrameMinor(n.ring === "relativeMinor");
+    }
+    strum(chordMidis(n));
+  };
+
+  const playWalk = () => {
+    playProgression(path.map(chordMidis));
+    path.forEach((n, i) => {
+      setTimeout(() => setSelected(n), i * 850);
+    });
   };
 
   const arpeggiate = (grip: Grip) => {
-    audio.current ??= new AudioContext();
-    const ctx = audio.current;
-    const now = ctx.currentTime;
-    const sounded = grip.frets
+    const midis = grip.frets
       .map((f, s) => (f === null ? null : 40 + [0, 5, 10, 15, 19, 24][s] + f))
       .filter((m): m is number => m !== null);
-    sounded.forEach((midi, i) => {
-      const osc = ctx.createOscillator();
-      osc.type = "triangle";
-      osc.frequency.value = 440 * Math.pow(2, (midi - 69) / 12);
-      const gain = ctx.createGain();
-      const t = now + i * 0.12;
-      gain.gain.setValueAtTime(0.0001, t);
-      gain.gain.exponentialRampToValueAtTime(0.14, t + 0.02);
-      gain.gain.exponentialRampToValueAtTime(0.0001, t + 0.9);
-      osc.connect(gain).connect(ctx.destination);
-      osc.start(t);
-      osc.stop(t + 1);
-    });
+    playRun(midis, 0.13);
   };
 
   return (
@@ -291,7 +274,7 @@ export function HarmonyCompass() {
             <g
               key={n.id}
               onClick={() => tap(n)}
-              className="cursor-pointer"
+              className="cursor-pointer transition-opacity duration-200 hover:opacity-100"
               opacity={isSelected || lit ? 1 : 0.55}
             >
               <circle
@@ -319,18 +302,72 @@ export function HarmonyCompass() {
       </svg>
 
       {/* teaching card */}
+      <div className="flex w-full max-w-sm shrink-0 flex-col gap-3">
+      <div className="rounded-2xl border border-line bg-fill-soft p-3 text-xs">
+        <div className="flex items-center gap-2">
+          <span className="text-ink-dim">Key</span>
+          <select
+            value={frameTonic}
+            onChange={(e) => {
+              const column = SPOKES.indexOf(
+                Number(e.target.value) as (typeof SPOKES)[number],
+              );
+              tap(node(frameMinor ? "relativeMinor" : "majorKey", column));
+            }}
+            className="rounded-md border border-line bg-transparent px-2 py-1 text-ink"
+            aria-label="Key center"
+          >
+            {SPOKES.map((pc) => (
+              <option key={pc} value={frameMinor ? (pc + 9) % 12 : pc}>
+                {functionalLabel(
+                  node(frameMinor ? "relativeMinor" : "majorKey", SPOKES.indexOf(pc)),
+                  frameTonic,
+                )}
+              </option>
+            ))}
+          </select>
+          <div className="flex overflow-hidden rounded-md border border-line">
+            {[false, true].map((minor) => (
+              <button
+                key={String(minor)}
+                onClick={() => {
+                  const column = SPOKES.indexOf(
+                    ((frameTonic + (frameMinor ? 3 : 0)) % 12) as (typeof SPOKES)[number],
+                  );
+                  tap(node(minor ? "relativeMinor" : "majorKey",
+                           column < 0 ? 0 : column));
+                }}
+                className={`px-2 py-1 ${minor === frameMinor ? "bg-fill text-ink" : "text-ink-dim"}`}
+              >
+                {minor ? "Minor" : "Major"}
+              </button>
+            ))}
+          </div>
+        </div>
+        {path.length > 1 && (
+          <div className="mt-2 flex items-center gap-2">
+            <span className="no-scrollbar flex-1 overflow-x-auto whitespace-nowrap text-ink-dim">
+              {path.map((n) => n.label).join(" → ")}
+            </span>
+            <button onClick={playWalk}
+              className="rounded-full bg-accent px-3 py-1 font-semibold text-accent-deep">
+              ▶ Walk
+            </button>
+            <button onClick={() => setPath([selected])} className="text-ink-mute">
+              Clear
+            </button>
+          </div>
+        )}
+      </div>
       <TeachingCard
         selected={selected}
         moves={moves}
         onArpeggiate={arpeggiate}
         onHearPair={(a, b) => {
-          audio.current ??= new AudioContext();
-          playChord(audio.current, a);
-          const ctx = audio.current;
-          const later = b;
-          setTimeout(() => playChord(ctx, later), 850);
+          playProgression([chordMidis(a), chordMidis(b)]);
         }}
       />
+      </div>
     </div>
   );
 }
