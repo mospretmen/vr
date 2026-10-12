@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import { FretboardExplorer } from "./components/FretboardExplorer";
 import { HarmonyCompass } from "./components/HarmonyCompass";
 import {
@@ -246,6 +246,31 @@ function Section({ id, title, description, children }: SectionHeadingProps) {
   );
 }
 
+function VideoSection() {
+  return (
+    <section className="border-t border-line">
+      <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
+        <h2 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
+          Watch it move.
+        </h2>
+        <p className="mt-2 max-w-2xl text-sm text-ink-dim sm:text-base">
+          Straight screen capture from the visionOS build — the compass and
+          its windows opening in the room.
+        </p>
+        <video
+          className="mt-8 w-full rounded-2xl border border-line"
+          src="/media/tour.mp4"
+          poster="/media/shot-compass.jpg"
+          controls
+          muted
+          playsInline
+          preload="metadata"
+        />
+      </div>
+    </section>
+  );
+}
+
 const SHOTS = [
   {
     src: "/media/shot-compass.jpg",
@@ -265,6 +290,7 @@ const SHOTS = [
 ];
 
 function GallerySection() {
+  const [expanded, setExpanded] = useState<string | null>(null);
   return (
     <section id="gallery" className="scroll-mt-20 border-t border-line">
       <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
@@ -280,18 +306,37 @@ function GallerySection() {
               key={shot.src}
               className="overflow-hidden rounded-2xl border border-line bg-raise"
             >
-              <img
-                src={shot.src}
-                alt={shot.alt}
-                loading="lazy"
-                className="aspect-video w-full object-cover"
-              />
+              <button
+                onClick={() => setExpanded(shot.src)}
+                className="block w-full cursor-zoom-in"
+                aria-label={`Expand: ${shot.alt}`}
+              >
+                <img
+                  src={shot.src}
+                  alt={shot.alt}
+                  loading="lazy"
+                  className="aspect-video w-full object-cover"
+                />
+              </button>
               <figcaption className="p-4 text-xs leading-relaxed text-ink-dim">
                 {shot.caption}
               </figcaption>
             </figure>
           ))}
         </div>
+        {expanded && (
+          <button
+            className="fixed inset-0 z-50 flex cursor-zoom-out items-center justify-center bg-black/85 p-4 sm:p-10"
+            onClick={() => setExpanded(null)}
+            aria-label="Close expanded screenshot"
+          >
+            <img
+              src={expanded}
+              alt="Expanded screenshot"
+              className="max-h-full max-w-full rounded-xl shadow-2xl"
+            />
+          </button>
+        )}
       </div>
     </section>
   );
@@ -316,6 +361,7 @@ export default function App() {
         <Hero />
         <Features />
         <VisionProSection />
+        <VideoSection />
         <GallerySection />
         <Section
           id="explorer"

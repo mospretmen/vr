@@ -23,6 +23,7 @@ import {
   type Grip,
 } from "../demoVoicings";
 import { voiceMoves } from "../voiceLeading";
+import { degreeCells } from "../degreeCells";
 
 const SIZE = 720;
 const CENTER = SIZE / 2;
@@ -397,14 +398,9 @@ function TeachingCard({
       )}
 
       {tab === "scales" && (
-        <ul className="mt-4 space-y-3">
+        <ul className="mt-4 space-y-2">
           {scales.map((s) => (
-            <li key={s.name} className="text-sm">
-              <span className="font-medium text-ink">{s.name}</span>
-              <span className="ml-2 text-xs text-ink-dim">
-                {spellScale(selected.root, s.intervals).join(" ")}
-              </span>
-            </li>
+            <ScaleRow key={s.name} root={selected.root} scale={s} />
           ))}
         </ul>
       )}
@@ -575,5 +571,54 @@ function VoiceStaff({ from, to }: { from: CompassNode; to: CompassNode }) {
         {to.label}
       </text>
     </svg>
+  );
+}
+
+
+/** A scale row that unfolds into its per-degree chord-scale cards —
+ *  roman · seventh · tensions · mode, same engine rows as the headset. */
+function ScaleRow({
+  root,
+  scale,
+}: {
+  root: number;
+  scale: ReturnType<typeof scaleSuggestions>[number];
+}) {
+  const [open, setOpen] = useState(false);
+  const cells = useMemo(() => degreeCells(root, scale), [root, scale]);
+  return (
+    <li className="text-sm">
+      <button
+        className="flex w-full items-baseline gap-2 text-left"
+        onClick={() => setOpen((o) => !o)}
+      >
+        <span className="font-medium text-ink">{scale.name}</span>
+        <span className="text-xs text-ink-dim">
+          {spellScale(root, scale.intervals).join(" ")}
+        </span>
+        {cells.length > 0 && (
+          <span className="ml-auto text-xs text-ink-mute">{open ? "−" : "+"}</span>
+        )}
+      </button>
+      {open && cells.length > 0 && (
+        <div className="mt-2 grid grid-cols-4 gap-1.5 sm:grid-cols-7">
+          {cells.map((cell, i) => (
+            <div
+              key={i}
+              className="rounded-lg bg-black/25 px-1 py-1.5 text-center"
+            >
+              <div className="text-xs font-bold text-orange-400">{cell.roman}</div>
+              <div className="truncate text-[10px] text-ink">{cell.chordSymbol}</div>
+              <div className="truncate text-[9px] font-semibold text-cyan-300/90">
+                {cell.tensions.join(" ")}
+              </div>
+              {cell.mode && (
+                <div className="truncate text-[8px] text-ink-mute">{cell.mode}</div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </li>
   );
 }
