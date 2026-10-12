@@ -236,6 +236,33 @@ struct MiniStaff: View {
 }
 
 
+extension AlterationChips {
+    /// Figure for a raw quality interval (register-aware): 14 → 9, 21 → 13.
+    static func intervalFigure(_ interval: Int) -> String {
+        switch interval {
+        case 0: "1"
+        case 2: "2"
+        case 3: "♭3"
+        case 4: "3"
+        case 5: "4"
+        case 6: "♭5"
+        case 7: "5"
+        case 8: "♯5"
+        case 9: "6"
+        case 10: "♭7"
+        case 11: "7"
+        case 13: "♭9"
+        case 14: "9"
+        case 15: "♯9"
+        case 17: "11"
+        case 18: "♯11"
+        case 20: "♭13"
+        case 21: "13"
+        default: "\(interval)"
+        }
+    }
+}
+
 /// Compact tappable scale chips, two per row.
 struct FlowChips: View {
     let scales: [Scale]
@@ -311,6 +338,12 @@ struct AlterationChips: View {
                 }
             }
             if let picked {
+                // The exact sounded stack — extensions are cumulative in
+                // chord symbols (maj13 implies the 9), so show the formula.
+                Text("= " + picked.chord.quality.intervals
+                        .map(Self.intervalFigure).joined(separator: " "))
+                    .font(.caption2.bold())
+                    .foregroundStyle(.orange.opacity(0.9))
                 Text("\(picked.hint) · \(picked.scale.name)")
                     .font(.caption2)
                     .foregroundStyle(.secondary)
