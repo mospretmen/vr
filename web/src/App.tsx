@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { FretboardExplorer } from "./components/FretboardExplorer";
 import { HarmonyCompass } from "./components/HarmonyCompass";
 import { ClassicsShowcase } from "./components/ClassicsShowcase";
@@ -55,7 +55,29 @@ function ThemeToggle() {
   );
 }
 
+function useActiveSection(ids: string[]): string | null {
+  const [active, setActive] = useState<string | null>(null);
+  useEffect(() => {
+    const observer = new IntersectionObserver(
+      (entries) => {
+        const visible = entries
+          .filter((e) => e.isIntersecting)
+          .sort((a, b) => b.intersectionRatio - a.intersectionRatio)[0];
+        if (visible) setActive(visible.target.id);
+      },
+      { rootMargin: "-20% 0px -60% 0px", threshold: [0, 0.2, 0.5] },
+    );
+    for (const id of ids) {
+      const el = document.getElementById(id);
+      if (el) observer.observe(el);
+    }
+    return () => observer.disconnect();
+  }, [ids]);
+  return active;
+}
+
 function Nav() {
+  const active = useActiveSection(NAV_LINKS.map((l) => l.href.slice(1)));
   return (
     <header className="sticky top-0 z-40 border-b border-line bg-base/70 backdrop-blur-xl">
       <nav className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
@@ -65,7 +87,11 @@ function Nav() {
             <a
               key={href}
               href={href}
-              className="rounded-lg px-2.5 py-1.5 text-sm font-medium text-ink-dim transition-colors hover:bg-fill-soft hover:text-ink sm:px-3"
+              className={`rounded-lg px-2.5 py-1.5 text-sm font-medium transition-colors hover:bg-fill-soft hover:text-ink sm:px-3 ${
+                active === href.slice(1)
+                  ? "bg-fill-soft text-accent"
+                  : "text-ink-dim"
+              }`}
             >
               {label}
             </a>
