@@ -272,7 +272,9 @@ struct PhraseLibraryView: View {
     }
 
     private func phraseSubtitle(_ phrase: Phrase) -> String {
-        var parts: [String] = ["\(phrase.steps.count) notes"]
+        let fretted = phrase.steps.map(\.position.fret).filter { $0 > 0 }
+        let position = fretted.min().map { "fret \($0)" } ?? "open"
+        var parts: [String] = ["\(phrase.steps.count) notes", position]
         if let context = phrase.context, !context.isEmpty {
             parts.append(context)
         } else if let chord = phrase.chord {

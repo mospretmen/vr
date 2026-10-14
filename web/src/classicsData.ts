@@ -117,6 +117,31 @@ export const WEB_CLASSICS: WebPhrase[] = [
     remark: "Public domain, eight centuries old: the chant every film score quotes.",
   },
   {
+    name: "Block-chord glide (style of Red Garland)",
+    steps: [[4, 5], [4, 8], [5, 5], [4, 8], [4, 5]],
+    chord: { root: 0, intervals: [0, 4, 7], symbol: "C" },
+    remark: "The right-hand melody of his block chords: 3-5-6-5-3, smiling.",
+  },
+  {
+    name: "Organ stab cell (style of Jimmy Smith)",
+    steps: [[3, 5], [3, 3], [2, 5], [3, 3], [3, 5]],
+    chord: { root: 0, intervals: [0, 4, 7, 10], symbol: "C7" },
+    remark: "Root-♭7-5 and back — the drawbar jab, greasy on purpose.",
+  },
+  {
+    name: "Flatpick run (style of Doc Watson)",
+    steps: [[2, 5], [2, 7], [3, 4], [3, 5], [3, 7], [4, 8]],
+    chord: { root: 7, intervals: [0, 4, 7], symbol: "G" },
+    remark: "A fiddle-tune scale sprint, every note picked, straight to the root.",
+  },
+  {
+    name: "Blues turnaround walk (common practice)",
+    steps: [[3, 5], [3, 4], [3, 3], [2, 7], [2, 6], [2, 5]],
+    chord: { root: 0, intervals: [0, 4, 7, 10], symbol: "C7" },
+    context: "turnaround in C",
+    remark: "The chromatic walkdown from root to 5th that ends ten thousand blues choruses.",
+  },
+  {
     name: "Sixth-dim slide (style of Barry Harris)",
     steps: [[2, 7], [2, 6], [2, 5], [1, 7]],
     chord: { root: 0, intervals: [0, 4, 7], symbol: "C" },
