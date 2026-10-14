@@ -954,7 +954,7 @@ struct PhraseAnalysisTests {
 @Suite("Built-in classics")
 struct BuiltInPhraseTests {
     @Test func everyClassicTellsTheTruth() {
-        #expect(BuiltInPhrases.all.count == 89)
+        #expect(BuiltInPhrases.all.count == 104)
         // Verbatim pin: the Minuet's first phrase.
         let minuet = BuiltInPhrases.all.first { $0.name.contains("Anh. 114") }!
         #expect(minuet.steps.map(\.note.pitchClass) ==
@@ -985,12 +985,22 @@ struct BuiltInPhraseTests {
         #expect(pocketDevices.contains { $0.hasPrefix("enclosure") })
         // The Bach Prelude cell is verbatim C-E-G-C-E.
         let prelude = BuiltInPhrases.all.first { $0.name.contains("BWV 846") }!
-        #expect(prelude.steps.map(\.note.pitchClass) == [.c, .e, .g, .c, .e])
+        #expect(prelude.steps.map(\.note.pitchClass) == [.c, .e, .g, .c])
         for phrase in BuiltInPhrases.all {
             #expect(!phrase.steps.isEmpty)
             #expect(!phrase.remark.isEmpty)
             for step in phrase.steps {
                 #expect((0...15).contains(step.position.fret))
+            }
+            // PLAYABILITY (owner mandate): the hand stays in one position —
+            // fretted notes within a 5-fret span, no string-hops over 2.
+            let fretted = phrase.steps.map(\.position.fret).filter { $0 > 0 }
+            if let lo = fretted.min(), let hi = fretted.max() {
+                #expect(hi - lo <= 5, "\(phrase.name): span \(lo)–\(hi)")
+            }
+            for (a, b) in zip(phrase.steps, phrase.steps.dropFirst()) {
+                #expect(abs(a.position.string - b.position.string) <= 2,
+                        "\(phrase.name): string hop")
             }
             // The landing note belongs to the tagged chord.
             if let chord = phrase.chord, let last = phrase.steps.last {

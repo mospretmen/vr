@@ -121,43 +121,13 @@ struct PhraseLibraryView: View {
                             .buttonStyle(.borderless)
                         }
                     }
-                    Divider().padding(.vertical, 4)
-                    Text("Classics — style-of lines & public-domain themes")
-                        .font(.caption.bold()).foregroundStyle(.secondary)
-                    ForEach(BuiltInPhrases.all.filter(matches)) { classic in
-                        HStack(spacing: 8) {
-                            Button {
-                                selectedID = nil
-                                transpose = 0
-                                selectedClassic = classic
-                                pads.playRun(classic.steps.map(\.note), noteMs: 230)
-                            } label: {
-                                HStack(spacing: 8) {
-                                    Image(systemName: "play.circle")
-                                    VStack(alignment: .leading, spacing: 1) {
-                                        Text(classic.name).font(.callout.bold())
-                                        Text(phraseSubtitle(classic))
-                                            .font(.caption2).foregroundStyle(.secondary)
-                                    }
-                                    Spacer()
-                                }
-                                .padding(.vertical, 6).padding(.horizontal, 10)
-                                .background(classic.id == selectedClassic?.id
-                                                ? .blue.opacity(0.3) : .white.opacity(0.04),
-                                            in: .rect(cornerRadius: 10))
-                            }
-                            .buttonStyle(.plain)
-                            Button {
-                                var copy = classic
-                                copy.id = UUID()
-                                copy.createdAt = .now
-                                model.phrases.add(copy)
-                                selectedClassic = nil
-                                selectedID = copy.id
-                            } label: {
-                                Image(systemName: "plus.circle")
-                            }
-                            .buttonStyle(.borderless)
+                    ForEach(Self.classicGroups, id: \.title) { group in
+                        let items = group.phrases.filter(matches)
+                        if !items.isEmpty {
+                            Divider().padding(.vertical, 4)
+                            Text(group.title)
+                                .font(.caption.bold()).foregroundStyle(.secondary)
+                            classicRows(items)
                         }
                     }
                 }
@@ -237,6 +207,68 @@ struct PhraseLibraryView: View {
     private func transposedLabel(_ phrase: Phrase, _ delta: Int) -> String {
         let anchor = phrase.chord?.root ?? phrase.steps.first?.note.pitchClass ?? .c
         return anchor.transposed(by: delta).name()
+    }
+
+    /// The Classics shelf, grouped for browsing at scale.
+    private static let classicGroups: [(title: String, phrases: [Phrase])] = {
+        let classical = ["Bach", "Beethoven", "Mozart", "Petzold", "Bizet",
+                         "Joplin", "Pachelbel", "plainchant", "traditional",
+                         "Satie", "Vivaldi"]
+        var jazz: [Phrase] = []
+        var pd: [Phrase] = []
+        var common: [Phrase] = []
+        for phrase in BuiltInPhrases.all {
+            if classical.contains(where: { phrase.name.contains($0) }) {
+                pd.append(phrase)
+            } else if phrase.name.lowercased().contains("common practice") {
+                common.append(phrase)
+            } else {
+                jazz.append(phrase)
+            }
+        }
+        return [("Jazz & blues masters (style of)", jazz),
+                ("Classical & public domain", pd),
+                ("Common practice", common)]
+    }()
+
+    @ViewBuilder
+    private func classicRows(_ items: [Phrase]) -> some View {
+        ForEach(items) { classic in
+            HStack(spacing: 8) {
+                Button {
+                    selectedID = nil
+                    transpose = 0
+                    selectedClassic = classic
+                    pads.playRun(classic.steps.map(\.note), noteMs: 230)
+                } label: {
+                    HStack(spacing: 8) {
+                        Image(systemName: "play.circle")
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(classic.name).font(.callout.bold())
+                            Text(phraseSubtitle(classic))
+                                .font(.caption2).foregroundStyle(.secondary)
+                        }
+                        Spacer()
+                    }
+                    .padding(.vertical, 6).padding(.horizontal, 10)
+                    .background(classic.id == selectedClassic?.id
+                                    ? .blue.opacity(0.3) : .white.opacity(0.04),
+                                in: .rect(cornerRadius: 10))
+                }
+                .buttonStyle(.plain)
+                Button {
+                    var copy = classic
+                    copy.id = UUID()
+                    copy.createdAt = .now
+                    model.phrases.add(copy)
+                    selectedClassic = nil
+                    selectedID = copy.id
+                } label: {
+                    Image(systemName: "plus.circle")
+                }
+                .buttonStyle(.borderless)
+            }
+        }
     }
 
     private func phraseSubtitle(_ phrase: Phrase) -> String {
