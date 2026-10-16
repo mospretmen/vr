@@ -71,6 +71,8 @@ final class AppModel {
     var presentedChord: Chord? = nil
     /// The on-device phrase library.
     let phrases = PhraseStore()
+    /// When set, the phrase library opens filtered to this chord's root.
+    var phraseChordFilter: Chord? = nil
 
     // MARK: - Musical selection
     var displayMode: DisplayMode = .scale

@@ -160,7 +160,11 @@ struct HarmonyWheelView: View {
                                        model.presentedChord = chord
                                        openWindow(id: SceneID.chordDetail, value: 0)
                                    },
-                                   onHearProgression: { pads.playProgression($0) })
+                                   onHearProgression: { pads.playProgression($0) },
+                                   onShowPhrases: {
+                                       model.phraseChordFilter = selected.chord
+                                       openWindow(id: SceneID.phrases, value: 0)
+                                   })
             }
             breadcrumb
         }

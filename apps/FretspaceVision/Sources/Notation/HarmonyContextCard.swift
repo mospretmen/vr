@@ -17,6 +17,7 @@ struct HarmonyContextCard: View {
     let onHearChord: (Chord) -> Void
     let onOpenChord: (Chord) -> Void
     let onHearProgression: ([Chord]) -> Void
+    let onShowPhrases: () -> Void
     @State private var pickedAlteration: ChordAlteration?
     @State private var expandedMove: Int?
 
@@ -43,6 +44,17 @@ struct HarmonyContextCard: View {
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 7)
                     .background(.orange.opacity(0.3), in: .capsule)
+            }
+            .buttonStyle(.plain)
+            Button {
+                onShowPhrases()
+            } label: {
+                Label("Phrases over \(HarmonyWheel.functionalLabel(for: selected, inKeyFrame: frameTonic))",
+                      systemImage: "music.quarternote.3")
+                    .font(.caption.bold())
+                    .frame(maxWidth: .infinity)
+                    .padding(.vertical, 6)
+                    .background(.purple.opacity(0.3), in: .capsule)
             }
             .buttonStyle(.plain)
             Text("Scales to play").font(.caption.bold()).foregroundStyle(.secondary)
