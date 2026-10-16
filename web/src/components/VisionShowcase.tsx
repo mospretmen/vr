@@ -93,20 +93,21 @@ export function PricingSection() {
         </p>
         <div className="mt-8 grid max-w-3xl gap-4 sm:grid-cols-2">
           <div className="rounded-2xl border border-line bg-raise p-6">
-            <h3 className="font-display text-lg font-semibold">Explore — free</h3>
+            <h3 className="font-display text-lg font-semibold">Web — free, everything</h3>
             <ul className="mt-3 space-y-2 text-sm text-ink-dim">
-              <li>The 2D Harmony Compass, every pathway</li>
-              <li>Hear any chord and its resolutions</li>
-              <li>Core scales on the fretboard</li>
+              <li>The full Harmony Compass, every pathway</li>
+              <li>Voice leading, scales, grips, the Classics shelf</li>
+              <li>No account, no paywall — play right here</li>
             </ul>
           </div>
           <div className="rounded-2xl border border-accent/40 bg-raise p-6">
-            <h3 className="font-display text-lg font-semibold text-accent">Pro</h3>
+            <h3 className="font-display text-lg font-semibold text-accent">
+              Vision Pro app
+            </h3>
             <ul className="mt-3 space-y-2 text-sm text-ink-dim">
-              <li>The volumetric 3D compass on Vision Pro</li>
-              <li>Full grip dictionary, shells, drop-2, inversions</li>
-              <li>Voice leading, alterations, all 20 scales</li>
-              <li>Progression tools as they land</li>
+              <li>The whole instrument in your room, hands-free</li>
+              <li>Your personal phrase library, drills, movement</li>
+              <li>One-time purchase — it funds all of this</li>
             </ul>
           </div>
         </div>

@@ -30,6 +30,73 @@ function Wordmark() {
   );
 }
 
+const APP_VIEWS = [
+  { hash: "#/compass", label: "Compass" },
+  { hash: "#/fretboard", label: "Fretboard" },
+  { hash: "#/phrases", label: "Phrases" },
+] as const;
+
+function useHashRoute(): string {
+  const [hash, setHash] = useState(() => window.location.hash);
+  useEffect(() => {
+    const onChange = () => setHash(window.location.hash);
+    window.addEventListener("hashchange", onChange);
+    return () => window.removeEventListener("hashchange", onChange);
+  }, []);
+  return hash;
+}
+
+/** Full-screen app shell: glass top bar, the feature filling the view —
+ *  the VR layout translated to the browser. */
+function AppShell({ route }: { route: string }) {
+  return (
+    <div className="app-field min-h-screen">
+      <header className="sticky top-0 z-40 px-3 pt-3 sm:px-6">
+        <div className="glass mx-auto flex h-13 max-w-7xl items-center justify-between rounded-2xl px-4 py-2.5">
+          <Wordmark />
+          <div className="no-scrollbar flex items-center gap-1 overflow-x-auto">
+            {APP_VIEWS.map((view) => (
+              <a
+                key={view.hash}
+                href={view.hash}
+                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
+                  route === view.hash
+                    ? "bg-fill text-accent"
+                    : "text-ink-dim hover:bg-fill-soft hover:text-ink"
+                }`}
+              >
+                {view.label}
+              </a>
+            ))}
+            <a href="#top" onClick={() => { window.location.hash = ""; }}
+               className="ml-1 rounded-lg px-3 py-1.5 text-sm text-ink-mute hover:text-ink">
+              ← Site
+            </a>
+            <ThemeToggle />
+          </div>
+        </div>
+      </header>
+      <main className="mx-auto max-w-7xl px-3 pt-4 pb-8 sm:px-6">
+        {route === "#/compass" && (
+          <div className="glass stage-panel rounded-3xl p-4 sm:p-6">
+            <HarmonyCompass />
+          </div>
+        )}
+        {route === "#/fretboard" && (
+          <div className="glass stage-panel rounded-3xl p-3 sm:p-5">
+            <FretboardExplorer />
+          </div>
+        )}
+        {route === "#/phrases" && (
+          <div className="glass rounded-3xl">
+            <ClassicsShowcase />
+          </div>
+        )}
+      </main>
+    </div>
+  );
+}
+
 function ThemeToggle() {
   const toggle = () => {
     const el = document.documentElement;
@@ -132,6 +199,21 @@ function Hero() {
             bind them, and every legal move between. Tap a chord below: hear
             it, and see where music can go.
           </p>
+        </div>
+
+        <div className="rise-in rise-in-2 mt-8 flex flex-wrap items-center justify-center gap-3">
+          <a href="#/compass"
+             className="rounded-xl bg-accent px-6 py-3 text-sm font-semibold text-accent-deep transition-opacity hover:opacity-90">
+            Launch the Compass — free
+          </a>
+          <a href="#/fretboard"
+             className="rounded-xl border border-line px-6 py-3 text-sm font-medium text-ink transition-colors hover:bg-fill-soft">
+            Fretboard
+          </a>
+          <a href="#/phrases"
+             className="rounded-xl border border-line px-6 py-3 text-sm font-medium text-ink transition-colors hover:bg-fill-soft">
+            Phrases
+          </a>
         </div>
 
         <div id="compass" className="stage-panel rise-in rise-in-3 mx-auto mt-14 max-w-5xl scroll-mt-24 rounded-3xl border border-line p-4 sm:p-6">
@@ -382,6 +464,10 @@ function Footer() {
 }
 
 export default function App() {
+  const route = useHashRoute();
+  if (APP_VIEWS.some((v) => v.hash === route)) {
+    return <AppShell route={route} />;
+  }
   return (
     <div id="top" className="min-h-screen">
       <Nav />
