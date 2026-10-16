@@ -1,5 +1,7 @@
 import { useMemo, useState } from "react";
 import { NOTE_NAMES, noteName } from "../music";
+import { degreeCells } from "../degreeCells";
+import { SCALE_LORE } from "../demoVoicings";
 import {
   SCALE_TYPES,
   SEVENTH_QUALITIES,
@@ -102,7 +104,7 @@ interface Hovered {
   fret: number;
 }
 
-export function FretboardExplorer() {
+export function FretboardExplorer({ bare = false }: { bare?: boolean } = {}) {
   const [root, setRoot] = useState(9); // A — a guitarist's home base
   const [mode, setMode] = useState<DisplayMode>("scale");
   const [scaleIndex, setScaleIndex] = useState(8); // Minor Pentatonic
@@ -209,8 +211,58 @@ export function FretboardExplorer() {
 
   const boardMidY = (STRING_TOP + STRING_BOTTOM) / 2;
 
+  const scaleRail = bare && mode === "scale" && (
+    <aside className="no-scrollbar hidden h-full w-52 shrink-0 overflow-y-auto border-r border-line pr-2 lg:block">
+      <p className="px-3 pb-2 text-[11px] font-medium uppercase tracking-[0.14em] text-ink-mute">
+        Scales
+      </p>
+      {SCALE_TYPES.map((scale, i) => (
+        <button
+          key={scale.name}
+          onClick={() => setScaleIndex(i)}
+          className={`block w-full border-l-2 px-3 py-1.5 text-left text-sm transition-colors ${
+            i === scaleIndex
+              ? "border-accent text-ink"
+              : "border-transparent text-ink-mute hover:text-ink-dim"
+          }`}
+        >
+          {scale.name}
+        </button>
+      ))}
+    </aside>
+  );
+
+  const scaleStory = mode === "scale" && (
+    <div className="border-t border-line px-4 py-3 sm:px-5">
+      <p className="max-w-3xl text-sm text-ink-dim">
+        {SCALE_LORE[SCALE_TYPES[scaleIndex].name] ?? ""}
+      </p>
+      {SCALE_TYPES[scaleIndex].intervals.length === 7 && (
+        <div className="no-scrollbar mt-3 flex gap-1.5 overflow-x-auto">
+          {degreeCells(root, SCALE_TYPES[scaleIndex]).map((cell, i) => (
+            <div key={i}
+                 className="min-w-[86px] shrink-0 rounded-lg bg-fill-soft px-2 py-1.5 text-center">
+              <div className="text-xs font-bold text-orange-400">{cell.roman}</div>
+              <div className="truncate text-[10px] text-ink">{cell.chordSymbol}</div>
+              <div className="truncate text-[9px] font-semibold text-cyan-300/90">
+                {cell.tensions.join(" ")}
+              </div>
+              {cell.mode && (
+                <div className="truncate text-[8px] text-ink-mute">{cell.mode}</div>
+              )}
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+
   return (
-    <div className="overflow-hidden rounded-2xl border border-line bg-raise/80 shadow-[0_24px_80px_-32px_rgba(0,0,0,0.9)] backdrop-blur-sm">
+    <div className={bare ? "flex h-full gap-5" : "contents"}>
+    {scaleRail}
+    <div className={bare
+        ? "min-w-0 flex-1 overflow-y-auto"
+        : "overflow-hidden rounded-2xl border border-line bg-raise/80 shadow-[0_24px_80px_-32px_rgba(0,0,0,0.9)] backdrop-blur-sm"}>
       {/* Controls */}
       <div className="flex flex-col gap-4 border-b border-line p-4 sm:p-5">
         <div className="flex flex-wrap items-center gap-x-4 gap-y-3">
@@ -270,6 +322,7 @@ export function FretboardExplorer() {
             <label className="flex items-center gap-2">
               <span className="sr-only">Scale or mode</span>
               <select
+                hidden={bare}
                 value={scaleIndex}
                 onChange={(e) => setScaleIndex(Number(e.target.value))}
                 className="h-9 rounded-lg border border-line bg-raise-2 px-3 pr-8 text-sm text-ink transition-colors hover:border-white/20"
@@ -731,6 +784,8 @@ export function FretboardExplorer() {
           )}
         </svg>
       </div>
+      {scaleStory}
+    </div>
     </div>
   );
 }

@@ -188,7 +188,7 @@ export function HarmonyCompass({ fill = false }: { fill?: boolean } = {}) {
         ? "flex h-full min-h-0 flex-col gap-3 lg:flex-row"
         : "flex flex-col items-start gap-6 lg:flex-row"}>
       <div className={fill
-          ? "glass-chrome flex min-h-0 min-w-0 flex-1 items-center justify-center rounded-3xl p-2"
+          ? "flex min-h-0 min-w-0 flex-1 items-center justify-center"
           : "contents"}>
       <svg
         viewBox={`0 0 ${SIZE} ${SIZE}`}
@@ -311,7 +311,7 @@ export function HarmonyCompass({ fill = false }: { fill?: boolean } = {}) {
       </div>
       {/* teaching card */}
       <div className={fill
-          ? "glass-chrome flex h-full w-full min-h-0 shrink-0 flex-col gap-0 overflow-hidden rounded-3xl lg:w-[390px]"
+          ? "flex h-full w-full min-h-0 shrink-0 flex-col gap-0 overflow-hidden border-line lg:w-[390px] lg:border-l lg:pl-5"
           : "flex w-full max-w-sm shrink-0 flex-col gap-3"}>
       <div className={fill
           ? "border-b border-line p-3 text-xs"

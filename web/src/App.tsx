@@ -56,34 +56,33 @@ function AppShell({ route }: { route: string }) {
            className="font-display text-base font-bold tracking-tight text-ink">
           Fret<span className="text-accent">space</span>
         </a>
-        <nav className="glass-chrome flex items-center gap-0.5 rounded-full p-1">
+        <nav className="flex items-center gap-6">
           {APP_VIEWS.map((view) => (
             <a key={view.hash} href={view.hash}
-               className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-200 ${
-                 route === view.hash
-                   ? "bg-accent text-accent-deep shadow-[0_2px_14px_-2px_rgba(249,115,22,0.6)]"
-                   : "text-ink-dim hover:text-ink"
+               className={`relative py-1.5 text-sm font-medium transition-colors duration-200 ${
+                 route === view.hash ? "text-ink" : "text-ink-mute hover:text-ink-dim"
                }`}>
               {view.label}
+              {route === view.hash && (
+                <span className="absolute -bottom-0.5 left-0 right-0 mx-auto h-[2px] w-5 rounded-full bg-accent" />
+              )}
             </a>
           ))}
         </nav>
-        <div className="flex items-center gap-3 text-xs text-ink-mute">
-          <a href="#waitlist" onClick={() => { window.location.hash = ""; }}
-             className="hidden rounded-full border border-line px-3 py-1.5 transition-colors hover:text-ink sm:block">
-            Get it on Vision Pro
-          </a>
-        </div>
+        <a href="#waitlist" onClick={() => { window.location.hash = ""; }}
+           className="hidden text-xs text-ink-mute transition-colors hover:text-ink sm:block">
+          Get it on Vision&nbsp;Pro
+        </a>
       </header>
       <main className="min-h-0 flex-1 px-3 pb-3 sm:px-5 sm:pb-5">
         {route === "#/compass" && <HarmonyCompass fill />}
         {route === "#/fretboard" && (
-          <div className="glass-chrome h-full overflow-auto rounded-3xl p-3 sm:p-5">
-            <FretboardExplorer />
+          <div className="h-full overflow-auto pt-2">
+            <FretboardExplorer bare />
           </div>
         )}
         {route === "#/phrases" && (
-          <div className="glass-chrome h-full overflow-hidden rounded-3xl">
+          <div className="h-full overflow-hidden pt-2">
             <ClassicsBrowser fill />
           </div>
         )}

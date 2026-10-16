@@ -133,3 +133,23 @@ export function toneRole(node: CompassNode, stringIndex: number, fret: number): 
   if (semis >= 6 && semis <= 8) return 2;
   return 3;
 }
+
+
+/** One-line character notes per scale — mirrors the headset's ScaleLore. */
+export const SCALE_LORE: Record<string, string> = {
+  "Major (Ionian)": "The home base — bright, stable, resolved. Everything else is measured against it.",
+  Dorian: "Minor with a bright natural 6 — the classic cool jazz and funk minor sound.",
+  Phrygian: "Dark minor with a ♭2 — Spanish and modern-metal flavor.",
+  Lydian: "Major with a raised 4 — floating, dreamy, film-score openness.",
+  Mixolydian: "Major with a ♭7 — the dominant-chord scale; blues, rock and funk live here.",
+  "Minor (Aeolian)": "The pure minor — melancholy, songlike, the relative shadow of major.",
+  Locrian: "Unstable by design (♭2 and ♭5) — at home only over half-diminished chords.",
+  "Major Pentatonic": "Five safe, open notes of major — country, gospel, and singable solos.",
+  "Minor Pentatonic": "The guitarist's mother tongue — five notes, infinite blues and rock.",
+  Blues: "Minor pentatonic plus the ♭5 'blue note' — tension you bend through, not sit on.",
+  "Harmonic Minor": "Minor with a raised 7 — the dramatic pull home; neoclassical and gypsy heat.",
+  "Melodic Minor": "Minor with a bright 6 and 7 — the jazz minor, smooth on the way up.",
+  "Phrygian Dominant": "Harmonic minor's 5th mode — flamenco and metal fire over a dominant.",
+  "Lydian Dominant": "Mixolydian with a ♯4 — the hip altered-but-not-too-altered dominant color.",
+  "Bebop Dominant": "Mixolydian plus a passing major 7 — eight notes that keep chord tones on the beat.",
+};

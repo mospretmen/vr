@@ -31,7 +31,7 @@ export function ClassicsBrowser({ fill = false }: { fill?: boolean } = {}) {
   const [index, setIndex] = useState(0);
   const phrase = WEB_CLASSICS[index];
   return (
-    <div className={fill ? "flex h-full flex-col gap-5 p-4 sm:p-6 lg:flex-row" : ""}>
+    <div className={fill ? "flex h-full flex-col gap-6 px-1 pt-2 sm:px-2 lg:flex-row" : ""}>
           <div className="flex w-full flex-col gap-5 lg:flex-row">
             <div className={`no-scrollbar w-full overflow-y-auto lg:max-w-xs ${fill ? "lg:max-h-full max-h-[240px]" : "max-h-[320px]"}`}>
               <ul className="space-y-1.5">
@@ -42,10 +42,10 @@ export function ClassicsBrowser({ fill = false }: { fill?: boolean } = {}) {
                         setIndex(i);
                         playRun(p.steps.map(stepMidi));
                       }}
-                      className={`w-full rounded-lg px-3 py-2 text-left text-sm transition-colors ${
+                      className={`w-full border-l-2 px-3 py-2 text-left text-sm transition-colors ${
                         i === index
-                          ? "bg-fill text-ink"
-                          : "text-ink-dim hover:bg-fill-soft hover:text-ink"
+                          ? "border-accent text-ink"
+                          : "border-transparent text-ink-mute hover:text-ink-dim"
                       }`}
                     >
                       <span className="font-medium">{p.name}</span>
