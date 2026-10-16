@@ -7,9 +7,6 @@ import { WEB_CLASSICS, stepMidi, stepPitchClass, type WebPhrase } from "../class
 const SHARP = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B"];
 
 export function ClassicsShowcase() {
-  const [index, setIndex] = useState(0);
-  const phrase = WEB_CLASSICS[index];
-
   return (
     <section id="classics" className="scroll-mt-20 border-t border-line">
       <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
@@ -22,8 +19,21 @@ export function ClassicsShowcase() {
           transposable to any key and importable into your own library.
         </p>
         <div className="stage-panel mt-8 rounded-3xl border border-line p-4 sm:p-6">
-          <div className="flex flex-col gap-5 lg:flex-row">
-            <div className="no-scrollbar max-h-[320px] w-full overflow-y-auto lg:max-w-xs">
+          <ClassicsBrowser />
+        </div>
+      </div>
+    </section>
+  );
+}
+
+/** The playable browser itself — reused full-screen by the app shell. */
+export function ClassicsBrowser({ fill = false }: { fill?: boolean } = {}) {
+  const [index, setIndex] = useState(0);
+  const phrase = WEB_CLASSICS[index];
+  return (
+    <div className={fill ? "flex h-full flex-col gap-5 p-4 sm:p-6 lg:flex-row" : ""}>
+          <div className="flex w-full flex-col gap-5 lg:flex-row">
+            <div className={`no-scrollbar w-full overflow-y-auto lg:max-w-xs ${fill ? "lg:max-h-full max-h-[240px]" : "max-h-[320px]"}`}>
               <ul className="space-y-1.5">
                 {WEB_CLASSICS.map((p, i) => (
                   <li key={p.name}>
@@ -69,9 +79,7 @@ export function ClassicsShowcase() {
               </p>
             </div>
           </div>
-        </div>
-      </div>
-    </section>
+    </div>
   );
 }
 

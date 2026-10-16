@@ -141,7 +141,7 @@ function chordMidis(n: CompassNode): number[] {
   return [n.root + 48, ...chordPitchClasses(n).map((pc) => pc + 60)];
 }
 
-export function HarmonyCompass() {
+export function HarmonyCompass({ fill = false }: { fill?: boolean } = {}) {
   const [selected, setSelected] = useState<CompassNode>(() => node("majorKey", 0));
   const [frameTonic, setFrameTonic] = useState(0);
   const [frameMinor, setFrameMinor] = useState(false);
@@ -184,10 +184,17 @@ export function HarmonyCompass() {
   };
 
   return (
-    <div className="flex flex-col items-start gap-6 lg:flex-row">
+    <div className={fill
+        ? "flex h-full min-h-0 flex-col gap-3 lg:flex-row"
+        : "flex flex-col items-start gap-6 lg:flex-row"}>
+      <div className={fill
+          ? "glass-chrome flex min-h-0 min-w-0 flex-1 items-center justify-center rounded-3xl p-2"
+          : "contents"}>
       <svg
         viewBox={`0 0 ${SIZE} ${SIZE}`}
-        className="w-full max-w-[640px] flex-1 select-none"
+        className={fill
+            ? "h-full max-h-full w-auto max-w-full select-none"
+            : "w-full max-w-[640px] flex-1 select-none"}
         role="img"
         aria-label="Interactive Harmony Compass"
       >
@@ -301,9 +308,14 @@ export function HarmonyCompass() {
         })}
       </svg>
 
+      </div>
       {/* teaching card */}
-      <div className="flex w-full max-w-sm shrink-0 flex-col gap-3">
-      <div className="rounded-2xl border border-line bg-fill-soft p-3 text-xs">
+      <div className={fill
+          ? "glass-chrome flex h-full w-full min-h-0 shrink-0 flex-col gap-0 overflow-hidden rounded-3xl lg:w-[390px]"
+          : "flex w-full max-w-sm shrink-0 flex-col gap-3"}>
+      <div className={fill
+          ? "border-b border-line p-3 text-xs"
+          : "rounded-2xl border border-line bg-fill-soft p-3 text-xs"}>
         <div className="flex items-center gap-2">
           <span className="text-ink-dim">Key</span>
           <select
@@ -362,6 +374,7 @@ export function HarmonyCompass() {
       <TeachingCard
         selected={selected}
         moves={moves}
+        embedded={fill}
         onArpeggiate={arpeggiate}
         onHearPair={(a, b) => {
           playProgression([chordMidis(a), chordMidis(b)]);
@@ -380,11 +393,13 @@ function TeachingCard({
   moves,
   onArpeggiate,
   onHearPair,
+  embedded = false,
 }: {
   selected: CompassNode;
   moves: Move[];
   onArpeggiate: (grip: Grip) => void;
   onHearPair: (a: CompassNode, b: CompassNode) => void;
+  embedded?: boolean;
 }) {
   const [tab, setTab] = useState<Tab>("pathways");
   const [expanded, setExpanded] = useState<number | null>(null);
@@ -394,7 +409,9 @@ function TeachingCard({
   const grip = grips[Math.min(gripIndex, grips.length - 1)];
 
   return (
-    <aside className="w-full max-w-sm shrink-0 rounded-2xl border border-line bg-fill-soft p-5 backdrop-blur">
+    <aside className={embedded
+        ? "min-h-0 w-full flex-1 overflow-y-auto p-5"
+        : "w-full max-w-sm shrink-0 rounded-2xl border border-line bg-fill-soft p-5 backdrop-blur"}>
       <h3 className="font-display text-2xl font-bold text-ink">{selected.label}</h3>
       <div className="mt-3 flex gap-1 rounded-lg bg-fill-soft p-1 text-xs">
         {(["pathways", "scales", "grips"] as Tab[]).map((t) => (

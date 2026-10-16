@@ -1,7 +1,7 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { FretboardExplorer } from "./components/FretboardExplorer";
 import { HarmonyCompass } from "./components/HarmonyCompass";
-import { ClassicsShowcase } from "./components/ClassicsShowcase";
+import { ClassicsBrowser, ClassicsShowcase } from "./components/ClassicsShowcase";
 import {
   PricingSection,
   VisionProSection,
@@ -46,50 +46,45 @@ function useHashRoute(): string {
   return hash;
 }
 
-/** Full-screen app shell: glass top bar, the feature filling the view —
- *  the VR layout translated to the browser. */
+/** Full-screen app shell v2 — one dark instrument environment, the VR
+ *  room translated: integrated top chrome, features filling the viewport. */
 function AppShell({ route }: { route: string }) {
   return (
-    <div className="app-field min-h-screen">
-      <header className="sticky top-0 z-40 px-3 pt-3 sm:px-6">
-        <div className="glass mx-auto flex h-13 max-w-7xl items-center justify-between rounded-2xl px-4 py-2.5">
-          <Wordmark />
-          <div className="no-scrollbar flex items-center gap-1 overflow-x-auto">
-            {APP_VIEWS.map((view) => (
-              <a
-                key={view.hash}
-                href={view.hash}
-                className={`rounded-lg px-3 py-1.5 text-sm font-medium transition-colors ${
-                  route === view.hash
-                    ? "bg-fill text-accent"
-                    : "text-ink-dim hover:bg-fill-soft hover:text-ink"
-                }`}
-              >
-                {view.label}
-              </a>
-            ))}
-            <a href="#top" onClick={() => { window.location.hash = ""; }}
-               className="ml-1 rounded-lg px-3 py-1.5 text-sm text-ink-mute hover:text-ink">
-              ← Site
+    <div className="stage-panel app-ambient flex h-screen flex-col overflow-hidden">
+      <header className="flex h-14 shrink-0 items-center justify-between gap-3 px-4 sm:px-6">
+        <a href="#top" onClick={() => { window.location.hash = ""; }}
+           className="font-display text-base font-bold tracking-tight text-ink">
+          Fret<span className="text-accent">space</span>
+        </a>
+        <nav className="glass-chrome flex items-center gap-0.5 rounded-full p-1">
+          {APP_VIEWS.map((view) => (
+            <a key={view.hash} href={view.hash}
+               className={`rounded-full px-4 py-1.5 text-sm font-medium transition-all duration-200 ${
+                 route === view.hash
+                   ? "bg-accent text-accent-deep shadow-[0_2px_14px_-2px_rgba(249,115,22,0.6)]"
+                   : "text-ink-dim hover:text-ink"
+               }`}>
+              {view.label}
             </a>
-            <ThemeToggle />
-          </div>
+          ))}
+        </nav>
+        <div className="flex items-center gap-3 text-xs text-ink-mute">
+          <a href="#waitlist" onClick={() => { window.location.hash = ""; }}
+             className="hidden rounded-full border border-line px-3 py-1.5 transition-colors hover:text-ink sm:block">
+            Get it on Vision Pro
+          </a>
         </div>
       </header>
-      <main className="mx-auto max-w-7xl px-3 pt-4 pb-8 sm:px-6">
-        {route === "#/compass" && (
-          <div className="glass stage-panel rounded-3xl p-4 sm:p-6">
-            <HarmonyCompass />
-          </div>
-        )}
+      <main className="min-h-0 flex-1 px-3 pb-3 sm:px-5 sm:pb-5">
+        {route === "#/compass" && <HarmonyCompass fill />}
         {route === "#/fretboard" && (
-          <div className="glass stage-panel rounded-3xl p-3 sm:p-5">
+          <div className="glass-chrome h-full overflow-auto rounded-3xl p-3 sm:p-5">
             <FretboardExplorer />
           </div>
         )}
         {route === "#/phrases" && (
-          <div className="glass rounded-3xl">
-            <ClassicsShowcase />
+          <div className="glass-chrome h-full overflow-hidden rounded-3xl">
+            <ClassicsBrowser fill />
           </div>
         )}
       </main>
@@ -146,7 +141,7 @@ function useActiveSection(ids: string[]): string | null {
 function Nav() {
   const active = useActiveSection(NAV_LINKS.map((l) => l.href.slice(1)));
   return (
-    <header className="sticky top-0 z-40 border-b border-line bg-base/70 backdrop-blur-xl">
+    <header className="sticky top-0 z-40 bg-base/70 backdrop-blur-xl">
       <nav className="mx-auto flex h-14 max-w-6xl items-center justify-between px-4 sm:px-6">
         <Wordmark />
         <div className="no-scrollbar flex items-center gap-1 overflow-x-auto sm:gap-2">

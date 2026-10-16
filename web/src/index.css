@@ -89,6 +89,24 @@
   color: var(--color-ink);
 }
 
+/* The app's ambient room: deep neutral with faint colored air. */
+.app-ambient {
+  background:
+    radial-gradient(1200px 700px at 20% -10%,
+      rgba(249, 115, 22, 0.07), transparent 60%),
+    radial-gradient(1000px 700px at 85% 110%,
+      rgba(99, 102, 241, 0.08), transparent 60%),
+    linear-gradient(180deg, #0b0b0f 0%, #09090c 100%);
+}
+
+/* Translucent chrome INSIDE the dark room. */
+.glass-chrome {
+  background: rgba(255, 255, 255, 0.045);
+  backdrop-filter: blur(18px) saturate(1.2);
+  -webkit-backdrop-filter: blur(18px) saturate(1.2);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
 /* Glassmorphism panel — the app-view surface. */
 .glass {
   background: color-mix(in srgb, var(--color-raise) 62%, transparent);
