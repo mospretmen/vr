@@ -27,9 +27,27 @@ export function ClassicsShowcase() {
 }
 
 /** The playable browser itself — reused full-screen by the app shell. */
+const KEY_NAMES = ["C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B"];
+
+function foldFret(fret: number): number {
+  let f = fret;
+  while (f > 15) f -= 12;
+  while (f < 0) f += 12;
+  return f;
+}
+
 export function ClassicsBrowser({ fill = false }: { fill?: boolean } = {}) {
   const [index, setIndex] = useState(0);
-  const phrase = WEB_CLASSICS[index];
+  const [transpose, setTranspose] = useState(0);
+  const base = WEB_CLASSICS[index];
+  const phrase: WebPhrase = transpose === 0 ? base : {
+    ...base,
+    steps: base.steps.map(([s, f]) => [s, foldFret(f + transpose)] as [number, number]),
+    chord: { ...base.chord,
+             root: (base.chord.root + transpose) % 12,
+             symbol: KEY_NAMES[(base.chord.root + transpose) % 12]
+               + base.chord.symbol.replace(/^[A-G][♯♭]?/, "") },
+  };
   return (
     <div className={fill ? "flex h-full flex-col gap-6 px-1 pt-2 sm:px-2 lg:flex-row" : ""}>
           <div className="flex w-full flex-col gap-5 lg:flex-row">
@@ -40,6 +58,7 @@ export function ClassicsBrowser({ fill = false }: { fill?: boolean } = {}) {
                     <button
                       onClick={() => {
                         setIndex(i);
+                        setTranspose(0);
                         playRun(p.steps.map(stepMidi));
                       }}
                       className={`w-full border-l-2 px-3 py-2 text-left text-sm transition-colors ${
@@ -62,12 +81,30 @@ export function ClassicsBrowser({ fill = false }: { fill?: boolean } = {}) {
                 <h3 className="font-display text-lg font-semibold text-ink">
                   {phrase.name}
                 </h3>
-                <button
-                  onClick={() => playRun(phrase.steps.map(stepMidi))}
-                  className="shrink-0 rounded-full bg-accent px-4 py-1.5 text-xs font-semibold text-accent-deep transition-opacity hover:opacity-90"
-                >
-                  ▶ Play
-                </button>
+                <div className="flex shrink-0 items-center gap-2">
+                  <select
+                    value={transpose}
+                    onChange={(e) => {
+                      const t = Number(e.target.value);
+                      setTranspose(t);
+                    }}
+                    aria-label="Transpose"
+                    className="rounded-md border border-line bg-transparent px-2 py-1 text-xs text-ink-dim"
+                  >
+                    {Array.from({ length: 12 }, (_, t) => (
+                      <option key={t} value={t}>
+                        {t === 0 ? "Original key"
+                          : `+${t} → ${KEY_NAMES[(base.chord.root + t) % 12]}`}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={() => playRun(phrase.steps.map(stepMidi))}
+                    className="rounded-full bg-accent px-4 py-1.5 text-xs font-semibold text-accent-deep transition-opacity hover:opacity-90"
+                  >
+                    ▶ Play
+                  </button>
+                </div>
               </div>
               <p className="mt-1 text-sm text-ink-dim">{phrase.remark}</p>
               <PhraseBoard phrase={phrase} />

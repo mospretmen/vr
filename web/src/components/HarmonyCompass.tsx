@@ -185,15 +185,15 @@ export function HarmonyCompass({ fill = false }: { fill?: boolean } = {}) {
 
   return (
     <div className={fill
-        ? "flex h-full min-h-0 flex-col gap-3 lg:flex-row"
+        ? "mx-auto w-full max-w-[1680px] max-lg:space-y-4 lg:flex lg:h-full lg:min-h-0 lg:flex-row lg:gap-3"
         : "flex flex-col items-start gap-6 lg:flex-row"}>
       <div className={fill
-          ? "flex min-h-0 min-w-0 flex-1 items-center justify-center"
+          ? "flex min-w-0 items-center justify-center lg:min-h-0 lg:flex-1"
           : "contents"}>
       <svg
         viewBox={`0 0 ${SIZE} ${SIZE}`}
         className={fill
-            ? "h-full max-h-full w-auto max-w-full select-none"
+            ? "max-w-full select-none max-lg:h-auto max-lg:w-full lg:h-full lg:max-h-full lg:w-auto"
             : "w-full max-w-[640px] flex-1 select-none"}
         role="img"
         aria-label="Interactive Harmony Compass"
@@ -311,7 +311,7 @@ export function HarmonyCompass({ fill = false }: { fill?: boolean } = {}) {
       </div>
       {/* teaching card */}
       <div className={fill
-          ? "flex h-full w-full min-h-0 shrink-0 flex-col gap-0 overflow-hidden border-line lg:w-[390px] lg:border-l lg:pl-5"
+          ? "flex w-full shrink-0 flex-col gap-0 border-line lg:h-full lg:min-h-0 lg:w-[390px] lg:overflow-hidden lg:border-l lg:pl-5"
           : "flex w-full max-w-sm shrink-0 flex-col gap-3"}>
       <div className={fill
           ? "border-b border-line p-3 text-xs"

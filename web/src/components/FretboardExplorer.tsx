@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { NOTE_NAMES, noteName } from "../music";
 import { degreeCells } from "../degreeCells";
 import { SCALE_LORE } from "../demoVoicings";
+import { strum } from "../audio";
 import {
   SCALE_TYPES,
   SEVENTH_QUALITIES,
@@ -240,8 +241,12 @@ export function FretboardExplorer({ bare = false }: { bare?: boolean } = {}) {
       {SCALE_TYPES[scaleIndex].intervals.length === 7 && (
         <div className="no-scrollbar mt-3 flex gap-1.5 overflow-x-auto">
           {degreeCells(root, SCALE_TYPES[scaleIndex]).map((cell, i) => (
-            <div key={i}
-                 className="min-w-[86px] shrink-0 rounded-lg bg-fill-soft px-2 py-1.5 text-center">
+            <button key={i}
+                 onClick={() => {
+                   const base = 48 + cell.rootPc;
+                   strum([base, ...cell.chordIntervals.slice(1).map((iv) => base + iv + 12)]);
+                 }}
+                 className="min-w-[86px] shrink-0 rounded-lg bg-fill-soft px-2 py-1.5 text-center transition-colors hover:bg-fill">
               <div className="text-xs font-bold text-orange-400">{cell.roman}</div>
               <div className="truncate text-[10px] text-ink">{cell.chordSymbol}</div>
               <div className="truncate text-[9px] font-semibold text-cyan-300/90">
@@ -250,7 +255,7 @@ export function FretboardExplorer({ bare = false }: { bare?: boolean } = {}) {
               {cell.mode && (
                 <div className="truncate text-[8px] text-ink-mute">{cell.mode}</div>
               )}
-            </div>
+            </button>
           ))}
         </div>
       )}

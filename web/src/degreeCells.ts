@@ -8,6 +8,9 @@ export interface DegreeCell {
   chordSymbol: string;
   tensions: string[]; // avoid notes parenthesized
   mode: string | null;
+  /** The degree chord's root pitch class and intervals — playable. */
+  rootPc: number;
+  chordIntervals: number[];
 }
 
 const SEVENTH_QUALITIES: [number[], string, boolean][] = [
@@ -104,6 +107,8 @@ export function degreeCells(root: number, scale: ScaleSuggestion): DegreeCell[] 
       chordSymbol: names[degree] + suffix,
       tensions,
       mode: MODE_NAMES[rotated.join()] ?? null,
+      rootPc: (root + intervals[degree]) % 12,
+      chordIntervals,
     };
   });
 }

@@ -74,7 +74,7 @@ function AppShell({ route }: { route: string }) {
           Get it on Vision&nbsp;Pro
         </a>
       </header>
-      <main className="min-h-0 flex-1 px-3 pb-3 sm:px-5 sm:pb-5">
+      <main className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 sm:px-5 sm:pb-5">
         {route === "#/compass" && <HarmonyCompass fill />}
         {route === "#/fretboard" && (
           <div className="h-full overflow-auto pt-2">
