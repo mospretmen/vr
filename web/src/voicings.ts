@@ -94,7 +94,9 @@ export function lowestVoicing(
 
   function search(voice: number): void {
     if (voice === candidates.length) {
-      const fretted = chosen.filter((f) => f > 0);
+      // Open strings count toward the span — an open string against
+      // fret-10 notes is not a shape any hand plays (VR parity, v37).
+      const fretted = chosen;
       const spread =
         fretted.length === 0
           ? 0

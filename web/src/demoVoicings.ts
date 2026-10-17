@@ -121,7 +121,8 @@ export function gripsFor(node: CompassNode): Grip[] {
 }
 
 function gripLow(g: Grip): number {
-  return Math.min(...g.frets.filter((f): f is number => f !== null && f > 0), 0);
+  const fretted = g.frets.filter((f): f is number => f !== null && f > 0);
+  return fretted.length ? Math.min(...fretted) : 0;
 }
 
 /** Chord-tone role per sounded position: 0 root, 1 third, 2 fifth, 3 seventh. */

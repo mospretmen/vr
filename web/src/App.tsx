@@ -70,7 +70,11 @@ function AppShell({ route }: { route: string }) {
           ))}
         </nav>
         <a href="#waitlist" onClick={() => { window.location.hash = ""; }}
-           className="hidden text-xs text-ink-mute transition-colors hover:text-ink sm:block">
+           className="hidden items-center gap-1.5 text-xs text-ink-mute transition-colors hover:text-ink sm:flex">
+          <svg width="18" height="12" viewBox="0 0 24 14" fill="none"
+               stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
+            <path d="M5.5 1.5h13A4 4 0 0 1 22.5 5.5v2a4.5 4.5 0 0 1-4.5 4.5c-2 0-2.8-1-4.2-2.3-.9-.85-2.7-.85-3.6 0C8.8 11 8 12 6 12a4.5 4.5 0 0 1-4.5-4.5v-2a4 4 0 0 1 4-4Z" />
+          </svg>
           Get it on Vision&nbsp;Pro
         </a>
       </header>

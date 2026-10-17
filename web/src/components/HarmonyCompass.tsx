@@ -428,27 +428,38 @@ function TeachingCard({
       </div>
 
       {tab === "pathways" && (
-        <ul className="mt-4 space-y-2.5">
+        <>
+        <p className="mt-3 text-[11px] text-ink-mute">
+          Tap any pathway ▶ to hear it and watch the voices move.
+        </p>
+        <ul className="mt-2 space-y-1.5">
           {moves.map((m, i) => (
             <li key={i}>
               <button
-                className="flex w-full items-start gap-2 text-left text-sm text-ink/90"
+                className="group flex w-full items-start gap-2 rounded-md px-1 py-0.5 text-left text-sm text-ink/90 transition-colors hover:bg-fill-soft"
                 onClick={() => {
                   const open = expanded === i ? null : i;
                   setExpanded(open);
                   if (open !== null) onHearPair(m.from, m.to);
                 }}
+                aria-expanded={expanded === i}
               >
                 <span
                   className="mt-1.5 h-2 w-2 shrink-0 rounded-full"
                   style={{ backgroundColor: KIND_COLOR[m.kind] }}
                 />
-                <span>{describe(m)}</span>
+                <span className="flex-1">{describe(m)}</span>
+                <span className={`mt-0.5 shrink-0 text-[10px] transition-transform duration-200 ${
+                  expanded === i ? "rotate-90 text-accent" : "text-ink-mute group-hover:text-ink-dim"
+                }`}>
+                  ▶
+                </span>
               </button>
               {expanded === i && <VoiceStaff from={m.from} to={m.to} />}
             </li>
           ))}
         </ul>
+        </>
       )}
 
       {tab === "scales" && (
@@ -486,11 +497,7 @@ function TeachingCard({
         </div>
       )}
 
-      {tab === "pathways" && (
-        <p className="mt-2 text-[11px] text-ink-mute">
-          Tap a pathway to watch the voices move.
-        </p>
-      )}
+
       <p className="mt-5 border-t border-line pt-4 text-xs text-ink-dim">
         In the full app every pathway opens full-neck scales, the complete
         grip dictionary, voice leading, and alterations.
@@ -511,16 +518,14 @@ function MiniFretboard({ node: n, grip }: { node: CompassNode; grip: Grip }) {
   const sounded = grip.frets
     .map((f, s) => (f === null ? null : { s, f }))
     .filter((x): x is { s: number; f: number } => x !== null);
-  const low = Math.max(
-    1,
-    Math.min(...sounded.map(({ f }) => f).filter((f) => f > 0), 1),
-  );
-  const start = Math.min(low, 11); // window start fret
+  const fretted = sounded.map(({ f }) => f).filter((f) => f > 0);
+  const low = fretted.length ? Math.min(...fretted) : 1;
+  const start = Math.max(1, Math.min(low, 11)); // window start fret
   const W = 300;
   const H = 128;
   const left = 26;
   const gap = (W - left - 10) / 5;
-  const stringY = (s: number) => 14 + (5 - s) * ((H - 32) / 5);
+  const stringY = (s: number) => 13 + (5 - s) * ((H - 40) / 5);
   const fretX = (f: number) => left + (f - start + 1) * gap;
   const noteX = (f: number) =>
     f === 0 ? left - 13 : fretX(f) - gap / 2;
@@ -638,23 +643,16 @@ function ScaleRow({
   root: number;
   scale: ReturnType<typeof scaleSuggestions>[number];
 }) {
-  const [open, setOpen] = useState(false);
   const cells = useMemo(() => degreeCells(root, scale), [root, scale]);
   return (
     <li className="text-sm">
-      <button
-        className="flex w-full items-baseline gap-2 text-left"
-        onClick={() => setOpen((o) => !o)}
-      >
+      <div className="flex w-full items-baseline gap-2 text-left">
         <span className="font-medium text-ink">{scale.name}</span>
         <span className="text-xs text-ink-dim">
           {spellScale(root, scale.intervals).join(" ")}
         </span>
-        {cells.length > 0 && (
-          <span className="ml-auto text-xs text-ink-mute">{open ? "−" : "+"}</span>
-        )}
-      </button>
-      {open && cells.length > 0 && (
+      </div>
+      {cells.length > 0 && (
         <div className="mt-2 grid grid-cols-4 gap-1.5 sm:grid-cols-7">
           {cells.map((cell, i) => (
             <div

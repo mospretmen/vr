@@ -82,6 +82,24 @@ const VOICING_STYLES: readonly { id: VoicingStyle; label: string }[] = [
 /** Harmonizing yields one triad per degree only for seven-note scales. */
 const SEVEN_NOTE_SCALES = SCALE_TYPES.filter((s) => s.intervals.length === 7);
 
+/** Starting frets of five boxes up the neck — each begins on the scale's
+ *  next low-string note (mirrors the Swift core's boxStartFrets). */
+function boxStartFrets(root: number, intervals: readonly number[]): number[] {
+  const pcs = new Set(intervals.map((i) => (root + i) % 12));
+  const starts: number[] = [];
+  let fret = 0;
+  while (starts.length < 5 && fret <= 15) {
+    if (pcs.has((4 + fret) % 12)) {
+      starts.push(fret);
+      fret += 1;
+      while (fret <= 15 && !pcs.has((4 + fret) % 12)) fret += 1;
+    } else {
+      fret += 1;
+    }
+  }
+  return starts;
+}
+
 /** Chord-tone marker styling, indexed root/third/fifth/seventh. Full literal
  * class names so Tailwind generates the token utilities. */
 const TONE_FILL = [
@@ -109,6 +127,8 @@ export function FretboardExplorer({ bare = false }: { bare?: boolean } = {}) {
   const [root, setRoot] = useState(9); // A — a guitarist's home base
   const [mode, setMode] = useState<DisplayMode>("scale");
   const [scaleIndex, setScaleIndex] = useState(8); // Minor Pentatonic
+  /** null = full neck; otherwise a 5-fret box starting at this fret. */
+  const [boxStart, setBoxStart] = useState<number | null>(null);
   const [triadIndex, setTriadIndex] = useState(0);
   const [voicingStyle, setVoicingStyle] = useState<VoicingStyle>("triads");
   // One quality index per style, so flipping styles keeps context.
@@ -212,6 +232,10 @@ export function FretboardExplorer({ bare = false }: { bare?: boolean } = {}) {
 
   const boardMidY = (STRING_TOP + STRING_BOTTOM) / 2;
 
+  const inBox = (fret: number): boolean =>
+    boxStart === null || (fret >= boxStart && fret < boxStart + 5)
+    || (fret === 0 && boxStart === 0);
+
   const scaleRail = bare && mode === "scale" && (
     <aside className="no-scrollbar hidden h-full w-52 shrink-0 overflow-y-auto border-r border-line pr-2 lg:block">
       <p className="px-3 pb-2 text-[11px] font-medium uppercase tracking-[0.14em] text-ink-mute">
@@ -220,7 +244,7 @@ export function FretboardExplorer({ bare = false }: { bare?: boolean } = {}) {
       {SCALE_TYPES.map((scale, i) => (
         <button
           key={scale.name}
-          onClick={() => setScaleIndex(i)}
+          onClick={() => { setScaleIndex(i); setBoxStart(null); }}
           className={`block w-full border-l-2 px-3 py-1.5 text-left text-sm transition-colors ${
             i === scaleIndex
               ? "border-accent text-ink"
@@ -279,9 +303,14 @@ export function FretboardExplorer({ bare = false }: { bare?: boolean } = {}) {
             aria-label="Root note"
             className="flex flex-wrap gap-1"
           >
-            {NOTE_NAMES.map((name, pc) => (
+            {NOTE_NAMES.map((name, pc) => {
+              const ENH: Record<number, string> = {
+                1: "C♯/D♭", 3: "D♯/E♭", 6: "F♯/G♭", 8: "G♯/A♭", 10: "A♯/B♭",
+              };
+              const label = ENH[pc] ?? name;
+              return (
               <button
-                key={name}
+                key={label}
                 type="button"
                 aria-pressed={root === pc}
                 onClick={() => setRoot(pc)}
@@ -291,9 +320,9 @@ export function FretboardExplorer({ bare = false }: { bare?: boolean } = {}) {
                     : "text-ink-dim hover:bg-fill-soft hover:text-ink"
                 }`}
               >
-                {name}
+                {label}
               </button>
-            ))}
+            );})}
           </div>
         </div>
 
@@ -329,7 +358,7 @@ export function FretboardExplorer({ bare = false }: { bare?: boolean } = {}) {
               <select
                 hidden={bare}
                 value={scaleIndex}
-                onChange={(e) => setScaleIndex(Number(e.target.value))}
+                onChange={(e) => { setScaleIndex(Number(e.target.value)); setBoxStart(null); }}
                 className="h-9 rounded-lg border border-line bg-raise-2 px-3 pr-8 text-sm text-ink transition-colors hover:border-white/20"
               >
                 {SCALE_TYPES.map((scale, i) => (
@@ -550,6 +579,32 @@ export function FretboardExplorer({ bare = false }: { bare?: boolean } = {}) {
             "hover a position"
           )}
         </p>
+        {mode === "scale" && (
+          <div className="flex flex-wrap items-center gap-1.5 pt-1">
+            <span className="w-10 shrink-0 text-[11px] font-medium uppercase tracking-[0.14em] text-ink-mute">
+              Box
+            </span>
+            <button
+              onClick={() => setBoxStart(null)}
+              className={`rounded-full px-3 py-1 text-xs transition-colors ${
+                boxStart === null ? "bg-accent text-accent-deep" : "bg-fill-soft text-ink-dim hover:text-ink"
+              }`}
+            >
+              Full neck
+            </button>
+            {boxStartFrets(root, SCALE_TYPES[scaleIndex].intervals).map((f, i) => (
+              <button
+                key={f}
+                onClick={() => setBoxStart(f)}
+                className={`rounded-full px-3 py-1 text-xs transition-colors ${
+                  boxStart === f ? "bg-accent text-accent-deep" : "bg-fill-soft text-ink-dim hover:text-ink"
+                }`}
+              >
+                Box {i + 1} · fret {f}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* Board */}
@@ -664,8 +719,9 @@ export function FretboardExplorer({ bare = false }: { bare?: boolean } = {}) {
               const offset = offsetInSelection(pc);
               // Voicings mode paints its own shapes; the grid stays as
               // hover targets only.
-              const active = offset !== null && !voicingsMode;
-              const isRoot = offset === 0 && !voicingsMode;
+              const boxed = mode !== "scale" || inBox(f);
+              const active = offset !== null && !voicingsMode && boxed;
+              const isRoot = offset === 0 && !voicingsMode && boxed;
               const isHovered = hovered?.string === s && hovered?.fret === f;
               const cx = noteX(f);
               const cy = stringY(s);
