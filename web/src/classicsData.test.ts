@@ -22,10 +22,24 @@ suite("web classics", () => {
     }
   });
 
+  it("every fragment sits in one hand position (playability law)", () => {
+    for (const phrase of WEB_CLASSICS) {
+      const fretted = phrase.steps.map(([, f]) => f).filter((f) => f > 0);
+      if (fretted.length) {
+        const span = Math.max(...fretted) - Math.min(...fretted);
+        expect(span, `${phrase.name}: span ${span}`).toBeLessThanOrEqual(5);
+      }
+      for (let i = 1; i < phrase.steps.length; i++) {
+        expect(Math.abs(phrase.steps[i][0] - phrase.steps[i - 1][0]),
+               `${phrase.name}: string hop`).toBeLessThanOrEqual(2);
+      }
+    }
+  });
+
   it("the verbatim pins hold", () => {
     const elise = WEB_CLASSICS.find((p) => p.name.includes("Für Elise"))!;
     expect(elise.steps.map(stepPitchClass)).toEqual([4, 3, 4, 3, 4, 11, 2, 0, 9]);
     const prelude = WEB_CLASSICS.find((p) => p.name.includes("BWV 846"))!;
-    expect(prelude.steps.map(stepPitchClass)).toEqual([0, 4, 7, 0, 4]);
+    expect(prelude.steps.map(stepPitchClass)).toEqual([0, 4, 7, 0]);
   });
 });

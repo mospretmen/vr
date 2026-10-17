@@ -88,7 +88,7 @@ export const WEB_CLASSICS: WebPhrase[] = [
   },
   {
     name: "Prelude arpeggio (Bach, BWV 846)",
-    steps: [[3, 5], [4, 5], [4, 8], [5, 8], [5, 12]],
+    steps: [[3, 5], [4, 5], [4, 8], [5, 8]],
     chord: { root: 0, intervals: [0, 4, 7], symbol: "C" },
     remark: "The C major Prelude's broken chord — public domain, verbatim.",
   },
