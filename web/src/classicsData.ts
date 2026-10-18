@@ -142,6 +142,30 @@ export const WEB_CLASSICS: WebPhrase[] = [
     remark: "The chromatic walkdown from root to 5th that ends ten thousand blues choruses.",
   },
   {
+    name: "Hummingbird box (style of B.B. King)",
+    steps: [[5, 8], [4, 8], [4, 10], [5, 8]],
+    chord: { root: 0, intervals: [0, 4, 7, 10], symbol: "C7" },
+    remark: "One note at a time out of the box: root, 5, 6, root — sing it, don't spray it.",
+  },
+  {
+    name: "Cold-heart curl (style of Peter Green)",
+    steps: [[2, 7], [3, 5], [3, 4], [2, 7]],
+    chord: { root: 9, intervals: [0, 3, 7], symbol: "Am" },
+    remark: "Less is everything: the minor third answered through the 9 — vibrato does the rest.",
+  },
+  {
+    name: "Morning mood (Grieg, Op. 46)",
+    steps: [[2, 5], [2, 2], [1, 5], [1, 3], [1, 5], [2, 2], [2, 5]],
+    chord: { root: 0, intervals: [0, 4, 7], symbol: "C" },
+    remark: "Verbatim, public domain: Peer Gynt's sunrise, pentatonic and patient.",
+  },
+  {
+    name: "Lullaby curve (Brahms, Op. 49)",
+    steps: [[4, 5], [4, 5], [4, 8], [4, 5], [4, 5], [4, 8]],
+    chord: { root: 0, intervals: [0, 4, 7], symbol: "C" },
+    remark: "Verbatim, public domain: the cradle-song thirds that rock the world to sleep.",
+  },
+  {
     name: "Sixth-dim slide (style of Barry Harris)",
     steps: [[2, 7], [2, 6], [2, 5], [1, 7]],
     chord: { root: 0, intervals: [0, 4, 7], symbol: "C" },

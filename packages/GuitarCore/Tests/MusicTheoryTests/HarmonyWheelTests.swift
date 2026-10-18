@@ -954,7 +954,7 @@ struct PhraseAnalysisTests {
 @Suite("Built-in classics")
 struct BuiltInPhraseTests {
     @Test func everyClassicTellsTheTruth() {
-        #expect(BuiltInPhrases.all.count == 136)
+        #expect(BuiltInPhrases.all.count == 150)
         // Verbatim pin: the Minuet's first phrase.
         let minuet = BuiltInPhrases.all.first { $0.name.contains("Anh. 114") }!
         #expect(minuet.steps.map(\.note.pitchClass) ==
