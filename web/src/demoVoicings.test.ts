@@ -1,7 +1,21 @@
 // Parity pins for the demo's scales + grips against the Swift core.
 import { describe as suite, expect, it } from "vitest";
-import { gripsFor, scaleSuggestions, spellScale, toneRole } from "./demoVoicings";
+import { gripFamilies, gripsFor, scaleSuggestions, spellScale, toneRole } from "./demoVoicings";
 import { node } from "./compass";
+
+suite("grip dictionary (ChordGripTemplates parity)", () => {
+  it("knows the extended qualities per family, charts-exact", () => {
+    const cMajor = gripFamilies(node("majorKey", 0));
+    expect(cMajor.map((f) => f.suffix)).toEqual(["", "6", "6/9", "maj7", "maj9"]);
+    const sixNine = cMajor.find((f) => f.suffix === "6/9")!;
+    expect(sixNine.grips[0].frets).toEqual([null, 3, 2, 2, 3, 3]); // C6/9 x32233
+    const g7 = gripFamilies(node("dominant", 9)); // spoke 9 = G
+    const hendrix = g7.find((f) => f.suffix === "7♯9")!;
+    expect(hendrix.grips[0].frets).toEqual([null, 10, 9, 10, 11, null]); // G7♯9 x(10)9(10)(11)x
+    const am = gripFamilies(node("relativeMinor", 9));
+    expect(am.map((f) => f.suffix)).toContain("m(maj7)");
+  });
+});
 
 suite("demo scales & grips", () => {
   it("dominant scale list matches the core's ordering", () => {

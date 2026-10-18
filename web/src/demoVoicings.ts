@@ -93,6 +93,79 @@ const TEMPLATES: Record<CompassNode["ring"], (number | null)[][]> = {
   ],
 };
 
+/** The VR app's curated grip dictionary, per wheel family: movable shapes
+ *  exactly as chord charts print them (ChordGripTemplates parity). */
+const QUALITY_SHAPES: Record<CompassNode["ring"], [string, (number | null)[][]][]> = {
+  majorKey: [
+    ["", TEMPLATES.majorKey],
+    ["6", [[0, null, -1, 1, 0, null], [null, 0, 2, 2, 2, 2]]],
+    ["6/9", [[null, 0, -1, -1, 0, 0]]],
+    ["maj7", [[0, null, 1, 1, 0, null], [null, 0, 2, 1, 2, 0]]],
+    ["maj9", [[null, 0, -1, 1, 0, null]]],
+  ],
+  relativeMinor: [
+    ["m", TEMPLATES.relativeMinor],
+    ["m6", [[0, null, -1, 0, 0, null], [null, 0, -2, -1, -2, null]]],
+    ["m7", [[0, 2, 0, 0, 0, 0], [null, 0, 2, 0, 1, 0]]],
+    ["m9", [[null, 0, -2, 0, 0, 0], [0, 2, 0, 0, 0, 2]]],
+    ["m11", [[0, null, 0, 0, -2, null], [0, 0, 0, 0, 0, 0], [null, 0, 0, 0, 1, null]]],
+    ["m(maj7)", [[0, null, 1, 0, 0, null], [null, 0, 2, 1, 1, null]]],
+  ],
+  dominant: [
+    ["7", TEMPLATES.dominant],
+    ["9", [[null, 0, -1, 0, 0, 0]]],
+    ["13", [[null, 0, -1, 0, 0, 2]]],
+    ["7♭9", [[null, 0, -1, 0, -1, null]]],
+    ["7♯9", [[null, 0, -1, 0, 1, null]]],
+    ["7♯5", [[0, null, 0, 1, 1, null]]],
+    ["7♭5", [[0, null, 0, 1, -1, null]]],
+    ["7sus4", [[null, 0, 2, 0, 3, 0]]],
+    ["9sus4", [[null, 0, 0, 0, 0, 0]]],
+  ],
+  diminished: [
+    ["°7", TEMPLATES.diminished],
+    ["ø7", [[0, null, 0, 0, -1, null], [null, 0, 1, 0, 1, null]]],
+  ],
+};
+
+function instantiate(shapes: (number | null)[][], root: number): Grip[] {
+  const grips: Grip[] = [];
+  for (const offsets of shapes) {
+    const anchor = offsets.findIndex((o) => o !== null);
+    for (let rootFret = 0; rootFret <= 12; rootFret++) {
+      if ((OPEN_PCS[anchor] + rootFret) % 12 !== root) continue;
+      const frets = offsets.map((o) => (o === null ? null : rootFret + o));
+      if (frets.some((f) => f !== null && (f < 0 || f > 14))) continue;
+      const fretted = frets.filter((f): f is number => f !== null && f > 0);
+      const low = fretted.length ? Math.min(...fretted) : 0;
+      grips.push({ frets, positionLabel: low === 0 ? "Open" : `fret ${low}` });
+    }
+  }
+  const seen = new Set<string>();
+  return grips
+    .filter((g) => {
+      const key = g.frets.join(",");
+      if (seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    })
+    .sort((a, b) => gripLow(a) - gripLow(b))
+    .slice(0, 4);
+}
+
+export interface GripFamily {
+  /** Chord-symbol suffix: "", "6/9", "maj9"… */
+  suffix: string;
+  grips: Grip[];
+}
+
+/** Every quality the VR grip dictionary knows for this node's family. */
+export function gripFamilies(node: CompassNode): GripFamily[] {
+  return QUALITY_SHAPES[node.ring]
+    .map(([suffix, shapes]) => ({ suffix, grips: instantiate(shapes, node.root) }))
+    .filter((f) => f.grips.length > 0);
+}
+
 export function gripsFor(node: CompassNode): Grip[] {
   const grips: Grip[] = [];
   for (const offsets of TEMPLATES[node.ring]) {

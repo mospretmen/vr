@@ -17,7 +17,7 @@ import {
   type MoveKind,
 } from "../compass";
 import {
-  gripsFor,
+  gripFamilies,
   scaleSuggestions,
   spellScale,
   toneRole,
@@ -404,7 +404,10 @@ function TeachingCard({
   const [tab, setTab] = useState<Tab>("pathways");
   const [expanded, setExpanded] = useState<number | null>(null);
   const [gripIndex, setGripIndex] = useState(0);
-  const grips = useMemo(() => gripsFor(selected), [selected]);
+  const [qualityIndex, setQualityIndex] = useState(0);
+  const families = useMemo(() => gripFamilies(selected), [selected]);
+  const family = families[Math.min(qualityIndex, families.length - 1)];
+  const grips = family?.grips ?? [];
   const scales = useMemo(() => scaleSuggestions(selected), [selected]);
   const grip = grips[Math.min(gripIndex, grips.length - 1)];
 
@@ -430,18 +433,14 @@ function TeachingCard({
       {tab === "pathways" && (
         <>
         <p className="mt-3 text-[11px] text-ink-mute">
-          Tap any pathway ▶ to hear it and watch the voices move.
+          Tap any pathway ▶ to see how the voices move.
         </p>
         <ul className="mt-2 space-y-1.5">
           {moves.map((m, i) => (
             <li key={i}>
               <button
                 className="group flex w-full items-start gap-2 rounded-md px-1 py-0.5 text-left text-sm text-ink/90 transition-colors hover:bg-fill-soft"
-                onClick={() => {
-                  const open = expanded === i ? null : i;
-                  setExpanded(open);
-                  if (open !== null) onHearPair(m.from, m.to);
-                }}
+                onClick={() => setExpanded(expanded === i ? null : i)}
                 aria-expanded={expanded === i}
               >
                 <span
@@ -455,7 +454,17 @@ function TeachingCard({
                   ▶
                 </span>
               </button>
-              {expanded === i && <VoiceStaff from={m.from} to={m.to} />}
+              {expanded === i && (
+                <div>
+                  <VoiceStaff from={m.from} to={m.to} />
+                  <button
+                    onClick={() => onHearPair(m.from, m.to)}
+                    className="mt-1 rounded-full bg-fill-soft px-3 py-1 text-[11px] text-ink-dim transition-colors hover:text-ink"
+                  >
+                    ▶ Hear the move
+                  </button>
+                </div>
+              )}
             </li>
           ))}
         </ul>
@@ -473,6 +482,21 @@ function TeachingCard({
       {tab === "grips" && grip && (
         <div className="mt-4">
           <div className="flex flex-wrap gap-1.5">
+            {families.map((f, i) => (
+              <button
+                key={f.suffix || "triad"}
+                onClick={() => { setQualityIndex(i); setGripIndex(0); }}
+                className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
+                  i === Math.min(qualityIndex, families.length - 1)
+                    ? "bg-fill text-ink"
+                    : "text-ink-mute hover:bg-fill-soft hover:text-ink-dim"
+                }`}
+              >
+                {selected.label.replace(/(m|7|°7)$/, "")}{f.suffix || (selected.ring === "relativeMinor" ? "m" : "")}
+              </button>
+            ))}
+          </div>
+          <div className="mt-2.5 flex flex-wrap gap-1.5">
             {grips.map((g, i) => (
               <button
                 key={i}
