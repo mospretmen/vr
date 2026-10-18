@@ -214,6 +214,42 @@ export const WEB_CLASSICS: WebPhrase[] = [
     remark: "Keep hitting the root between color tones — groove is repetition.",
   },
   {
+    name: "Duck-walk opener (style of Chuck Berry)",
+    steps: [[4, 8], [4, 5], [4, 8], [4, 5], [3, 5]],
+    chord: { root: 0, intervals: [0, 4, 7, 10], symbol: "C7" },
+    remark: "The double-stop intro flattened to a line: 5 and 3 hammering to the root.",
+  },
+  {
+    name: "Bend contour (style of Gilmour)",
+    steps: [[3, 7], [3, 9], [3, 7], [2, 10]],
+    chord: { root: 9, intervals: [0, 3, 7], symbol: "Am" },
+    remark: "The two-fret cry drawn as a slide: 4 up to 5, falling away to the ♭3.",
+  },
+  {
+    name: "Steel glint (style of Knopfler)",
+    steps: [[3, 5], [4, 5], [2, 5], [3, 5]],
+    chord: { root: 0, intervals: [0, 4, 7], symbol: "C" },
+    remark: "Thumb-rolled triad, placed like speech — the National steel glint.",
+  },
+  {
+    name: "Lágrima sigh (Tárrega)",
+    steps: [[5, 8], [5, 7], [5, 8], [4, 8]],
+    chord: { root: 0, intervals: [0, 4, 7], symbol: "C" },
+    remark: "Public domain: the teardrop's opening — a neighbor tone away from home.",
+  },
+  {
+    name: "Badinerie kick (Bach, BWV 1067)",
+    steps: [[4, 5], [3, 5], [2, 7], [3, 5], [4, 5]],
+    chord: { root: 9, intervals: [0, 3, 7], symbol: "Am" },
+    remark: "Public domain: the flute's playful plunge down the minor triad.",
+  },
+  {
+    name: "Nachtmusik call (Mozart, K. 525)",
+    steps: [[3, 5], [2, 5], [3, 5], [2, 5], [3, 5], [4, 5], [2, 5]],
+    chord: { root: 0, intervals: [0, 4, 7], symbol: "C" },
+    remark: "Public domain: the serenade's opening salute — all triad, all confidence.",
+  },
+  {
     name: "Sixth-dim slide (style of Barry Harris)",
     steps: [[2, 7], [2, 6], [2, 5], [1, 7]],
     chord: { root: 0, intervals: [0, 4, 7], symbol: "C" },
