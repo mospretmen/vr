@@ -157,13 +157,70 @@ export interface GripFamily {
   /** Chord-symbol suffix: "", "6/9", "maj9"… */
   suffix: string;
   grips: Grip[];
+  /** Four-note interval content when the quality supports inversions. */
+  seventhIntervals: number[] | null;
 }
+
+/** Interval content per suffix — drives the drop-2 inversion engine. */
+const SUFFIX_INTERVALS: Record<string, number[]> = {
+  "6": [0, 4, 7, 9], "maj7": [0, 4, 7, 11], "maj9": [0, 4, 7, 11],
+  "m6": [0, 3, 7, 9], "m7": [0, 3, 7, 10], "m9": [0, 3, 7, 10],
+  "m(maj7)": [0, 3, 7, 11],
+  "7": [0, 4, 7, 10], "9": [0, 4, 7, 10], "13": [0, 4, 7, 10],
+  "7♭9": [0, 4, 7, 10], "7♯9": [0, 4, 7, 10],
+  "7♯5": [0, 4, 8, 10], "7♭5": [0, 4, 6, 10], "7sus4": [0, 5, 7, 10],
+  "°7": [0, 3, 6, 9], "ø7": [0, 3, 6, 10],
+};
 
 /** Every quality the VR grip dictionary knows for this node's family. */
 export function gripFamilies(node: CompassNode): GripFamily[] {
   return QUALITY_SHAPES[node.ring]
-    .map(([suffix, shapes]) => ({ suffix, grips: instantiate(shapes, node.root) }))
+    .map(([suffix, shapes]) => ({
+      suffix,
+      grips: instantiate(shapes, node.root),
+      seventhIntervals: SUFFIX_INTERVALS[suffix] ?? null,
+    }))
     .filter((f) => f.grips.length > 0);
+}
+
+export const STRING_SETS: [number, number, number, number][] = [
+  [0, 1, 2, 3], [1, 2, 3, 4], [2, 3, 4, 5],
+];
+export const STRING_SET_LABELS = ["6–3", "5–2", "4–1"];
+export const INVERSION_LABELS = ["Root", "1st inv", "2nd inv", "3rd inv"];
+
+/** Drop-2 voicing of a seventh chord on an adjacent 4-string set — the
+ *  VR Inversions tab's engine. Returns the playable grip, or null when no
+ *  one-position fingering exists on that set. */
+export function drop2Grip(
+  root: number, intervals: number[],
+  set: [number, number, number, number], inversion: number,
+): Grip | null {
+  // Close-position stack chosen so the named inversion's note lands in the
+  // bass after the drop (players name drop-2 voicings by their bass note).
+  const stack = Array.from({ length: 4 }, (_, v) =>
+    (root + intervals[(inversion + 2 + v) % 4]) % 12);
+  const voiced = [stack[2], stack[0], stack[1], stack[3]]; // low→high
+  // Choose, per string, the lowest fret sounding its voice, allowing +12
+  // to minimise the hand span (opens count toward the span).
+  const base = voiced.map((pc, k) => ((pc - OPEN_PCS[set[k]]) % 12 + 12) % 12);
+  let best: number[] | null = null;
+  let bestSpan = 99;
+  for (let mask = 0; mask < 16; mask++) {
+    const frets = base.map((f, k) => (mask & (1 << k) ? f + 12 : f));
+    if (frets.some((f) => f > 14)) continue;
+    const span = Math.max(...frets) - Math.min(...frets);
+    if (span <= 5 && span < bestSpan) {
+      best = frets;
+      bestSpan = span;
+    }
+  }
+  if (!best) return null;
+  const all: (number | null)[] = [null, null, null, null, null, null];
+  set.forEach((stringIndex, k) => { all[stringIndex] = best![k]; });
+  const fretted = best.filter((f) => f > 0);
+  const low = fretted.length ? Math.min(...fretted) : 0;
+  return { frets: all, positionLabel: low === 0 ? "Open" : `fret ${low}` };
 }
 
 export function gripsFor(node: CompassNode): Grip[] {

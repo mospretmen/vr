@@ -1,9 +1,20 @@
 // Parity pins for the demo's scales + grips against the Swift core.
 import { describe as suite, expect, it } from "vitest";
-import { gripFamilies, gripsFor, scaleSuggestions, spellScale, toneRole } from "./demoVoicings";
+import { drop2Grip, gripFamilies, gripsFor, scaleSuggestions, spellScale, toneRole } from "./demoVoicings";
 import { node } from "./compass";
 
 suite("grip dictionary (ChordGripTemplates parity)", () => {
+  it("drop-2 inversions land the textbook voicings", () => {
+    const g = drop2Grip(0, [0, 4, 7, 11], [1, 2, 3, 4], 0)!; // Cmaj7, strings 5-2
+    expect(g.frets).toEqual([null, 3, 5, 4, 5, null]); // C G B E — x3545x
+    for (let inv = 0; inv < 4; inv++) {
+      const v = drop2Grip(7, [0, 4, 7, 10], [2, 3, 4, 5], inv); // G7 top set
+      expect(v, `G7 drop-2 inv ${inv}`).not.toBeNull();
+      const fretted = v!.frets.filter((f): f is number => f !== null);
+      expect(Math.max(...fretted) - Math.min(...fretted)).toBeLessThanOrEqual(5);
+    }
+  });
+
   it("knows the extended qualities per family, charts-exact", () => {
     const cMajor = gripFamilies(node("majorKey", 0));
     expect(cMajor.map((f) => f.suffix)).toEqual(["", "6", "6/9", "maj7", "maj9"]);

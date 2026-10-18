@@ -17,7 +17,11 @@ import {
   type MoveKind,
 } from "../compass";
 import {
+  drop2Grip,
   gripFamilies,
+  INVERSION_LABELS,
+  STRING_SET_LABELS,
+  STRING_SETS,
   scaleSuggestions,
   spellScale,
   toneRole,
@@ -405,8 +409,17 @@ function TeachingCard({
   const [expanded, setExpanded] = useState<number | null>(null);
   const [gripIndex, setGripIndex] = useState(0);
   const [qualityIndex, setQualityIndex] = useState(0);
+  const [gripView, setGripView] = useState<"shapes" | "inversions">("shapes");
+  const [setIndex, setSetIndex] = useState(1);
+  const [inversion, setInversion] = useState(0);
   const families = useMemo(() => gripFamilies(selected), [selected]);
   const family = families[Math.min(qualityIndex, families.length - 1)];
+  const inversionGrip = useMemo(
+    () => family?.seventhIntervals
+      ? drop2Grip(selected.root, family.seventhIntervals, STRING_SETS[setIndex], inversion)
+      : null,
+    [family, selected, setIndex, inversion],
+  );
   const grips = family?.grips ?? [];
   const scales = useMemo(() => scaleSuggestions(selected), [selected]);
   const grip = grips[Math.min(gripIndex, grips.length - 1)];
@@ -496,6 +509,66 @@ function TeachingCard({
               </button>
             ))}
           </div>
+          {family?.seventhIntervals && (
+            <div className="mt-2.5 flex gap-1">
+              {(["shapes", "inversions"] as const).map((v) => (
+                <button
+                  key={v}
+                  onClick={() => setGripView(v)}
+                  className={`rounded-full px-3 py-1 text-[11px] capitalize transition-colors ${
+                    gripView === v ? "bg-accent text-accent-deep" : "bg-fill-soft text-ink-mute hover:text-ink"
+                  }`}
+                >
+                  {v === "shapes" ? "Shapes" : "Drop-2 inversions"}
+                </button>
+              ))}
+            </div>
+          )}
+          {gripView === "inversions" && family?.seventhIntervals ? (
+            <div className="mt-2.5">
+              <div className="flex flex-wrap gap-1.5">
+                {STRING_SET_LABELS.map((label, i) => (
+                  <button
+                    key={label}
+                    onClick={() => setSetIndex(i)}
+                    className={`rounded-full px-3 py-1 text-xs transition-colors ${
+                      i === setIndex ? "bg-fill text-ink" : "text-ink-mute hover:text-ink-dim"
+                    }`}
+                  >
+                    strings {label}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {INVERSION_LABELS.map((label, i) => (
+                  <button
+                    key={label}
+                    onClick={() => {
+                      setInversion(i);
+                      const g = drop2Grip(selected.root, family.seventhIntervals!, STRING_SETS[setIndex], i);
+                      if (g) onArpeggiate(g);
+                    }}
+                    className={`rounded-full px-3 py-1 text-xs transition-colors ${
+                      i === inversion ? "bg-accent text-accent-deep" : "bg-fill-soft text-ink-dim hover:text-ink"
+                    }`}
+                  >
+                    {label}
+                  </button>
+                ))}
+              </div>
+              {inversionGrip ? (
+                <MiniFretboard node={selected} grip={inversionGrip} />
+              ) : (
+                <p className="mt-3 text-xs text-ink-mute">
+                  No one-position drop-2 on this string set — try the next one.
+                </p>
+              )}
+              <p className="mt-2 text-[11px] text-ink-mute">
+                Same four voices, re-stacked: watch the root climb through the shape.
+              </p>
+            </div>
+          ) : (
+          <>
           <div className="mt-2.5 flex flex-wrap gap-1.5">
             {grips.map((g, i) => (
               <button
@@ -518,6 +591,8 @@ function TeachingCard({
           <p className="mt-2 text-[11px] text-ink-mute">
             Tap a position to hear it, bottom to top.
           </p>
+          </>
+          )}
         </div>
       )}
 
