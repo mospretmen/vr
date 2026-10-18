@@ -187,6 +187,11 @@ export const STRING_SETS: [number, number, number, number][] = [
   [0, 1, 2, 3], [1, 2, 3, 4], [2, 3, 4, 5],
 ];
 export const STRING_SET_LABELS = ["6–3", "5–2", "4–1"];
+/** Drop-3 lives on the skipped-string sets, as Joe Pass played them. */
+export const DROP3_SETS: [number, number, number, number][] = [
+  [0, 2, 3, 4], [1, 3, 4, 5],
+];
+export const DROP3_SET_LABELS = ["6·432", "5·321"];
 export const INVERSION_LABELS = ["Root", "1st inv", "2nd inv", "3rd inv"];
 
 /** Drop-2 voicing of a seventh chord on an adjacent 4-string set — the
@@ -196,11 +201,23 @@ export function drop2Grip(
   root: number, intervals: number[],
   set: [number, number, number, number], inversion: number,
 ): Grip | null {
+  return dropGrip(root, intervals, set, inversion, 2);
+}
+
+export function dropGrip(
+  root: number, intervals: number[],
+  set: [number, number, number, number], inversion: number,
+  drop: 2 | 3,
+): Grip | null {
   // Close-position stack chosen so the named inversion's note lands in the
-  // bass after the drop (players name drop-2 voicings by their bass note).
+  // bass after the drop (players name these voicings by their bass note).
+  // Drop-2 lowers the 2nd voice from the top; drop-3 the 3rd.
+  const start = drop === 2 ? inversion + 2 : inversion + 3;
   const stack = Array.from({ length: 4 }, (_, v) =>
-    (root + intervals[(inversion + 2 + v) % 4]) % 12);
-  const voiced = [stack[2], stack[0], stack[1], stack[3]]; // low→high
+    (root + intervals[(start + v) % 4]) % 12);
+  const voiced = drop === 2
+    ? [stack[2], stack[0], stack[1], stack[3]]
+    : [stack[1], stack[0], stack[2], stack[3]]; // low→high
   // Choose, per string, the lowest fret sounding its voice, allowing +12
   // to minimise the hand span (opens count toward the span).
   const base = voiced.map((pc, k) => ((pc - OPEN_PCS[set[k]]) % 12 + 12) % 12);
@@ -221,6 +238,45 @@ export function drop2Grip(
   const fretted = best.filter((f) => f > 0);
   const low = fretted.length ? Math.min(...fretted) : 0;
   return { frets: all, positionLabel: low === 0 ? "Open" : `fret ${low}` };
+}
+
+export interface DyadKind {
+  label: string;
+  /** Interval indices into the chord's 4-note content, low voice first. */
+  voices: [number, number];
+}
+
+/** Guide-tone and sixth dyads — the two-note vocabulary (3+7, 7+3, R+3). */
+export const DYAD_KINDS: DyadKind[] = [
+  { label: "3 + 7", voices: [1, 3] },
+  { label: "7 + 3", voices: [3, 1] },
+  { label: "R + 3", voices: [0, 1] },
+  { label: "3 + 5", voices: [1, 2] },
+];
+export const DYAD_PAIRS: [number, number][] = [[2, 3], [3, 4], [4, 5], [2, 4]];
+export const DYAD_PAIR_LABELS = ["4·3", "3·2", "2·1", "4·2"];
+
+/** All positions of a two-voice dyad up the neck on one string pair. */
+export function dyadGrips(
+  root: number, intervals: number[],
+  kind: DyadKind, pair: [number, number],
+): Grip[] {
+  const pcLow = (root + intervals[kind.voices[0]]) % 12;
+  const pcHigh = (root + intervals[kind.voices[1]]) % 12;
+  const grips: Grip[] = [];
+  for (let base = 0; base <= 14; base++) {
+    if ((OPEN_PCS[pair[0]] + base) % 12 !== pcLow) continue;
+    // Highest-string fret nearest the low voice.
+    let f = ((pcHigh - OPEN_PCS[pair[1]]) % 12 + 12) % 12;
+    while (f < base - 3) f += 12;
+    if (f > 14 || Math.abs(f - base) > 4) continue;
+    const all: (number | null)[] = [null, null, null, null, null, null];
+    all[pair[0]] = base;
+    all[pair[1]] = f;
+    const low = Math.min(...[base, f].filter((x) => x > 0));
+    grips.push({ frets: all, positionLabel: base === 0 && f === 0 ? "Open" : `fret ${low}` });
+  }
+  return grips.slice(0, 5);
 }
 
 export function gripsFor(node: CompassNode): Grip[] {

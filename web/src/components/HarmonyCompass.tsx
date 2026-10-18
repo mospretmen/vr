@@ -17,7 +17,13 @@ import {
   type MoveKind,
 } from "../compass";
 import {
-  drop2Grip,
+  DROP3_SET_LABELS,
+  DROP3_SETS,
+  dropGrip,
+  DYAD_KINDS,
+  DYAD_PAIR_LABELS,
+  DYAD_PAIRS,
+  dyadGrips,
   gripFamilies,
   INVERSION_LABELS,
   STRING_SET_LABELS,
@@ -409,16 +415,29 @@ function TeachingCard({
   const [expanded, setExpanded] = useState<number | null>(null);
   const [gripIndex, setGripIndex] = useState(0);
   const [qualityIndex, setQualityIndex] = useState(0);
-  const [gripView, setGripView] = useState<"shapes" | "inversions">("shapes");
+  const [gripView, setGripView] = useState<"shapes" | "drop2" | "drop3" | "dyads">("shapes");
   const [setIndex, setSetIndex] = useState(1);
   const [inversion, setInversion] = useState(0);
+  const [dyadKind, setDyadKind] = useState(0);
+  const [dyadPair, setDyadPair] = useState(1);
+  const [dyadPos, setDyadPos] = useState(0);
   const families = useMemo(() => gripFamilies(selected), [selected]);
   const family = families[Math.min(qualityIndex, families.length - 1)];
+  const drop = gripView === "drop3" ? 3 : 2;
+  const voicingSets = gripView === "drop3" ? DROP3_SETS : STRING_SETS;
+  const voicingSetLabels = gripView === "drop3" ? DROP3_SET_LABELS : STRING_SET_LABELS;
+  const boundedSet = Math.min(setIndex, voicingSets.length - 1);
   const inversionGrip = useMemo(
     () => family?.seventhIntervals
-      ? drop2Grip(selected.root, family.seventhIntervals, STRING_SETS[setIndex], inversion)
+      ? dropGrip(selected.root, family.seventhIntervals, voicingSets[boundedSet], inversion, drop)
       : null,
-    [family, selected, setIndex, inversion],
+    [family, selected, boundedSet, inversion, drop, voicingSets],
+  );
+  const dyads = useMemo(
+    () => family?.seventhIntervals
+      ? dyadGrips(selected.root, family.seventhIntervals, DYAD_KINDS[dyadKind], DYAD_PAIRS[dyadPair])
+      : [],
+    [family, selected, dyadKind, dyadPair],
   );
   const grips = family?.grips ?? [];
   const scales = useMemo(() => scaleSuggestions(selected), [selected]);
@@ -510,29 +529,78 @@ function TeachingCard({
             ))}
           </div>
           {family?.seventhIntervals && (
-            <div className="mt-2.5 flex gap-1">
-              {(["shapes", "inversions"] as const).map((v) => (
+            <div className="mt-2.5 flex flex-wrap gap-1">
+              {([["shapes", "Shapes"], ["drop2", "Drop-2"], ["drop3", "Drop-3"], ["dyads", "Dyads"]] as const).map(([v, label]) => (
                 <button
                   key={v}
                   onClick={() => setGripView(v)}
-                  className={`rounded-full px-3 py-1 text-[11px] capitalize transition-colors ${
+                  className={`rounded-full px-3 py-1 text-[11px] transition-colors ${
                     gripView === v ? "bg-accent text-accent-deep" : "bg-fill-soft text-ink-mute hover:text-ink"
                   }`}
                 >
-                  {v === "shapes" ? "Shapes" : "Drop-2 inversions"}
+                  {label}
                 </button>
               ))}
             </div>
           )}
-          {gripView === "inversions" && family?.seventhIntervals ? (
+          {gripView === "dyads" && family?.seventhIntervals ? (
             <div className="mt-2.5">
               <div className="flex flex-wrap gap-1.5">
-                {STRING_SET_LABELS.map((label, i) => (
+                {DYAD_KINDS.map((k, i) => (
+                  <button
+                    key={k.label}
+                    onClick={() => { setDyadKind(i); setDyadPos(0); }}
+                    className={`rounded-full px-3 py-1 text-xs transition-colors ${
+                      i === dyadKind ? "bg-fill text-ink" : "text-ink-mute hover:text-ink-dim"
+                    }`}
+                  >
+                    {k.label}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {DYAD_PAIR_LABELS.map((label, i) => (
+                  <button
+                    key={label}
+                    onClick={() => { setDyadPair(i); setDyadPos(0); }}
+                    className={`rounded-full px-3 py-1 text-xs transition-colors ${
+                      i === dyadPair ? "bg-fill text-ink" : "text-ink-mute hover:text-ink-dim"
+                    }`}
+                  >
+                    strings {label}
+                  </button>
+                ))}
+              </div>
+              <div className="mt-1.5 flex flex-wrap gap-1.5">
+                {dyads.map((g, i) => (
+                  <button
+                    key={i}
+                    onClick={() => { setDyadPos(i); onArpeggiate(g); }}
+                    className={`rounded-full px-3 py-1 text-xs transition-colors ${
+                      i === Math.min(dyadPos, dyads.length - 1)
+                        ? "bg-accent text-accent-deep" : "bg-fill-soft text-ink-dim hover:text-ink"
+                    }`}
+                  >
+                    {g.positionLabel}
+                  </button>
+                ))}
+              </div>
+              {dyads[Math.min(dyadPos, dyads.length - 1)] && (
+                <MiniFretboard node={selected} grip={dyads[Math.min(dyadPos, dyads.length - 1)]} />
+              )}
+              <p className="mt-2 text-[11px] text-ink-mute">
+                Two voices carry the whole chord — slide the pair through the changes.
+              </p>
+            </div>
+          ) : (gripView === "drop2" || gripView === "drop3") && family?.seventhIntervals ? (
+            <div className="mt-2.5">
+              <div className="flex flex-wrap gap-1.5">
+                {voicingSetLabels.map((label, i) => (
                   <button
                     key={label}
                     onClick={() => setSetIndex(i)}
                     className={`rounded-full px-3 py-1 text-xs transition-colors ${
-                      i === setIndex ? "bg-fill text-ink" : "text-ink-mute hover:text-ink-dim"
+                      i === boundedSet ? "bg-fill text-ink" : "text-ink-mute hover:text-ink-dim"
                     }`}
                   >
                     strings {label}
@@ -545,7 +613,7 @@ function TeachingCard({
                     key={label}
                     onClick={() => {
                       setInversion(i);
-                      const g = drop2Grip(selected.root, family.seventhIntervals!, STRING_SETS[setIndex], i);
+                      const g = dropGrip(selected.root, family.seventhIntervals!, voicingSets[boundedSet], i, drop);
                       if (g) onArpeggiate(g);
                     }}
                     className={`rounded-full px-3 py-1 text-xs transition-colors ${
@@ -560,7 +628,7 @@ function TeachingCard({
                 <MiniFretboard node={selected} grip={inversionGrip} />
               ) : (
                 <p className="mt-3 text-xs text-ink-mute">
-                  No one-position drop-2 on this string set — try the next one.
+                  No one-position voicing on this string set — try the next one.
                 </p>
               )}
               <p className="mt-2 text-[11px] text-ink-mute">

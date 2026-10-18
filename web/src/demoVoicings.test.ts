@@ -1,6 +1,6 @@
 // Parity pins for the demo's scales + grips against the Swift core.
 import { describe as suite, expect, it } from "vitest";
-import { drop2Grip, gripFamilies, gripsFor, scaleSuggestions, spellScale, toneRole } from "./demoVoicings";
+import { drop2Grip, DYAD_KINDS, dyadGrips, dropGrip, gripFamilies, gripsFor, scaleSuggestions, spellScale, toneRole } from "./demoVoicings";
 import { node } from "./compass";
 
 suite("grip dictionary (ChordGripTemplates parity)", () => {
@@ -13,6 +13,22 @@ suite("grip dictionary (ChordGripTemplates parity)", () => {
       const fretted = v!.frets.filter((f): f is number => f !== null);
       expect(Math.max(...fretted) - Math.min(...fretted)).toBeLessThanOrEqual(5);
     }
+  });
+
+  it("drop-3 lands the Joe Pass shapes", () => {
+    // G7 drop-3 root position on 6·432: G(3) x F(3) B(4) D(3) x — 3x343x
+    const g = dropGrip(7, [0, 4, 7, 10], [0, 2, 3, 4], 0, 3)!;
+    expect(g.frets).toEqual([3, null, 3, 4, 3, null]);
+    for (let inv = 0; inv < 4; inv++) {
+      const v = dropGrip(0, [0, 4, 7, 11], [1, 3, 4, 5], inv, 3); // Cmaj7 5·321
+      expect(v, `Cmaj7 drop-3 inv ${inv}`).not.toBeNull();
+    }
+  });
+
+  it("dyads put the guide tones where players grab them", () => {
+    // C7 guide tones 3+7 on strings 4·3: E(2) B♭(3) — x x 2 3 x x
+    const dyads = dyadGrips(0, [0, 4, 7, 10], DYAD_KINDS[0], [2, 3]);
+    expect(dyads[0].frets).toEqual([null, null, 2, 3, null, null]);
   });
 
   it("knows the extended qualities per family, charts-exact", () => {

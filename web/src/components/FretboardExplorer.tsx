@@ -82,22 +82,48 @@ const VOICING_STYLES: readonly { id: VoicingStyle; label: string }[] = [
 /** Harmonizing yields one triad per degree only for seven-note scales. */
 const SEVEN_NOTE_SCALES = SCALE_TYPES.filter((s) => s.intervals.length === 7);
 
-/** Starting frets of five boxes up the neck — each begins on the scale's
- *  next low-string note (mirrors the Swift core's boxStartFrets). */
-function boxStartFrets(root: number, intervals: readonly number[]): number[] {
-  const pcs = new Set(intervals.map((i) => (root + i) % 12));
-  const starts: number[] = [];
-  let fret = 0;
-  while (starts.length < 5 && fret <= 15) {
-    if (pcs.has((4 + fret) % 12)) {
-      starts.push(fret);
-      fret += 1;
-      while (fret <= 15 && !pcs.has((4 + fret) % 12)) fret += 1;
-    } else {
-      fret += 1;
+const OPEN_MIDI = [40, 45, 50, 55, 59, 64];
+
+export interface ScaleBox {
+  label: string;
+  startFret: number;
+  positions: Set<number>; // string * 100 + fret
+}
+
+/** Standard fingering boxes: 3 notes per string for 7-note scales, 2 for
+ *  pentatonics, each box starting on the next scale degree on the low E —
+ *  box 1 starts from the open strings when the scale allows it. */
+export function scaleBoxes(root: number, intervals: readonly number[]): ScaleBox[] {
+  const n = intervals.length;
+  if (n !== 5 && n !== 7) return [];
+  const nps = n === 5 ? 2 : 3;
+  const boxes: ScaleBox[] = [];
+  for (let k = 0; k < n; k++) {
+    // Lowest playable start: the k-th degree's first fret on the low E.
+    const startPc = (root + intervals[k % n]) % 12;
+    const startFret = ((startPc - 4) % 12 + 12) % 12; // low E open = E
+    let midi = OPEN_MIDI[0] + startFret;
+    let degree = k;
+    const positions = new Set<number>();
+    let maxFret = startFret;
+    let ok = true;
+    for (let string = 0; string < 6 && ok; string++) {
+      for (let i = 0; i < nps; i++) {
+        const fret = midi - OPEN_MIDI[string];
+        if (fret < 0 || fret > 15) { ok = false; break; }
+        positions.add(string * 100 + fret);
+        maxFret = Math.max(maxFret, fret);
+        // Step up to the next scale degree.
+        const cur = intervals[degree % n] + 12 * Math.floor(degree / n);
+        degree += 1;
+        const nxt = intervals[degree % n] + 12 * Math.floor(degree / n);
+        midi += nxt - cur;
+      }
     }
+    if (ok) boxes.push({ label: `Box ${boxes.length + 1}`, startFret, positions });
   }
-  return starts;
+  return boxes.sort((a, b) => a.startFret - b.startFret)
+    .map((b, i) => ({ ...b, label: `Box ${i + 1}` }));
 }
 
 /** Chord-tone marker styling, indexed root/third/fifth/seventh. Full literal
@@ -127,8 +153,8 @@ export function FretboardExplorer({ bare = false }: { bare?: boolean } = {}) {
   const [root, setRoot] = useState(9); // A — a guitarist's home base
   const [mode, setMode] = useState<DisplayMode>("scale");
   const [scaleIndex, setScaleIndex] = useState(8); // Minor Pentatonic
-  /** null = full neck; otherwise a 5-fret box starting at this fret. */
-  const [boxStart, setBoxStart] = useState<number | null>(null);
+  /** null = full neck; otherwise an index into scaleBoxes. */
+  const [boxIndex, setBoxIndex] = useState<number | null>(null);
   const [triadIndex, setTriadIndex] = useState(0);
   const [voicingStyle, setVoicingStyle] = useState<VoicingStyle>("triads");
   // One quality index per style, so flipping styles keeps context.
@@ -232,9 +258,13 @@ export function FretboardExplorer({ bare = false }: { bare?: boolean } = {}) {
 
   const boardMidY = (STRING_TOP + STRING_BOTTOM) / 2;
 
-  const inBox = (fret: number): boolean =>
-    boxStart === null || (fret >= boxStart && fret < boxStart + 5)
-    || (fret === 0 && boxStart === 0);
+  const boxes = useMemo(
+    () => scaleBoxes(root, SCALE_TYPES[scaleIndex].intervals),
+    [root, scaleIndex],
+  );
+  const activeBox = boxIndex === null ? null : boxes[boxIndex] ?? null;
+  const inBox = (string: number, fret: number): boolean =>
+    activeBox === null || activeBox.positions.has(string * 100 + fret);
 
   const scaleRail = bare && mode === "scale" && (
     <aside className="no-scrollbar hidden h-full w-52 shrink-0 overflow-y-auto border-r border-line pr-2 lg:block">
@@ -244,7 +274,7 @@ export function FretboardExplorer({ bare = false }: { bare?: boolean } = {}) {
       {SCALE_TYPES.map((scale, i) => (
         <button
           key={scale.name}
-          onClick={() => { setScaleIndex(i); setBoxStart(null); }}
+          onClick={() => { setScaleIndex(i); setBoxIndex(null); }}
           className={`block w-full border-l-2 px-3 py-1.5 text-left text-sm transition-colors ${
             i === scaleIndex
               ? "border-accent text-ink"
@@ -358,7 +388,7 @@ export function FretboardExplorer({ bare = false }: { bare?: boolean } = {}) {
               <select
                 hidden={bare}
                 value={scaleIndex}
-                onChange={(e) => { setScaleIndex(Number(e.target.value)); setBoxStart(null); }}
+                onChange={(e) => { setScaleIndex(Number(e.target.value)); setBoxIndex(null); }}
                 className="h-9 rounded-lg border border-line bg-raise-2 px-3 pr-8 text-sm text-ink transition-colors hover:border-white/20"
               >
                 {SCALE_TYPES.map((scale, i) => (
@@ -585,22 +615,22 @@ export function FretboardExplorer({ bare = false }: { bare?: boolean } = {}) {
               Box
             </span>
             <button
-              onClick={() => setBoxStart(null)}
+              onClick={() => setBoxIndex(null)}
               className={`rounded-full px-3 py-1 text-xs transition-colors ${
-                boxStart === null ? "bg-accent text-accent-deep" : "bg-fill-soft text-ink-dim hover:text-ink"
+                boxIndex === null ? "bg-accent text-accent-deep" : "bg-fill-soft text-ink-dim hover:text-ink"
               }`}
             >
               Full neck
             </button>
-            {boxStartFrets(root, SCALE_TYPES[scaleIndex].intervals).map((f, i) => (
+            {boxes.map((b, i) => (
               <button
-                key={f}
-                onClick={() => setBoxStart(f)}
+                key={i}
+                onClick={() => setBoxIndex(i)}
                 className={`rounded-full px-3 py-1 text-xs transition-colors ${
-                  boxStart === f ? "bg-accent text-accent-deep" : "bg-fill-soft text-ink-dim hover:text-ink"
+                  boxIndex === i ? "bg-accent text-accent-deep" : "bg-fill-soft text-ink-dim hover:text-ink"
                 }`}
               >
-                Box {i + 1} · fret {f}
+                {b.label} · {b.startFret === 0 ? "open" : `fret ${b.startFret}`}
               </button>
             ))}
           </div>
@@ -719,7 +749,7 @@ export function FretboardExplorer({ bare = false }: { bare?: boolean } = {}) {
               const offset = offsetInSelection(pc);
               // Voicings mode paints its own shapes; the grid stays as
               // hover targets only.
-              const boxed = mode !== "scale" || inBox(f);
+              const boxed = mode !== "scale" || inBox(s, f);
               const active = offset !== null && !voicingsMode && boxed;
               const isRoot = offset === 0 && !voicingsMode && boxed;
               const isHovered = hovered?.string === s && hovered?.fret === f;
