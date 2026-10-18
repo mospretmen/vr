@@ -131,19 +131,32 @@ final class ChordPadEngine {
     ) -> [Float] {
         let frequency = 440.0 * pow(2.0, (Double(midi) - 69.0) / 12.0)
         let period = max(2, Int(sampleRate / frequency))
+        // Low-passed excitation (three smoothing passes): a felt-pick attack
+        // instead of a white-noise snap. Mirrors web/src/audio.ts.
         var delayLine = (0..<period).map { _ in Double.random(in: -1...1) }
+        for _ in 0..<3 {
+            var previous = delayLine[period - 1]
+            for i in 0..<period {
+                let current = delayLine[i]
+                delayLine[i] = 0.5 * (current + previous)
+                previous = current
+            }
+        }
         let count = Int(sampleRate * seconds)
         var out = [Float](repeating: 0, count: count)
         var index = 0
-        let damping = 0.996
+        // High strings decay faster than wound bass strings.
+        let damping = min(0.9985, max(0.988, 0.9995 - Double(midi - 40) * 0.00022))
+        let attackFrames = sampleRate * 0.004
         for frame in 0..<count {
             let next = (index + 1) % period
             let sample = delayLine[index]
             delayLine[index] = damping * 0.5 * (delayLine[index] + delayLine[next])
             index = next
-            // Gentle fade tail so phrases never click off.
+            // Soft attack in, gentle fade tail out, so nothing ever clicks.
             let tail = seconds - Double(frame) / sampleRate
-            let env = tail < 0.05 ? tail / 0.05 : 1.0
+            var env = tail < 0.08 ? tail / 0.08 : 1.0
+            if Double(frame) < attackFrames { env *= Double(frame) / attackFrames }
             out[frame] = Float(sample * amplitude * env)
         }
         return out
