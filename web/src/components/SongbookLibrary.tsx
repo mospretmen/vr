@@ -57,6 +57,7 @@ export function SongbookLibrary() {
   const [status, setStatus] = useState<string | null>(null);
   const [offsets, setOffsets] = useState<Record<string, number>>(() =>
     Object.fromEntries(SONGBOOKS.map((b) => [b.key, getOffset(b.key)])));
+  const [viewer, setViewer] = useState<{ entry: SongEntry; url: string } | null>(null);
   const urlCache = useRef<Map<string, string>>(new Map());
 
   const supported = typeof window !== "undefined" && "showDirectoryPicker" in window;
@@ -109,24 +110,50 @@ export function SongbookLibrary() {
     }
   }, [needsGesture, scanFolder]);
 
-  const open = useCallback(async (entry: SongEntry) => {
+  const open = useCallback(async (entry: SongEntry, handle?: DirHandle) => {
     const book = bookByKey(entry.book);
-    if (!book || !dir) return;
+    const folder = handle ?? dir;
+    if (!book || !folder) return;
     setStatus(null);
     try {
-      const fh = await dir.getFileHandle(book.file);
+      const fh = await folder.getFileHandle(book.file);
       let url = urlCache.current.get(book.key);
       if (!url) {
         const file = await fh.getFile();
         url = URL.createObjectURL(file);
         urlCache.current.set(book.key, url);
       }
-      const page = Math.max(1, entry.page + (offsets[entry.book] ?? 0));
-      window.open(`${url}#page=${page}`, "_blank");
+      setViewer({ entry, url });
     } catch {
-      setStatus(`Couldn't open ${book.file} — is it still in the connected folder?`);
+      setStatus(`Couldn't open ${book.file} — is it in the connected folder?`);
     }
-  }, [dir, offsets]);
+  }, [dir]);
+
+  /** A song click with no folder connected starts the connect flow,
+   *  then opens the tune — one gesture, no dead buttons. */
+  const openOrConnect = useCallback(async (entry: SongEntry) => {
+    if (dir && !needsGesture) {
+      void open(entry);
+      return;
+    }
+    try {
+      const saved = needsGesture ? await idbGet<DirHandle>("dir") : undefined;
+      if (saved && (await saved.requestPermission?.({ mode: "read" })) === "granted") {
+        setDir(saved);
+        setNeedsGesture(false);
+        void scanFolder(saved);
+        void open(entry, saved);
+        return;
+      }
+      // @ts-expect-error showDirectoryPicker is not in the TS lib yet
+      const handle: DirHandle = await window.showDirectoryPicker({ mode: "read" });
+      await idbSet("dir", handle);
+      setDir(handle);
+      setNeedsGesture(false);
+      void scanFolder(handle);
+      void open(entry, handle);
+    } catch { /* cancelled */ }
+  }, [dir, needsGesture, open, scanFolder]);
 
   const bump = useCallback((book: string, delta: number) => {
     setOffsets((prev) => {
@@ -190,9 +217,8 @@ export function SongbookLibrary() {
                 return (
                   <li key={`${e.title}-${e.book}-${i}`}>
                     <button
-                      onClick={() => void open(e)}
-                      disabled={!dir || needsGesture}
-                      className="group flex w-full items-baseline gap-3 border-l-2 border-transparent px-3 py-2 text-left transition-colors hover:border-accent hover:bg-fill-soft disabled:cursor-default"
+                      onClick={() => void openOrConnect(e)}
+                      className="group flex w-full items-baseline gap-3 border-l-2 border-transparent px-3 py-2 text-left transition-colors hover:border-accent hover:bg-fill-soft"
                     >
                       <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">
                         {e.title}
@@ -228,9 +254,8 @@ export function SongbookLibrary() {
                       </div>
                     </div>
                     <button
-                      onClick={() => void open({ title: b.name, book: b.key, page: 1 })}
-                      disabled={!dir || needsGesture}
-                      className="shrink-0 rounded-full bg-fill-soft px-3 py-1 text-[11px] text-ink-dim transition-colors hover:text-ink disabled:opacity-40"
+                      onClick={() => void openOrConnect({ title: b.name, book: b.key, page: 1 })}
+                      className="shrink-0 rounded-full bg-fill-soft px-3 py-1 text-[11px] text-ink-dim transition-colors hover:text-ink"
                     >
                       Open
                     </button>
@@ -252,6 +277,39 @@ export function SongbookLibrary() {
           </div>
         )}
       </div>
+
+      {viewer && (
+        <div className="fixed inset-0 z-50 flex flex-col bg-black/92 backdrop-blur-sm">
+          <div className="flex shrink-0 items-center gap-3 px-4 py-2.5">
+            <div className="min-w-0 flex-1">
+              <span className="truncate text-sm font-semibold text-ink">{viewer.entry.title}</span>
+              <span className="ml-2 text-xs text-ink-mute">
+                {bookByKey(viewer.entry.book)?.name} · p.{viewer.entry.page}
+              </span>
+            </div>
+            {bookByKey(viewer.entry.book)?.indexed && (
+              <div className="flex items-center gap-1.5 text-[11px] text-ink-mute">
+                page off by?
+                <button onClick={() => bump(viewer.entry.book, -1)}
+                        className="rounded bg-fill-soft px-2 py-0.5 hover:text-ink">−</button>
+                <span className="w-5 text-center tabular-nums">{offsets[viewer.entry.book] ?? 0}</span>
+                <button onClick={() => bump(viewer.entry.book, 1)}
+                        className="rounded bg-fill-soft px-2 py-0.5 hover:text-ink">+</button>
+              </div>
+            )}
+            <button onClick={() => setViewer(null)}
+                    className="rounded-full bg-fill-soft px-3.5 py-1 text-xs text-ink-dim hover:text-ink">
+              ✕ Close
+            </button>
+          </div>
+          <iframe
+            key={`${viewer.url}-${offsets[viewer.entry.book] ?? 0}`}
+            title={viewer.entry.title}
+            src={`${viewer.url}#page=${Math.max(1, viewer.entry.page + (offsets[viewer.entry.book] ?? 0))}`}
+            className="min-h-0 w-full flex-1 border-0"
+          />
+        </div>
+      )}
     </div>
   );
 }

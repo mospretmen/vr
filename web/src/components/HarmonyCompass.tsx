@@ -328,8 +328,8 @@ export function HarmonyCompass({ fill = false, wheelOnly = false }: {
       {/* teaching card */}
       {!wheelOnly && (
       <div className={fill
-          ? "flex w-full shrink-0 flex-col gap-0 border-line lg:h-full lg:min-h-0 lg:w-[390px] lg:overflow-hidden lg:border-l lg:pl-5"
-          : "flex w-full max-w-sm shrink-0 flex-col gap-3"}>
+          ? "flex w-full shrink-0 flex-col gap-0 border-line lg:h-full lg:min-h-0 lg:w-[460px] lg:overflow-hidden lg:border-l lg:pl-5"
+          : "flex w-full max-w-md shrink-0 flex-col gap-3"}>
       <div className={fill
           ? "border-b border-line p-3 text-xs"
           : "rounded-2xl border border-line bg-fill-soft p-3 text-xs"}>
@@ -404,6 +404,62 @@ export function HarmonyCompass({ fill = false, wheelOnly = false }: {
 }
 
 
+/** The scale written on a treble staff — note heads, accidentals,
+ *  ledger lines, closing on the octave root. */
+function MiniStaff({ root, intervals }: { root: number; intervals: readonly number[] }) {
+  const names = spellScale(root, intervals);
+  const LETTERS: Record<string, number> = { C: 0, D: 1, E: 2, F: 3, G: 4, A: 5, B: 6 };
+  // Absolute diatonic steps, ascending from octave 4; close with the root.
+  const steps: { abs: number; acc: string }[] = [];
+  let prev = -Infinity;
+  for (const name of [...names, names[0]]) {
+    const letter = LETTERS[name[0]] ?? 0;
+    let oct = 4;
+    let abs = letter + 7 * oct;
+    while (abs <= prev) { oct += 1; abs = letter + 7 * oct; }
+    prev = abs;
+    steps.push({ abs, acc: name.slice(1) });
+  }
+  const half = 5;
+  const baseY = 58; // E4, bottom staff line
+  const y = (abs: number) => baseY - (abs - 30) * half;
+  const left = 14;
+  const gap = 27;
+  const W = left + steps.length * gap + 8;
+  return (
+    <svg viewBox={`0 0 ${W} 76`} className="mt-1.5 h-[62px] w-auto max-w-full"
+         aria-label="Scale on the staff">
+      {[30, 32, 34, 36, 38].map((line) => (
+        <line key={line} x1={4} x2={W - 4} y1={y(line)} y2={y(line)}
+              stroke="currentColor" strokeWidth={0.8} opacity={0.35} />
+      ))}
+      {steps.map(({ abs, acc }, i) => {
+        const cx = left + 10 + i * gap;
+        const cy = y(abs);
+        const ledgers: number[] = [];
+        for (let l = 28; l >= abs - (abs % 2); l -= 2) if (l < 30) ledgers.push(l);
+        for (let l = 40; l <= abs + (abs % 2); l += 2) if (l > 38) ledgers.push(l);
+        return (
+          <g key={i}>
+            {ledgers.map((l) => (
+              <line key={l} x1={cx - 8} x2={cx + 8} y1={y(l)} y2={y(l)}
+                    stroke="currentColor" strokeWidth={0.8} opacity={0.45} />
+            ))}
+            {acc && (
+              <text x={cx - 8} y={cy + 3.2} textAnchor="end" fontSize={9}
+                    fill="currentColor" opacity={0.85}>{acc}</text>
+            )}
+            <ellipse cx={cx} cy={cy} rx={4.6} ry={3.5}
+                     fill={i === 0 || i === steps.length - 1
+                       ? "var(--color-accent-strong)" : "currentColor"}
+                     transform={`rotate(-14 ${cx} ${cy})`} />
+          </g>
+        );
+      })}
+    </svg>
+  );
+}
+
 type Tab = "pathways" | "scales" | "grips";
 
 function TeachingCard({
@@ -431,9 +487,12 @@ function TeachingCard({
   const [dyadPos, setDyadPos] = useState(0);
   const families = useMemo(() => gripFamilies(selected), [selected]);
   const family = families[Math.min(qualityIndex, families.length - 1)];
-  const drop = gripView === "drop3" ? 3 : 2;
-  const voicingSets = gripView === "drop3" ? DROP3_SETS : STRING_SETS;
-  const voicingSetLabels = gripView === "drop3" ? DROP3_SET_LABELS : STRING_SET_LABELS;
+  const hasShapes = (family?.grips.length ?? 0) > 0;
+  const view = gripView === "shapes" && !hasShapes && family?.seventhIntervals
+    ? "drop2" : gripView;
+  const drop = view === "drop3" ? 3 : 2;
+  const voicingSets = view === "drop3" ? DROP3_SETS : STRING_SETS;
+  const voicingSetLabels = view === "drop3" ? DROP3_SET_LABELS : STRING_SET_LABELS;
   const boundedSet = Math.min(setIndex, voicingSets.length - 1);
   const inversionGrip = useMemo(
     () => family?.seventhIntervals
@@ -538,12 +597,14 @@ function TeachingCard({
           </div>
           {family?.seventhIntervals && (
             <div className="mt-2.5 flex flex-wrap gap-1">
-              {([["shapes", "Shapes"], ["drop2", "Drop-2"], ["drop3", "Drop-3"], ["dyads", "Dyads"]] as const).map(([v, label]) => (
+              {([["shapes", "Shapes"], ["drop2", "Drop-2"], ["drop3", "Drop-3"], ["dyads", "Dyads"]] as const)
+                .filter(([v]) => v !== "shapes" || hasShapes)
+                .map(([v, label]) => (
                 <button
                   key={v}
                   onClick={() => setGripView(v)}
                   className={`rounded-full px-3 py-1 text-[11px] transition-colors ${
-                    gripView === v ? "bg-accent text-accent-deep" : "bg-fill-soft text-ink-mute hover:text-ink"
+                    view === v ? "bg-accent text-accent-deep" : "bg-fill-soft text-ink-mute hover:text-ink"
                   }`}
                 >
                   {label}
@@ -551,7 +612,7 @@ function TeachingCard({
               ))}
             </div>
           )}
-          {gripView === "dyads" && family?.seventhIntervals ? (
+          {view === "dyads" && family?.seventhIntervals ? (
             <div className="mt-2.5">
               <div className="flex flex-wrap gap-1.5">
                 {DYAD_KINDS.map((k, i) => (
@@ -600,7 +661,7 @@ function TeachingCard({
                 Two voices carry the whole chord — slide the pair through the changes.
               </p>
             </div>
-          ) : (gripView === "drop2" || gripView === "drop3") && family?.seventhIntervals ? (
+          ) : (view === "drop2" || view === "drop3") && family?.seventhIntervals ? (
             <div className="mt-2.5">
               <div className="flex flex-wrap gap-1.5">
                 {voicingSetLabels.map((label, i) => (
@@ -827,6 +888,7 @@ function ScaleRow({
           {spellScale(root, scale.intervals).join(" ")}
         </span>
       </div>
+      <MiniStaff root={root} intervals={scale.intervals} />
       {cells.length > 0 && (
         <div className="mt-2 grid grid-cols-4 gap-1.5 sm:grid-cols-7">
           {cells.map((cell, i) => (

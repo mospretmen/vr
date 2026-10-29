@@ -54,11 +54,33 @@ const SHARP = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A�
 const FLAT = ["C", "D♭", "D", "E♭", "E", "F", "G♭", "G", "A♭", "A", "B♭", "B"];
 const FLAT_DEGREES = new Set([1, 3, 6, 8, 10]);
 
-/** Flat-side degrees spell flat — the Swift core's convention. */
+const NATURAL_PCS: Record<string, number> = { C: 0, D: 2, E: 4, F: 5, G: 7, A: 9, B: 11 };
+const LETTER_ORDER = ["C", "D", "E", "F", "G", "A", "B"];
+const ACCIDENTALS: Record<number, string> = { [-2]: "𝄫", [-1]: "♭", 0: "", 1: "♯", 2: "𝄪" };
+
+/** Correct functional spelling. Seven-note scales get one letter per
+ *  degree (C Lydian: F♯, never G♭); others fall back to the flat-side
+ *  heuristic shared with the Swift core. */
 export function spellScale(root: number, intervals: readonly number[]): string[] {
-  return intervals.map((semis) => {
-    const pc = (root + semis) % 12;
-    return FLAT_DEGREES.has(semis) ? FLAT[pc] : SHARP[pc];
+  const rootName = FLAT_DEGREES.has(root) ? FLAT[root] : SHARP[root];
+  if (intervals.length !== 7) {
+    return intervals.map((semis) => {
+      const pc = (root + semis) % 12;
+      return FLAT_DEGREES.has(semis) ? FLAT[pc] : SHARP[pc];
+    });
+  }
+  const rootLetter = LETTER_ORDER.indexOf(rootName[0]);
+  const rootAcc = rootName.includes("♭") ? -1 : rootName.includes("♯") ? 1 : 0;
+  return intervals.map((semis, degree) => {
+    const letter = LETTER_ORDER[(rootLetter + degree) % 7];
+    const pc = (NATURAL_PCS[rootName[0]] + rootAcc + semis + 12) % 12;
+    let diff = pc - NATURAL_PCS[letter];
+    if (diff > 6) diff -= 12;
+    if (diff < -6) diff += 12;
+    const acc = ACCIDENTALS[diff];
+    // A spelling needing triple accidentals falls back to plain names.
+    if (acc === undefined) return FLAT_DEGREES.has(semis) ? FLAT[pc] : SHARP[pc];
+    return letter + acc;
   });
 }
 
@@ -98,6 +120,7 @@ const TEMPLATES: Record<CompassNode["ring"], (number | null)[][]> = {
 const QUALITY_SHAPES: Record<CompassNode["ring"], [string, (number | null)[][]][]> = {
   majorKey: [
     ["", TEMPLATES.majorKey],
+    ["add9", []],
     ["6", [[0, null, -1, 1, 0, null], [null, 0, 2, 2, 2, 2]]],
     ["6/9", [[null, 0, -1, -1, 0, 0]]],
     ["maj7", [[0, null, 1, 1, 0, null], [null, 0, 2, 1, 2, 0]]],
@@ -105,6 +128,7 @@ const QUALITY_SHAPES: Record<CompassNode["ring"], [string, (number | null)[][]][
   ],
   relativeMinor: [
     ["m", TEMPLATES.relativeMinor],
+    ["m(add9)", []],
     ["m6", [[0, null, -1, 0, 0, null], [null, 0, -2, -1, -2, null]]],
     ["m7", [[0, 2, 0, 0, 0, 0], [null, 0, 2, 0, 1, 0]]],
     ["m9", [[null, 0, -2, 0, 0, 0], [0, 2, 0, 0, 0, 2]]],
@@ -163,6 +187,7 @@ export interface GripFamily {
 
 /** Interval content per suffix — drives the drop-2 inversion engine. */
 const SUFFIX_INTERVALS: Record<string, number[]> = {
+  "add9": [0, 2, 4, 7], "m(add9)": [0, 2, 3, 7],
   "6": [0, 4, 7, 9], "maj7": [0, 4, 7, 11], "maj9": [0, 4, 7, 11],
   "m6": [0, 3, 7, 9], "m7": [0, 3, 7, 10], "m9": [0, 3, 7, 10],
   "m(maj7)": [0, 3, 7, 11],
@@ -180,7 +205,7 @@ export function gripFamilies(node: CompassNode): GripFamily[] {
       grips: instantiate(shapes, node.root),
       seventhIntervals: SUFFIX_INTERVALS[suffix] ?? null,
     }))
-    .filter((f) => f.grips.length > 0);
+    .filter((f) => f.grips.length > 0 || f.seventhIntervals !== null);
 }
 
 export const STRING_SETS: [number, number, number, number][] = [

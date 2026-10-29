@@ -189,8 +189,16 @@ function PhraseBoard({ phrase }: { phrase: WebPhrase }) {
 
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="mt-4 w-full">
+      <defs>
+        {/* Same rosewood as the Fretboard view — one instrument everywhere. */}
+        <linearGradient id="pb-wood" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#422617" />
+          <stop offset="0.5" stopColor="#5c3821" />
+          <stop offset="1" stopColor="#4d2e1c" />
+        </linearGradient>
+      </defs>
       <rect x={left} y={8} width={W - left - 8} height={H - 40} rx={6}
-        fill="#4d2e1c" stroke="rgba(0,0,0,0.4)" />
+        fill="url(#pb-wood)" stroke="rgba(0,0,0,0.4)" />
       {start === 1 && (
         <rect x={left - 5} y={8} width={6} height={H - 40} rx={2} fill="#ded9cc" />
       )}
@@ -200,7 +208,8 @@ function PhraseBoard({ phrase }: { phrase: WebPhrase }) {
       ))}
       {[0, 1, 2, 3, 4, 5].map((s) => (
         <line key={s} x1={left - 6} y1={stringY(s)} x2={W - 8} y2={stringY(s)}
-          stroke="#c9c2b2" strokeWidth={2.4 - s * 0.3} opacity={0.85} />
+          stroke={s < 3 ? "#9d9588" : "#c9c7bd"} strokeWidth={2.4 - s * 0.3}
+          opacity={0.85} />
       ))}
       <text x={wireX(start) - gap / 2} y={H - 16} textAnchor="middle"
         fontSize={11} fill="var(--color-ink-mute)">

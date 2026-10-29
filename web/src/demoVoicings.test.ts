@@ -33,7 +33,7 @@ suite("grip dictionary (ChordGripTemplates parity)", () => {
 
   it("knows the extended qualities per family, charts-exact", () => {
     const cMajor = gripFamilies(node("majorKey", 0));
-    expect(cMajor.map((f) => f.suffix)).toEqual(["", "6", "6/9", "maj7", "maj9"]);
+    expect(cMajor.map((f) => f.suffix)).toEqual(["", "add9", "6", "6/9", "maj7", "maj9"]);
     const sixNine = cMajor.find((f) => f.suffix === "6/9")!;
     expect(sixNine.grips[0].frets).toEqual([null, 3, 2, 2, 3, 3]); // C6/9 x32233
     const g7 = gripFamilies(node("dominant", 9)); // spoke 9 = G
