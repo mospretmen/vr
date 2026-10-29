@@ -178,6 +178,7 @@ export function SongbookLibrary() {
 
   /** One-time import via the folder picker (Chrome/Edge). */
   const importLibrary = useCallback(async () => {
+    setStatus("Opening the folder picker…");
     try {
       // @ts-expect-error showDirectoryPicker is not in the TS lib yet
       const dir: FileSystemDirectoryHandle = await window.showDirectoryPicker({ mode: "read" });
@@ -191,8 +192,12 @@ export function SongbookLibrary() {
         }
       } catch { /* partial listing is fine */ }
       await importFiles(files);
-    } catch {
-      setProgress(null); /* user cancelled */
+    } catch (err) {
+      setProgress(null);
+      const name = err instanceof Error ? err.name : "UnknownError";
+      setStatus(name === "AbortError"
+        ? null // user closed the dialog — not an error
+        : `Folder picker failed (${name}) — try "Add book files…" instead.`);
     }
   }, [importFiles]);
 
@@ -266,7 +271,9 @@ export function SongbookLibrary() {
             ⚙
           </button>
           {storedCount < SONGBOOKS.length && (
-            <label className="cursor-pointer rounded-full bg-fill-soft px-4 py-1.5 text-xs font-semibold text-ink-dim transition-colors hover:text-ink">
+            <label
+              onClick={() => setStatus("Choose your PDF files in the dialog…")}
+              className="cursor-pointer rounded-full bg-accent px-4 py-1.5 text-xs font-semibold text-accent-deep transition-opacity hover:opacity-90">
               Add book files…
               <input
                 type="file"
@@ -285,15 +292,11 @@ export function SongbookLibrary() {
             <button
               onClick={() => void importLibrary()}
               disabled={progress !== null}
-              className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${
-                storedCount === 0
-                  ? "bg-accent text-accent-deep hover:opacity-90"
-                  : "bg-fill-soft text-ink-dim hover:text-ink"
-              }`}
+              className="rounded-full bg-fill-soft px-4 py-1.5 text-xs font-semibold text-ink-dim transition-colors hover:text-ink"
             >
               {progress
                 ? `Importing ${progress.done + 1}/${progress.total}: ${progress.current}…`
-                : storedCount === 0 ? "Import your library — one time" : "Import missing books"}
+                : "…or import the whole folder"}
             </button>
           )}
         </div>
