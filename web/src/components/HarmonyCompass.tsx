@@ -151,7 +151,9 @@ function chordMidis(n: CompassNode): number[] {
   return [n.root + 48, ...chordPitchClasses(n).map((pc) => pc + 60)];
 }
 
-export function HarmonyCompass({ fill = false }: { fill?: boolean } = {}) {
+export function HarmonyCompass({ fill = false, wheelOnly = false }: {
+  fill?: boolean; wheelOnly?: boolean;
+} = {}) {
   const [selected, setSelected] = useState<CompassNode>(() => node("majorKey", 0));
   const [frameTonic, setFrameTonic] = useState(0);
   const [frameMinor, setFrameMinor] = useState(false);
@@ -194,7 +196,9 @@ export function HarmonyCompass({ fill = false }: { fill?: boolean } = {}) {
   };
 
   return (
-    <div className={fill
+    <div className={wheelOnly
+        ? "w-full"
+        : fill
         ? "mx-auto w-full max-w-[1680px] max-lg:space-y-4 lg:flex lg:h-full lg:min-h-0 lg:flex-row lg:gap-3"
         : "flex flex-col items-start gap-6 lg:flex-row"}>
       <div className={fill
@@ -202,7 +206,9 @@ export function HarmonyCompass({ fill = false }: { fill?: boolean } = {}) {
           : "contents"}>
       <svg
         viewBox={`0 0 ${SIZE} ${SIZE}`}
-        className={fill
+        className={wheelOnly
+            ? "h-auto w-full select-none"
+            : fill
             ? "max-w-full select-none max-lg:h-auto max-lg:w-full lg:h-full lg:max-h-full lg:w-auto"
             : "w-full max-w-[640px] flex-1 select-none"}
         role="img"
@@ -320,6 +326,7 @@ export function HarmonyCompass({ fill = false }: { fill?: boolean } = {}) {
 
       </div>
       {/* teaching card */}
+      {!wheelOnly && (
       <div className={fill
           ? "flex w-full shrink-0 flex-col gap-0 border-line lg:h-full lg:min-h-0 lg:w-[390px] lg:overflow-hidden lg:border-l lg:pl-5"
           : "flex w-full max-w-sm shrink-0 flex-col gap-3"}>
@@ -391,6 +398,7 @@ export function HarmonyCompass({ fill = false }: { fill?: boolean } = {}) {
         }}
       />
       </div>
+      )}
     </div>
   );
 }

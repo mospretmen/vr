@@ -240,3 +240,21 @@ body {
     transition-duration: 0.01ms !important;
   }
 }
+
+/* Scroll-driven reveals — one room, things surface as you arrive. */
+.reveal {
+  opacity: 0;
+  transform: translateY(28px);
+  transition: opacity 0.8s ease, transform 0.8s cubic-bezier(0.16, 1, 0.3, 1);
+}
+.reveal.is-visible {
+  opacity: 1;
+  transform: none;
+}
+.glow-pool {
+  background: radial-gradient(42% 42% at 50% 50%, rgba(237, 125, 49, 0.14), transparent 70%);
+}
+.video-ambient {
+  mask-image: linear-gradient(to bottom, transparent, black 7%, black 93%, transparent);
+  -webkit-mask-image: linear-gradient(to bottom, transparent, black 7%, black 93%, transparent);
+}

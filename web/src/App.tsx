@@ -4,8 +4,6 @@ import { HarmonyCompass } from "./components/HarmonyCompass";
 import { ClassicsBrowser, ClassicsShowcase } from "./components/ClassicsShowcase";
 import { VisionProSection } from "./components/VisionShowcase";
 import { SongbookLibrary } from "./components/SongbookLibrary";
-import { PracticeStats } from "./components/PracticeStats";
-import { TrackLibrary } from "./components/TrackLibrary";
 
 const NAV_LINKS = [
   { label: "Compass", href: "#compass" },
@@ -169,6 +167,29 @@ function Nav() {
   );
 }
 
+function Reveal({ children, delay = 0, className = "" }: {
+  children: ReactNode; delay?: number; className?: string;
+}) {
+  const [ref, setRef] = useState<HTMLDivElement | null>(null);
+  const [seen, setSeen] = useState(false);
+  useEffect(() => {
+    if (!ref) return;
+    const io = new IntersectionObserver(
+      ([e]) => { if (e.isIntersecting) setSeen(true); },
+      { threshold: 0.12 },
+    );
+    io.observe(ref);
+    return () => io.disconnect();
+  }, [ref]);
+  return (
+    <div ref={setRef}
+         style={delay ? { transitionDelay: `${delay}ms` } : undefined}
+         className={`reveal ${seen ? "is-visible" : ""} ${className}`}>
+      {children}
+    </div>
+  );
+}
+
 function Hero() {
   return (
     <section className="hero-field relative overflow-hidden">
@@ -176,8 +197,8 @@ function Hero() {
         aria-hidden="true"
         className="hero-grid pointer-events-none absolute inset-0"
       />
-      <div className="relative mx-auto max-w-6xl px-4 pt-20 pb-14 sm:px-6 sm:pt-28">
-        <div className="mx-auto max-w-3xl text-center">
+      <div className="relative mx-auto max-w-7xl px-4 pt-16 pb-10 sm:px-6 sm:pt-20 lg:grid lg:min-h-[88vh] lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] lg:items-center lg:gap-10 lg:pt-0 lg:pb-0">
+        <div className="mx-auto max-w-3xl text-center lg:mx-0 lg:max-w-none lg:text-left">
           <p className="rise-in inline-flex items-center gap-2 rounded-full border border-accent/25 bg-accent-strong/10 px-3.5 py-1.5 text-xs font-medium tracking-wide text-accent">
             <span
               aria-hidden="true"
@@ -195,12 +216,11 @@ function Hero() {
           <p className="rise-in rise-in-2 mx-auto mt-6 max-w-xl text-base text-pretty text-ink-dim sm:text-lg">
             The Harmony Compass is a navigable map of functional harmony —
             every key, its relative minor, the dominants and diminisheds that
-            bind them, and every legal move between. Tap a chord below: hear
-            it, and see where music can go.
+            bind them, and every legal move between. Tap a chord on the wheel:
+            hear it, and see where music can go.
           </p>
-        </div>
 
-        <div className="rise-in rise-in-2 mt-8 flex flex-wrap items-center justify-center gap-3">
+        <div className="rise-in rise-in-2 mt-8 flex flex-wrap items-center justify-center gap-3 lg:justify-start">
           <a href="#/compass"
              className="rounded-xl bg-accent px-6 py-3 text-sm font-semibold text-accent-deep transition-opacity hover:opacity-90">
             Launch the Compass
@@ -213,13 +233,21 @@ function Hero() {
              className="rounded-xl border border-line px-6 py-3 text-sm font-medium text-ink transition-colors hover:bg-fill-soft">
             Phrases
           </a>
+          <a href="#/songbook"
+             className="rounded-xl border border-line px-6 py-3 text-sm font-medium text-ink transition-colors hover:bg-fill-soft">
+            Songbook
+          </a>
+        </div>
         </div>
 
-        <div id="compass" className="stage-panel rise-in rise-in-3 mx-auto mt-14 max-w-5xl scroll-mt-24 rounded-3xl border border-line p-4 sm:p-6">
-          <p className="mb-3 text-center text-[11px] font-medium uppercase tracking-[0.18em] text-ink-mute">
-            Live demo — the same graph that drives the Vision Pro app, note for note
+        <div id="compass" className="rise-in rise-in-3 relative mx-auto mt-12 w-full max-w-3xl scroll-mt-24 lg:mt-0 lg:max-w-none">
+          <div aria-hidden="true" className="glow-pool pointer-events-none absolute -inset-16" />
+          <div className="relative">
+            <HarmonyCompass wheelOnly />
+          </div>
+          <p className="mt-2 text-center text-[11px] font-medium uppercase tracking-[0.18em] text-ink-mute">
+            Live — the same graph that drives the Vision Pro app, note for note
           </p>
-          <HarmonyCompass />
         </div>
       </div>
     </section>
@@ -367,10 +395,11 @@ function VideoSection() {
           its windows opening in the room.
         </p>
         <video
-          className="mt-8 w-full rounded-2xl border border-line"
+          className="video-ambient mt-8 w-full rounded-3xl"
           src="/media/tour.mp4"
           poster="/media/shot-compass.jpg"
-          controls
+          autoPlay
+          loop
           muted
           playsInline
           preload="metadata"
@@ -380,72 +409,26 @@ function VideoSection() {
   );
 }
 
-const SHOTS = [
-  {
-    src: "/media/shot-compass.jpg",
-    alt: "The Harmony Compass floating in a living room through Apple Vision Pro",
-    caption: "The compass in the room — C selected, its pathways blazing, the rest a whisper.",
-  },
-  {
-    src: "/media/shot-windows.jpg",
-    alt: "Scale and chord windows open beside the compass in Apple Vision Pro",
-    caption: "Tap a scale or a grip and it opens beside the wheel — staff, degrees, rosewood neck.",
-  },
-  {
-    src: "/media/shot-3d.jpg",
-    alt: "The volumetric 3D compass next to the 2D wheel in Apple Vision Pro",
-    caption: "The volumetric compass: keys nearest, dominants behind, diminisheds deepest.",
-  },
-];
-
-function GallerySection() {
-  const [expanded, setExpanded] = useState<string | null>(null);
+function SongbookTeaser() {
   return (
-    <section id="gallery" className="scroll-mt-20 border-t border-line">
+    <section className="border-t border-line">
       <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
-        <h2 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
-          Seen through the headset.
-        </h2>
-        <p className="mt-2 max-w-2xl text-sm text-ink-dim sm:text-base">
-          Straight captures from the visionOS build — no mockups.
-        </p>
-        <div className="mt-8 grid gap-4 lg:grid-cols-3">
-          {SHOTS.map((shot) => (
-            <figure
-              key={shot.src}
-              className="overflow-hidden rounded-2xl border border-line bg-raise"
-            >
-              <button
-                onClick={() => setExpanded(shot.src)}
-                className="block w-full cursor-zoom-in"
-                aria-label={`Expand: ${shot.alt}`}
-              >
-                <img
-                  src={shot.src}
-                  alt={shot.alt}
-                  loading="lazy"
-                  className="aspect-video w-full object-cover"
-                />
-              </button>
-              <figcaption className="p-4 text-xs leading-relaxed text-ink-dim">
-                {shot.caption}
-              </figcaption>
-            </figure>
-          ))}
+        <div className="flex flex-wrap items-end justify-between gap-6">
+          <div className="max-w-xl">
+            <h2 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
+              Every tune you own, one search away.
+            </h2>
+            <p className="mt-2 text-sm text-ink-dim sm:text-base">
+              The Songbook room indexes your fake-book library — 2,124 tunes
+              across the Real Books, the Jazz Fakebook, the Colorado, the Bill
+              Evans book and more. Type a title, land on the page.
+            </p>
+          </div>
+          <a href="#/songbook"
+             className="rounded-xl bg-accent px-6 py-3 text-sm font-semibold text-accent-deep transition-opacity hover:opacity-90">
+            Open the Songbook
+          </a>
         </div>
-        {expanded && (
-          <button
-            className="fixed inset-0 z-50 flex cursor-zoom-out items-center justify-center bg-black/85 p-4 sm:p-10"
-            onClick={() => setExpanded(null)}
-            aria-label="Close expanded screenshot"
-          >
-            <img
-              src={expanded}
-              alt="Expanded screenshot"
-              className="max-h-full max-w-full rounded-xl shadow-2xl"
-            />
-          </button>
-        )}
       </div>
     </section>
   );
@@ -472,39 +455,20 @@ export default function App() {
       <Nav />
       <main>
         <Hero />
-        <Features />
-        <VisionProSection />
-        <ClassicsShowcase />
-        <VideoSection />
-        <GallerySection />
-        <Section
-          id="explorer"
-          title="Fretboard Explorer"
-          description="Scales, modes, and triads rendered on a live fretboard — the web face of the same tested engine."
-        >
-          <div className="stage-panel rounded-3xl border border-line p-3 sm:p-5">
+        <Reveal><Features /></Reveal>
+        <Reveal><ClassicsShowcase /></Reveal>
+        <Reveal>
+          <Section
+            id="explorer"
+            title="The neck, lit."
+            description="Scales in real 3-notes-per-string boxes, triads, voicings — a live fretboard running the same tested engine as the headset."
+          >
             <FretboardExplorer />
-          </div>
-        </Section>
-        <Section
-          id="library"
-          title="Track Library"
-          description="Backing tracks with chord timelines, synced to the in-headset overlay. Expand a track to read its progression."
-        >
-          <div className="max-w-3xl">
-            <TrackLibrary />
-          </div>
-        </Section>
-        <Section
-          id="stats"
-          title="Practice Stats"
-          description="Your Vision Pro logs every session under an anonymous device ID. Paste it here to see streaks and time on the fretboard."
-        >
-          <div className="max-w-xl">
-            <PracticeStats />
-          </div>
-        </Section>
-
+          </Section>
+        </Reveal>
+        <Reveal><SongbookTeaser /></Reveal>
+        <Reveal><VisionProSection /></Reveal>
+        <Reveal><VideoSection /></Reveal>
       </main>
       <Footer />
     </div>
