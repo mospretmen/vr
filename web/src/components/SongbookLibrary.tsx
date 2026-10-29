@@ -8,6 +8,20 @@ import {
   bookByKey, searchSongs, SONG_INDEX, SONGBOOKS, type SongEntry,
 } from "../songbooks";
 
+const REMOTE_URL_KEY = "sb-remote-url";
+const REMOTE_AUTH_KEY = "sb-remote-auth";
+
+function remoteConfig(): { base: string; auth: string } {
+  try {
+    return {
+      base: localStorage.getItem(REMOTE_URL_KEY) ?? "",
+      auth: localStorage.getItem(REMOTE_AUTH_KEY) ?? "",
+    };
+  } catch {
+    return { base: "", auth: "" };
+  }
+}
+
 function offsetKey(book: string): string {
   return `sb-offset-${book}`;
 }
@@ -37,6 +51,8 @@ export function SongbookLibrary() {
   const [viewer, setViewer] = useState<{ entry: SongEntry; url: string } | null>(null);
   const [offsets, setOffsets] = useState<Record<string, number>>(() =>
     Object.fromEntries(SONGBOOKS.map((b) => [b.key, getOffset(b.key)])));
+  const [remote, setRemote] = useState(remoteConfig);
+  const [showSettings, setShowSettings] = useState(false);
   const urlCache = useRef<Map<string, string>>(new Map());
 
   const supported = typeof navigator !== "undefined" && "storage" in navigator;
@@ -96,21 +112,42 @@ export function SongbookLibrary() {
     const book = bookByKey(entry.book);
     if (!book) return;
     setStatus(null);
-    const root = await opfsRoot();
-    if (!root) return;
-    try {
-      const fh = await root.getFileHandle(book.file);
-      let url = urlCache.current.get(book.key);
-      if (!url) {
-        const file = await fh.getFile();
-        url = URL.createObjectURL(file);
-        urlCache.current.set(book.key, url);
-      }
-      setViewer({ entry, url });
-    } catch {
-      setStatus(`“${book.name}” isn't imported yet — use Import library and point at your songbook folder.`);
+    const cached = urlCache.current.get(book.key);
+    if (cached) {
+      setViewer({ entry, url: cached });
+      return;
     }
-  }, []);
+    // 1. The library stored with the site (OPFS import).
+    const root = await opfsRoot();
+    if (root) {
+      try {
+        const fh = await root.getFileHandle(book.file);
+        const file = await fh.getFile();
+        const url = URL.createObjectURL(file);
+        urlCache.current.set(book.key, url);
+        setViewer({ entry, url });
+        return;
+      } catch { /* not imported here */ }
+    }
+    // 2. A configured remote library (private bucket / static host).
+    if (remote.base) {
+      try {
+        const base = remote.base.replace(/\/+$/, "");
+        const res = await fetch(`${base}/${encodeURIComponent(book.file)}`, {
+          headers: remote.auth ? { Authorization: remote.auth } : undefined,
+        });
+        if (!res.ok) throw new Error(String(res.status));
+        const url = URL.createObjectURL(await res.blob());
+        urlCache.current.set(book.key, url);
+        setViewer({ entry, url });
+        return;
+      } catch {
+        setStatus(`Remote library didn't serve ${book.file} — check the URL/key in settings.`);
+        return;
+      }
+    }
+    setStatus(`“${book.name}” isn't in your library yet — Import it, or set a remote library in ⚙.`);
+  }, [remote]);
 
   const bump = useCallback((book: string, delta: number) => {
     setOffsets((prev) => {
@@ -137,6 +174,13 @@ export function SongbookLibrary() {
               {storedCount > 0 && ` ${storedCount} book${storedCount === 1 ? "" : "s"} in your library.`}
             </p>
           </div>
+          <button
+            onClick={() => setShowSettings((v) => !v)}
+            aria-label="Library settings"
+            className="rounded-full bg-fill-soft px-2.5 py-1.5 text-xs text-ink-dim transition-colors hover:text-ink"
+          >
+            ⚙
+          </button>
           {canPick && storedCount < SONGBOOKS.length && (
             <button
               onClick={() => void importLibrary()}
@@ -153,6 +197,37 @@ export function SongbookLibrary() {
             </button>
           )}
         </div>
+        {showSettings && (
+          <div className="mt-3 rounded-xl border border-line p-3 text-xs">
+            <div className="font-semibold text-ink">Remote library (optional)</div>
+            <p className="mt-1 text-ink-mute">
+              A private bucket or host that serves your book files by name —
+              lets every device stream the library without importing.
+            </p>
+            <div className="mt-2 flex flex-wrap gap-2">
+              <input
+                defaultValue={remote.base}
+                placeholder="https://your-bucket.example.com/songbooks"
+                onBlur={(e) => {
+                  const base = e.target.value.trim();
+                  try { localStorage.setItem(REMOTE_URL_KEY, base); } catch { /* */ }
+                  setRemote((r) => ({ ...r, base }));
+                }}
+                className="min-w-[280px] flex-1 rounded-md border border-line bg-transparent px-2.5 py-1.5 text-ink placeholder:text-ink-mute focus:border-accent focus:outline-none"
+              />
+              <input
+                defaultValue={remote.auth}
+                placeholder="Authorization header (optional)"
+                onBlur={(e) => {
+                  const auth = e.target.value.trim();
+                  try { localStorage.setItem(REMOTE_AUTH_KEY, auth); } catch { /* */ }
+                  setRemote((r) => ({ ...r, auth }));
+                }}
+                className="min-w-[220px] flex-1 rounded-md border border-line bg-transparent px-2.5 py-1.5 text-ink placeholder:text-ink-mute focus:border-accent focus:outline-none"
+              />
+            </div>
+          </div>
+        )}
         {!supported && (
           <p className="mt-2 text-xs text-amber-400/90">
             This browser can't store the library — use Chrome, Edge or Safari.
