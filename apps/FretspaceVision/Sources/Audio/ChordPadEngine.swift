@@ -1,10 +1,10 @@
 import AVFoundation
 import MusicTheory
 
-/// Procedural chord pads for backing playback — no audio assets, just
-/// softly-enveloped sine stacks per chord, so a progression is audible
-/// the moment it's loaded. Real stems can replace this later; the
-/// scheduling surface stays the same.
+/// The app's guitar: bundled nylon-string samples (FluidR3, MIT; one mp3
+/// per midi 40–84 under GuitarSamples/) decoded once and mixed into the
+/// same sequentially-queued buffers as before. The Karplus–Strong pluck
+/// remains the fallback for anything not yet decoded or out of range.
 @MainActor
 final class ChordPadEngine {
     private let engine = AVAudioEngine()
@@ -13,11 +13,96 @@ final class ChordPadEngine {
     private let format: AVAudioFormat
     private var started = false
 
+    /// Decoded mono 44.1k sample per midi note. Filled lazily + by the
+    /// background preload; main-actor confined.
+    private static var bank: [Int: [Float]] = [:]
+    private static let sampleRange = 40...84
+
     init() {
         format = AVAudioFormat(standardFormatWithSampleRate: sampleRate, channels: 1)!
         engine.attach(player)
         engine.connect(player, to: engine.mainMixerNode, format: format)
         engine.mainMixerNode.outputVolume = 0.8
+        Self.preload()
+    }
+
+    /// Decode the whole range shortly after launch so taps hit samples.
+    private static var preloaded = false
+    private static func preload() {
+        guard !preloaded else { return }
+        preloaded = true
+        Task { @MainActor in
+            for midi in sampleRange where bank[midi] == nil {
+                _ = loadSample(midi)
+                await Task.yield()
+            }
+            AppLog.audio.info("Guitar sample bank ready: \(bank.count) notes")
+        }
+    }
+
+    /// Synchronous decode of one bundled note into mono 44.1k floats.
+    @discardableResult
+    private static func loadSample(_ midi: Int) -> [Float]? {
+        if let cached = bank[midi] { return cached }
+        guard sampleRange.contains(midi),
+              let url = Bundle.main.url(forResource: String(midi),
+                                        withExtension: "mp3",
+                                        subdirectory: "GuitarSamples") else { return nil }
+        do {
+            let file = try AVAudioFile(forReading: url)
+            guard let raw = AVAudioPCMBuffer(pcmFormat: file.processingFormat,
+                                             frameCapacity: AVAudioFrameCount(file.length))
+            else { return nil }
+            try file.read(into: raw)
+            guard let target = AVAudioFormat(standardFormatWithSampleRate: 44_100, channels: 1),
+                  let converter = AVAudioConverter(from: file.processingFormat, to: target),
+                  let out = AVAudioPCMBuffer(pcmFormat: target,
+                                             frameCapacity: AVAudioFrameCount(
+                                                Double(file.length) * 44_100 / file.processingFormat.sampleRate + 1024))
+            else { return nil }
+            var fed = false
+            var convError: NSError?
+            converter.convert(to: out, error: &convError) { _, status in
+                if fed { status.pointee = .endOfStream; return nil }
+                fed = true
+                status.pointee = .haveData
+                return raw
+            }
+            if let convError {
+                AppLog.audio.error("Sample convert failed for midi \(midi): \(convError)")
+                return nil
+            }
+            guard let channel = out.floatChannelData?[0] else { return nil }
+            let samples = Array(UnsafeBufferPointer(start: channel, count: Int(out.frameLength)))
+            bank[midi] = samples
+            return samples
+        } catch {
+            AppLog.audio.error("Sample load failed for midi \(midi): \(error)")
+            return nil
+        }
+    }
+
+    /// One note as floats: the real string when decoded, the pluck model
+    /// otherwise. `seconds` caps length; a fade keeps the cut inaudible.
+    private static func noteSamples(
+        midi: Int, seconds: Double, sampleRate: Double, amplitude: Double
+    ) -> [Float] {
+        let clamped = min(max(midi, sampleRange.lowerBound), sampleRange.upperBound)
+        guard midi == clamped, let pcm = loadSample(clamped) else {
+            return pluckSamples(midi: midi, seconds: seconds,
+                                sampleRate: sampleRate, amplitude: amplitude)
+        }
+        let count = min(pcm.count, Int(sampleRate * seconds))
+        let fade = min(Int(sampleRate * 0.08), count)
+        var out = [Float](repeating: 0, count: count)
+        for i in 0..<count {
+            var v = pcm[i] * Float(amplitude)
+            if i >= count - fade {
+                v *= Float(count - i) / Float(fade)
+            }
+            out[i] = v
+        }
+        return out
     }
 
     /// Sound one chord for (up to) the given duration, immediately.
@@ -94,18 +179,38 @@ final class ChordPadEngine {
         player.scheduleBuffer(strummed, at: nil)
     }
 
-    /// Arpeggiate exact sounding notes (a grip or triad shape, bottom to top).
+    /// Arpeggiate exact sounding notes — swung like a player (long-short
+    /// eighth pairs), each note ringing into the next, the last held.
     func playRun(_ notes: [Note], noteMs: Int = 240) {
         guard ensureRunning() else { return }
         player.stop()
         player.play()
-        for note in notes {
-            if let buffer = Self.toneBuffer(midi: note.midi,
-                                            seconds: Double(noteMs) / 1000.0,
-                                            sampleRate: sampleRate, format: format) {
-                player.scheduleBuffer(buffer, at: nil)
+        let base = Double(noteMs) / 1000.0
+        var onsets: [Double] = []
+        var t = 0.0
+        for i in notes.indices {
+            onsets.append(t)
+            t += base * (i % 2 == 0 ? 1.18 : 0.82)
+        }
+        let ring = base * 5
+        let total = t + ring
+        let frames = AVAudioFrameCount(sampleRate * total)
+        guard frames > 0,
+              let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frames),
+              let samples = buffer.floatChannelData?[0] else { return }
+        buffer.frameLength = frames
+        for (i, note) in notes.enumerated() {
+            let last = i == notes.count - 1
+            let seconds = last ? ring : base * 2.2
+            let offset = Int(sampleRate * onsets[i])
+            let voice = Self.noteSamples(midi: note.midi, seconds: seconds,
+                                         sampleRate: sampleRate,
+                                         amplitude: last ? 0.62 : 0.5)
+            for (j, v) in voice.enumerated() where offset + j < Int(frames) {
+                samples[offset + j] += v
             }
         }
+        player.scheduleBuffer(buffer, at: nil)
     }
 
     private static func toneBuffer(
@@ -116,8 +221,8 @@ final class ChordPadEngine {
               let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: frames),
               let samples = buffer.floatChannelData?[0] else { return nil }
         buffer.frameLength = frames
-        let pluck = pluckSamples(midi: midi, seconds: seconds,
-                                 sampleRate: sampleRate, amplitude: 0.5)
+        let pluck = noteSamples(midi: midi, seconds: seconds,
+                                sampleRate: sampleRate, amplitude: 0.8)
         for (i, v) in pluck.enumerated() where i < Int(frames) {
             samples[i] = v
         }
@@ -177,7 +282,7 @@ final class ChordPadEngine {
             let offset = Int(sampleRate * stagger * Double(voice))
             let remaining = Double(Int(frames) - offset) / sampleRate
             guard remaining > 0.05 else { continue }
-            let pluck = pluckSamples(midi: midi, seconds: remaining,
+            let pluck = noteSamples(midi: midi, seconds: remaining,
                                      sampleRate: sampleRate, amplitude: amplitude)
             for (i, v) in pluck.enumerated() {
                 samples[offset + i] += v

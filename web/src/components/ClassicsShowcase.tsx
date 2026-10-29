@@ -38,6 +38,7 @@ function foldFret(fret: number): number {
 
 /** VR-parity shelf groups, assigned by name heuristics. */
 const SHELF_GROUPS: [string, RegExp][] = [
+  ["Study lines", /study line/i],
   ["Blues & rock", /B\.B\.|Albert King|Freddie King|Buddy Guy|Otis Rush|Peter Green|Chuck Berry|Gilmour|Knopfler|Hendrix|turnaround|SRV|Magic Sam|Collins|Sumlin|Hooker|Hopkins|Gatemouth/],
   ["Country & fingerstyle", /Doc Watson|Travis|Atkins|Albert Lee|Brent Mason|Jerry Reed|Nichols|Emmanuel|Les Paul/],
   ["Bossa & gypsy", /Django|Byrd|Bonfá|Baden|Jobim|Rosenberg|Lagrène/],
@@ -50,7 +51,7 @@ function shelfGroup(name: string): string {
 }
 
 const GROUP_ORDER = [
-  "Jazz masters", "Blues & rock", "Bossa & gypsy",
+  "Study lines", "Jazz masters", "Blues & rock", "Bossa & gypsy",
   "Country & fingerstyle", "Classical & public domain",
 ];
 

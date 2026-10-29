@@ -16,7 +16,11 @@ targets:
   FretspaceVision:
     type: application
     platform: visionOS
-    sources: [Sources]
+    sources:
+      - Sources
+      - path: Resources/GuitarSamples
+        type: folder
+        buildPhase: resources
     dependencies:
       - package: GuitarCore
         product: MusicTheory

@@ -24,10 +24,65 @@ export function stepPitchClass(step: [number, number]): number {
 
 export const WEB_CLASSICS: WebPhrase[] = [
   {
-    name: "Enclosure of the 3rd (style of Parker)",
-    steps: [[4, 6], [4, 4], [4, 5]],
+    name: "Bird flight over ii\u2013V\u2013I (study line)",
+    steps: [[2, 7], [3, 5], [4, 5], [4, 8], [4, 6], [4, 5], [3, 7], [3, 4], [3, 5], [2, 7], [2, 5], [3, 4], [3, 5]],
+    chord: { root: 0, intervals: [0, 4, 7], symbol: "C" },
+    context: "ii\u2013V\u2013I in C",
+    remark: "Dm9 arpeggio up, G7 spelled down to its 3rd, an enclosure into home — one breath of bebop.",
+  },
+  {
+    name: "Blues chorus opener (study line)",
+    steps: [[2, 5], [2, 7], [3, 5], [4, 5], [4, 8], [4, 5], [3, 3], [2, 7], [2, 5], [4, 5]],
+    chord: { root: 0, intervals: [0, 4, 7, 10], symbol: "C7" },
+    remark: "Pickup from the 5, major triad on top, the ♭7 answered — bar one of ten thousand choruses.",
+  },
+  {
+    name: "Minor turnaround cry (study line)",
+    steps: [[2, 7], [3, 5], [4, 5], [5, 5], [4, 9], [4, 5], [4, 6], [4, 5], [3, 7], [3, 5], [2, 7]],
+    chord: { root: 9, intervals: [0, 3, 7], symbol: "Am" },
+    remark: "Up the minor triad, the raised 7 pulling home, the ♭6 sighing down — a full turnaround phrase.",
+  },
+  {
+    name: "Invention sequence (study line)",
+    steps: [[3, 5], [3, 7], [4, 5], [3, 5], [3, 4], [3, 5], [3, 7], [3, 4], [2, 7], [3, 4], [3, 5], [2, 5]],
+    chord: { root: 0, intervals: [0, 4, 7], symbol: "C" },
+    remark: "A three-step falling sequence, Bach's workshop habit: state it, move it down, resolve it.",
+  },
+  {
+    name: "Minor arch statement (study line)",
+    steps: [[3, 5], [4, 4], [4, 8], [5, 6], [5, 8], [5, 6], [4, 8], [4, 6], [4, 4], [3, 5]],
+    chord: { root: 0, intervals: [0, 3, 7, 10], symbol: "Cm7" },
+    remark: "Up the m7 arpeggio to the high root and back down through the 4 — one singable arch.",
+  },
+  {
+    name: "Ballad descent (study line)",
+    steps: [[5, 8], [5, 7], [5, 6], [5, 5], [4, 5], [4, 6], [4, 5], [3, 5], [2, 7]],
+    chord: { root: 9, intervals: [0, 3, 7], symbol: "Am" },
+    remark: "Chromatic fall from the ♭3, a leaning ♭6, and the long way home — gypsy ballad grammar.",
+  },
+  {
+    name: "Blues head cell (study line)",
+    steps: [[3, 5], [4, 5], [4, 8], [4, 10], [5, 6], [4, 10], [4, 8], [4, 5], [3, 7], [3, 5]],
+    chord: { root: 0, intervals: [0, 4, 7, 10], symbol: "C7" },
+    remark: "Triad up to the 6, the ♭7 on top, stepping back down through the 9 — a head in miniature.",
+  },
+  {
+    name: "Rootless climb (study line)",
+    steps: [[4, 5], [3, 4], [3, 7], [2, 5], [2, 9], [2, 7], [2, 5], [4, 5]],
     chord: { root: 0, intervals: [0, 4, 7, 11], symbol: "Cmaj7" },
-    remark: "Surround the target from above and a half step below, then land — bebop's signature move.",
+    remark: "3–7–9–5 up to the high 7 and settle on the 3rd — the piano voicing as a line.",
+  },
+  {
+    name: "Four-note cells rising (study line)",
+    steps: [[3, 5], [3, 7], [4, 5], [4, 8], [3, 7], [4, 5], [4, 6], [4, 10], [4, 5], [4, 6], [4, 8], [5, 7], [5, 8]],
+    chord: { root: 0, intervals: [0, 4, 7, 11], symbol: "Cmaj7" },
+    remark: "1-2-3-5 moved up the scale, cell by cell, until it lands on the high root — the Coltrane drill as music.",
+  },
+  {
+    name: "Bossa line home (study line)",
+    steps: [[2, 7], [3, 4], [3, 5], [3, 7], [4, 5], [3, 7], [3, 5], [3, 4], [2, 7], [2, 5], [2, 7]],
+    chord: { root: 9, intervals: [0, 3, 7], symbol: "Am" },
+    remark: "Rise to the 5, fall by step, lean on the ♭7 and resolve — Jobim-school melodic speech.",
   },
   {
     name: "ii–V–I pocket (style of Parker)",
@@ -49,19 +104,6 @@ export const WEB_CLASSICS: WebPhrase[] = [
     remark: "Walk the 3rd down chromatically until it becomes the root.",
   },
   {
-    name: "Four notes and air (style of Miles)",
-    steps: [[2, 7], [3, 5], [3, 7], [3, 10], [3, 7]],
-    chord: { root: 2, intervals: [0, 3, 7, 10], symbol: "Dm7" },
-    context: "static minor vamp",
-    remark: "Economy as style: chord tones placed like brushstrokes — the rest is space.",
-  },
-  {
-    name: "Tritone jab (style of Monk)",
-    steps: [[4, 6], [3, 6], [3, 4], [2, 5]],
-    chord: { root: 7, intervals: [0, 4, 7, 10], symbol: "G7" },
-    remark: "Poke the ♭5 against the dominant, then land flat-footed on the root.",
-  },
-  {
     name: "1·2·3·5 stack (style of Coltrane)",
     steps: [[3, 5], [3, 7], [4, 5], [4, 8]],
     chord: { root: 0, intervals: [0, 4, 7, 11], symbol: "Cmaj7" },
@@ -79,12 +121,6 @@ export const WEB_CLASSICS: WebPhrase[] = [
     steps: [[4, 5], [4, 6], [4, 7], [4, 8], [5, 5]],
     chord: { root: 9, intervals: [0, 3, 7], symbol: "Am" },
     remark: "Every fret on the way up — the gypsy sprint into the root.",
-  },
-  {
-    name: "Falling sigh to the 7 (style of Chet Baker)",
-    steps: [[5, 5], [5, 3], [5, 1], [5, 0]],
-    chord: { root: 5, intervals: [0, 4, 7, 11], symbol: "Fmaj7" },
-    remark: "Stepwise descent 3-2-1-7: lyrical, patient, lands on the color tone.",
   },
   {
     name: "Prelude arpeggio (Bach, BWV 846)",
@@ -121,12 +157,6 @@ export const WEB_CLASSICS: WebPhrase[] = [
     steps: [[4, 5], [4, 8], [5, 5], [4, 8], [4, 5]],
     chord: { root: 0, intervals: [0, 4, 7], symbol: "C" },
     remark: "The right-hand melody of his block chords: 3-5-6-5-3, smiling.",
-  },
-  {
-    name: "Organ stab cell (style of Jimmy Smith)",
-    steps: [[3, 5], [3, 3], [2, 5], [3, 3], [3, 5]],
-    chord: { root: 0, intervals: [0, 4, 7, 10], symbol: "C7" },
-    remark: "Root-♭7-5 and back — the drawbar jab, greasy on purpose.",
   },
   {
     name: "Flatpick run (style of Doc Watson)",
@@ -248,11 +278,5 @@ export const WEB_CLASSICS: WebPhrase[] = [
     steps: [[3, 5], [2, 5], [3, 5], [2, 5], [3, 5], [4, 5], [2, 5]],
     chord: { root: 0, intervals: [0, 4, 7], symbol: "C" },
     remark: "Public domain: the serenade's opening salute — all triad, all confidence.",
-  },
-  {
-    name: "Sixth-dim slide (style of Barry Harris)",
-    steps: [[2, 7], [2, 6], [2, 5], [1, 7]],
-    chord: { root: 0, intervals: [0, 4, 7], symbol: "C" },
-    remark: "6 falls through ♭6 to 5 and lands on the 3rd — the movement school in four notes.",
   },
 ];
