@@ -98,16 +98,23 @@ export const OPEN_PCS = [4, 9, 2, 7, 11, 4] as const;
 /** Offsets from the root fret per string; anchor string carries 0. */
 const TEMPLATES: Record<CompassNode["ring"], (number | null)[][]> = {
   majorKey: [
-    [0, 2, 2, 1, 0, 0],        // E shape
-    [null, 0, 2, 2, 2, 0],     // A shape
+    [0, 2, 2, 1, 0, 0],          // E shape
+    [null, 0, 2, 2, 2, 0],       // A shape
+    [null, 0, -1, -3, -2, -3],   // C shape (C = x32010)
+    [0, -1, -3, -3, -3, 0],      // G shape (G = 320003)
+    [null, null, 0, 2, 3, 2],    // D shape (D = xx0232)
   ],
   relativeMinor: [
-    [0, 2, 2, 0, 0, 0],        // Em shape
-    [null, 0, 2, 2, 1, 0],     // Am shape
+    [0, 2, 2, 0, 0, 0],          // Em shape
+    [null, 0, 2, 2, 1, 0],       // Am shape
+    [null, null, 0, 2, 3, 1],    // Dm shape (Dm = xx0231)
   ],
   dominant: [
-    [0, 2, 0, 1, 0, 0],        // E7 shape (G7 = 353433)
-    [null, 0, 2, 0, 2, 0],     // A7 shape (C7 = x35353)
+    [0, 2, 0, 1, 0, 0],          // E7 shape (G7 = 353433)
+    [null, 0, 2, 0, 2, 0],       // A7 shape (C7 = x35353)
+    [null, 0, -1, 0, -2, -3],    // C7 shape (C7 = x32310)
+    [null, null, 0, 2, 1, 2],    // D7 shape (D7 = xx0212)
+    [0, -1, -3, -3, -3, -2],     // G7 shape (G7 = 320001)
   ],
   diminished: [
     [0, null, -1, 0, -1, null],  // °7 E-root (G°7 = 3x232x)
@@ -123,14 +130,16 @@ const QUALITY_SHAPES: Record<CompassNode["ring"], [string, (number | null)[][]][
     ["add9", []],
     ["6", [[0, null, -1, 1, 0, null], [null, 0, 2, 2, 2, 2]]],
     ["6/9", [[null, 0, -1, -1, 0, 0]]],
-    ["maj7", [[0, null, 1, 1, 0, null], [null, 0, 2, 1, 2, 0]]],
+    ["maj7", [[0, null, 1, 1, 0, null], [null, 0, 2, 1, 2, 0],
+              [null, 0, -1, -3, -3, -3], [null, null, 0, 2, 2, 2]]],
     ["maj9", [[null, 0, -1, 1, 0, null]]],
   ],
   relativeMinor: [
     ["m", TEMPLATES.relativeMinor],
     ["m(add9)", []],
     ["m6", [[0, null, -1, 0, 0, null], [null, 0, -2, -1, -2, null]]],
-    ["m7", [[0, 2, 0, 0, 0, 0], [null, 0, 2, 0, 1, 0]]],
+    ["m7", [[0, 2, 0, 0, 0, 0], [null, 0, 2, 0, 1, 0],
+            [null, null, 0, 2, 1, 1]]],
     ["m9", [[null, 0, -2, 0, 0, 0], [0, 2, 0, 0, 0, 2]]],
     ["m11", [[0, null, 0, 0, -2, null], [0, 0, 0, 0, 0, 0], [null, 0, 0, 0, 1, null]]],
     ["m(maj7)", [[0, null, 1, 0, 0, null], [null, 0, 2, 1, 1, null]]],
@@ -174,7 +183,7 @@ function instantiate(shapes: (number | null)[][], root: number): Grip[] {
       return true;
     })
     .sort((a, b) => gripLow(a) - gripLow(b))
-    .slice(0, 4);
+    .slice(0, 6);
 }
 
 export interface GripFamily {
@@ -328,7 +337,7 @@ export function gripsFor(node: CompassNode): Grip[] {
       return true;
     })
     .sort((a, b) => gripLow(a) - gripLow(b))
-    .slice(0, 4);
+    .slice(0, 6);
 }
 
 function gripLow(g: Grip): number {

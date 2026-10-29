@@ -3,6 +3,7 @@ import { NOTE_NAMES, noteName } from "../music";
 import { degreeCells } from "../degreeCells";
 import { SCALE_LORE } from "../demoVoicings";
 import { strum } from "../audio";
+import { MiniStaff } from "./HarmonyCompass";
 import {
   SCALE_TYPES,
   SEVENTH_QUALITIES,
@@ -289,6 +290,7 @@ export function FretboardExplorer({ bare = false }: { bare?: boolean } = {}) {
 
   const scaleStory = mode === "scale" && (
     <div className="border-t border-line px-4 py-3 sm:px-5">
+      <div className="text-ink"><MiniStaff root={root} intervals={SCALE_TYPES[scaleIndex].intervals} /></div>
       <p className="max-w-3xl text-sm text-ink-dim">
         {SCALE_LORE[SCALE_TYPES[scaleIndex].name] ?? ""}
       </p>

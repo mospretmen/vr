@@ -5,6 +5,18 @@ const MAJOR = { name: "Major (Ionian)", intervals: [0, 2, 4, 5, 7, 9, 11] };
 const MELODIC = { name: "Melodic Minor", intervals: [0, 2, 3, 5, 7, 9, 11] };
 const HARMONIC = { name: "Harmonic Minor", intervals: [0, 2, 3, 5, 7, 8, 11] };
 
+suite("non-heptatonic degree cards", () => {
+  it("minor pentatonic shows 1 ♭3 4 5 ♭7", () => {
+    const cells = degreeCells(9, { name: "Minor Pentatonic", intervals: [0, 3, 5, 7, 10] });
+    expect(cells.map((c) => c.roman)).toEqual(["1", "♭3", "4", "5", "♭7"]);
+    expect(cells.map((c) => c.chordSymbol)).toEqual(["A", "C", "D", "E", "G"]);
+  });
+  it("blues labels the 6-semitone tone ♭5", () => {
+    const cells = degreeCells(0, { name: "Blues", intervals: [0, 3, 5, 6, 7, 10] });
+    expect(cells[3].roman).toBe("♭5");
+  });
+});
+
 suite("degree cells parity", () => {
   it("C major harmonizes to the textbook row", () => {
     const cells = degreeCells(0, MAJOR);

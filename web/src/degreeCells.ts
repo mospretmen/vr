@@ -56,10 +56,29 @@ const TENSION_LABELS: Record<number, string> = {
 };
 const MAJOR_DEGREES = [0, 2, 4, 5, 7, 9, 11];
 
-/** The full chord-scale card per degree of a 7-note scale; [] otherwise. */
+/** Interval figures for degree labels outside the 7-note system. */
+const FIGURES: Record<number, string> = {
+  0: "1", 1: "♭2", 2: "2", 3: "♭3", 4: "3", 5: "4",
+  7: "5", 8: "♭6", 9: "6", 10: "♭7", 11: "7",
+};
+
+/** The full chord-scale card per degree. Seven-note scales get the
+ *  harmonized-seventh treatment; pentatonics, blues and 8-note scales
+ *  get consistent degree cards (figure + note), so no scale is bare. */
 export function degreeCells(root: number, scale: ScaleSuggestion): DegreeCell[] {
   const intervals = scale.intervals;
-  if (intervals.length !== 7) return [];
+  if (intervals.length !== 7) {
+    const names = spellScale(root, intervals);
+    const hasP4 = intervals.includes(5);
+    return intervals.map((semis, degree) => ({
+      roman: semis === 6 ? (hasP4 ? "♭5" : "♯4") : FIGURES[semis] ?? String(semis),
+      chordSymbol: names[degree],
+      tensions: [],
+      mode: null,
+      rootPc: (root + semis) % 12,
+      chordIntervals: [0],
+    }));
+  }
   const names = spellScale(root, intervals);
 
   return intervals.map((_, degree) => {

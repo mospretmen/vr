@@ -1,42 +1,12 @@
 // The songbook room: every fake book and songbook in one searchable place.
-// PDFs stay in the user's own folder (File System Access API); the app
-// holds only the index and opens the right page on demand.
+// The library is imported ONCE from the user's folder into the browser's
+// Origin Private File System — after that it lives with the site: no
+// permission prompts, no reconnecting, works offline. Nothing is uploaded;
+// the books stay on this machine.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   bookByKey, searchSongs, SONG_INDEX, SONGBOOKS, type SongEntry,
 } from "../songbooks";
-
-// ---- Tiny IndexedDB keyval for the directory handle ----
-const DB_NAME = "fretspace-songbooks";
-function idb(): Promise<IDBDatabase> {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(DB_NAME, 1);
-    req.onupgradeneeded = () => req.result.createObjectStore("kv");
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
-async function idbGet<T>(key: string): Promise<T | undefined> {
-  const db = await idb();
-  return new Promise((resolve) => {
-    const tx = db.transaction("kv", "readonly").objectStore("kv").get(key);
-    tx.onsuccess = () => resolve(tx.result as T | undefined);
-    tx.onerror = () => resolve(undefined);
-  });
-}
-async function idbSet(key: string, value: unknown): Promise<void> {
-  const db = await idb();
-  return new Promise((resolve) => {
-    const tx = db.transaction("kv", "readwrite").objectStore("kv").put(value, key);
-    tx.onsuccess = () => resolve();
-    tx.onerror = () => resolve();
-  });
-}
-
-type DirHandle = FileSystemDirectoryHandle & {
-  queryPermission?: (d: { mode: string }) => Promise<string>;
-  requestPermission?: (d: { mode: string }) => Promise<string>;
-};
 
 function offsetKey(book: string): string {
   return `sb-offset-${book}`;
@@ -49,74 +19,87 @@ function getOffset(book: string): number {
   }
 }
 
+async function opfsRoot(): Promise<FileSystemDirectoryHandle | null> {
+  try {
+    return await navigator.storage.getDirectory();
+  } catch {
+    return null;
+  }
+}
+
+type ImportProgress = { done: number; total: number; current: string } | null;
+
 export function SongbookLibrary() {
-  const [dir, setDir] = useState<DirHandle | null>(null);
-  const [needsGesture, setNeedsGesture] = useState(false);
-  const [found, setFound] = useState<Record<string, boolean>>({});
+  const [stored, setStored] = useState<Record<string, boolean>>({});
+  const [progress, setProgress] = useState<ImportProgress>(null);
   const [query, setQuery] = useState("");
   const [status, setStatus] = useState<string | null>(null);
+  const [viewer, setViewer] = useState<{ entry: SongEntry; url: string } | null>(null);
   const [offsets, setOffsets] = useState<Record<string, number>>(() =>
     Object.fromEntries(SONGBOOKS.map((b) => [b.key, getOffset(b.key)])));
-  const [viewer, setViewer] = useState<{ entry: SongEntry; url: string } | null>(null);
   const urlCache = useRef<Map<string, string>>(new Map());
 
-  const supported = typeof window !== "undefined" && "showDirectoryPicker" in window;
+  const supported = typeof navigator !== "undefined" && "storage" in navigator;
+  const canPick = typeof window !== "undefined" && "showDirectoryPicker" in window;
 
-  const scanFolder = useCallback(async (handle: DirHandle) => {
+  /** What's already in the site's own storage — readable with no prompt. */
+  const scanStored = useCallback(async () => {
+    const root = await opfsRoot();
+    if (!root) return;
     const names = new Set<string>();
     try {
       // @ts-expect-error async iteration of directory handles
-      for await (const [name] of handle.entries()) names.add(name.toLowerCase());
-    } catch {
-      return;
-    }
-    setFound(Object.fromEntries(
+      for await (const [name] of root.entries()) names.add(name.toLowerCase());
+    } catch { /* empty */ }
+    setStored(Object.fromEntries(
       SONGBOOKS.map((b) => [b.key, names.has(b.file.toLowerCase())])));
   }, []);
 
   useEffect(() => {
-    void (async () => {
-      const saved = await idbGet<DirHandle>("dir");
-      if (!saved) return;
-      const perm = await saved.queryPermission?.({ mode: "read" });
-      if (perm === "granted") {
-        setDir(saved);
-        void scanFolder(saved);
-      } else {
-        setNeedsGesture(true);
-      }
-    })();
-  }, [scanFolder]);
+    void scanStored();
+  }, [scanStored]);
 
-  const connect = useCallback(async () => {
+  /** One-time import: pick the folder, copy every known book into OPFS. */
+  const importLibrary = useCallback(async () => {
     try {
-      if (needsGesture) {
-        const saved = await idbGet<DirHandle>("dir");
-        if (saved && (await saved.requestPermission?.({ mode: "read" })) === "granted") {
-          setDir(saved);
-          setNeedsGesture(false);
-          void scanFolder(saved);
-          return;
+      // @ts-expect-error showDirectoryPicker is not in the TS lib yet
+      const dir: FileSystemDirectoryHandle = await window.showDirectoryPicker({ mode: "read" });
+      const root = await opfsRoot();
+      if (!root) return;
+      void navigator.storage.persist?.();
+      const wanted = SONGBOOKS.filter((b) => !stored[b.key]);
+      let done = 0;
+      for (const book of wanted) {
+        setProgress({ done, total: wanted.length, current: book.name });
+        try {
+          const src = await dir.getFileHandle(book.file);
+          const file = await src.getFile();
+          const dst = await root.getFileHandle(book.file, { create: true });
+          const writable = await dst.createWritable();
+          await file.stream().pipeTo(writable);
+          done += 1;
+        } catch {
+          /* that book isn't in the folder — skip */
         }
       }
-      // @ts-expect-error showDirectoryPicker is not in the TS lib yet
-      const handle: DirHandle = await window.showDirectoryPicker({ mode: "read" });
-      await idbSet("dir", handle);
-      setDir(handle);
-      setNeedsGesture(false);
-      void scanFolder(handle);
+      setProgress(null);
+      setStatus(done > 0
+        ? `Imported ${done} book${done === 1 ? "" : "s"} — your library now lives here.`
+        : "No known book files found in that folder.");
+      void scanStored();
     } catch {
-      /* user cancelled */
+      setProgress(null); /* user cancelled */
     }
-  }, [needsGesture, scanFolder]);
+  }, [stored, scanStored]);
 
-  const open = useCallback(async (entry: SongEntry, handle?: DirHandle) => {
+  const open = useCallback(async (entry: SongEntry) => {
     const book = bookByKey(entry.book);
-    const folder = handle ?? dir;
-    if (!book || !folder) return;
+    if (!book) return;
     setStatus(null);
+    const root = await opfsRoot();
+    if (!root) return;
     try {
-      const fh = await folder.getFileHandle(book.file);
+      const fh = await root.getFileHandle(book.file);
       let url = urlCache.current.get(book.key);
       if (!url) {
         const file = await fh.getFile();
@@ -125,35 +108,9 @@ export function SongbookLibrary() {
       }
       setViewer({ entry, url });
     } catch {
-      setStatus(`Couldn't open ${book.file} — is it in the connected folder?`);
+      setStatus(`“${book.name}” isn't imported yet — use Import library and point at your songbook folder.`);
     }
-  }, [dir]);
-
-  /** A song click with no folder connected starts the connect flow,
-   *  then opens the tune — one gesture, no dead buttons. */
-  const openOrConnect = useCallback(async (entry: SongEntry) => {
-    if (dir && !needsGesture) {
-      void open(entry);
-      return;
-    }
-    try {
-      const saved = needsGesture ? await idbGet<DirHandle>("dir") : undefined;
-      if (saved && (await saved.requestPermission?.({ mode: "read" })) === "granted") {
-        setDir(saved);
-        setNeedsGesture(false);
-        void scanFolder(saved);
-        void open(entry, saved);
-        return;
-      }
-      // @ts-expect-error showDirectoryPicker is not in the TS lib yet
-      const handle: DirHandle = await window.showDirectoryPicker({ mode: "read" });
-      await idbSet("dir", handle);
-      setDir(handle);
-      setNeedsGesture(false);
-      void scanFolder(handle);
-      void open(entry, handle);
-    } catch { /* cancelled */ }
-  }, [dir, needsGesture, open, scanFolder]);
+  }, []);
 
   const bump = useCallback((book: string, delta: number) => {
     setOffsets((prev) => {
@@ -166,7 +123,7 @@ export function SongbookLibrary() {
   }, []);
 
   const results = useMemo(() => searchSongs(query), [query]);
-  const anyFound = Object.values(found).some(Boolean);
+  const storedCount = Object.values(stored).filter(Boolean).length;
 
   return (
     <div className="mx-auto flex h-full w-full max-w-5xl flex-col">
@@ -177,24 +134,28 @@ export function SongbookLibrary() {
             <p className="mt-0.5 text-sm text-ink-dim">
               {SONG_INDEX.length.toLocaleString()} tunes across {SONGBOOKS.length} books —
               search, click, play.
+              {storedCount > 0 && ` ${storedCount} book${storedCount === 1 ? "" : "s"} in your library.`}
             </p>
           </div>
-          <button
-            onClick={() => void connect()}
-            className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${
-              dir && !needsGesture
-                ? "bg-fill-soft text-ink-dim hover:text-ink"
-                : "bg-accent text-accent-deep hover:opacity-90"
-            }`}
-          >
-            {dir && !needsGesture ? "Folder connected ✓ — change" :
-              needsGesture ? "Reconnect your songbook folder" : "Connect your songbook folder"}
-          </button>
+          {canPick && storedCount < SONGBOOKS.length && (
+            <button
+              onClick={() => void importLibrary()}
+              disabled={progress !== null}
+              className={`rounded-full px-4 py-1.5 text-xs font-semibold transition-colors ${
+                storedCount === 0
+                  ? "bg-accent text-accent-deep hover:opacity-90"
+                  : "bg-fill-soft text-ink-dim hover:text-ink"
+              }`}
+            >
+              {progress
+                ? `Importing ${progress.done + 1}/${progress.total}: ${progress.current}…`
+                : storedCount === 0 ? "Import your library — one time" : "Import missing books"}
+            </button>
+          )}
         </div>
         {!supported && (
           <p className="mt-2 text-xs text-amber-400/90">
-            This browser can't open local folders — use Chrome or Edge for
-            click-to-song. Search still works; page numbers are shown.
+            This browser can't store the library — use Chrome, Edge or Safari.
           </p>
         )}
         <input
@@ -213,11 +174,10 @@ export function SongbookLibrary() {
             <ul>
               {results.map((e, i) => {
                 const book = bookByKey(e.book)!;
-                const available = found[e.book];
                 return (
                   <li key={`${e.title}-${e.book}-${i}`}>
                     <button
-                      onClick={() => void openOrConnect(e)}
+                      onClick={() => void open(e)}
                       className="group flex w-full items-baseline gap-3 border-l-2 border-transparent px-3 py-2 text-left transition-colors hover:border-accent hover:bg-fill-soft"
                     >
                       <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">
@@ -225,7 +185,7 @@ export function SongbookLibrary() {
                       </span>
                       <span className="shrink-0 text-xs text-ink-mute">
                         {book.name} · p.{e.page}
-                        {available === false && " · not in folder"}
+                        {stored[e.book] === false && storedCount > 0 && " · not imported"}
                       </span>
                     </button>
                   </li>
@@ -241,7 +201,6 @@ export function SongbookLibrary() {
           <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
             {SONGBOOKS.map((b) => {
               const count = SONG_INDEX.filter((e) => e.book === b.key).length;
-              const available = found[b.key];
               return (
                 <div key={b.key}
                      className="rounded-xl border border-line p-4 transition-colors hover:border-white/20">
@@ -250,17 +209,17 @@ export function SongbookLibrary() {
                       <div className="truncate text-sm font-semibold text-ink">{b.name}</div>
                       <div className="mt-0.5 text-[11px] text-ink-mute">
                         {count > 0 ? `${count} tunes indexed` : `${b.pages} pages`}
-                        {anyFound && (available ? " · in folder ✓" : " · not found")}
+                        {stored[b.key] ? " · in library ✓" : " · not imported"}
                       </div>
                     </div>
                     <button
-                      onClick={() => void openOrConnect({ title: b.name, book: b.key, page: 1 })}
+                      onClick={() => void open({ title: b.name, book: b.key, page: 1 })}
                       className="shrink-0 rounded-full bg-fill-soft px-3 py-1 text-[11px] text-ink-dim transition-colors hover:text-ink"
                     >
                       Open
                     </button>
                   </div>
-                  {b.indexed && (
+                  {b.indexed && stored[b.key] && (
                     <div className="mt-2.5 flex items-center gap-1.5 text-[11px] text-ink-mute">
                       page offset
                       <button onClick={() => bump(b.key, -1)}
@@ -268,7 +227,6 @@ export function SongbookLibrary() {
                       <span className="w-5 text-center tabular-nums">{offsets[b.key] ?? 0}</span>
                       <button onClick={() => bump(b.key, 1)}
                               className="rounded bg-fill-soft px-1.5 hover:text-ink">+</button>
-                      <span className="text-ink-mute/70">— calibrate once if pages land off</span>
                     </div>
                   )}
                 </div>

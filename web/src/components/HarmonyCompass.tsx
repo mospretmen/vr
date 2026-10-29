@@ -406,7 +406,7 @@ export function HarmonyCompass({ fill = false, wheelOnly = false }: {
 
 /** The scale written on a treble staff — note heads, accidentals,
  *  ledger lines, closing on the octave root. */
-function MiniStaff({ root, intervals }: { root: number; intervals: readonly number[] }) {
+export function MiniStaff({ root, intervals }: { root: number; intervals: readonly number[] }) {
   const names = spellScale(root, intervals);
   const LETTERS: Record<string, number> = { C: 0, D: 1, E: 2, F: 3, G: 4, A: 5, B: 6 };
   // Absolute diatonic steps, ascending from octave 4; close with the root.
