@@ -9,12 +9,16 @@ public enum ChordGripTemplates {
     /// catalog[intervalSet] = shapes, best-known first.
     /// E-root = anchored on string 0 (low E), A-root = string 1.
     static let catalog: [Set<Int>: [[Int?]]] = [
-        // maj7 — Gmaj7 3x443x · Cmaj7 x35453
-        [0, 4, 7, 11]: [[0, nil, 1, 1, 0, nil], [nil, 0, 2, 1, 2, 0]],
-        // 7 — G7 353433 · C7 x35353
-        [0, 4, 7, 10]: [[0, 2, 0, 1, 0, 0], [nil, 0, 2, 0, 2, 0]],
-        // m7 — Gm7 353333 · Cm7 x35343
-        [0, 3, 7, 10]: [[0, 2, 0, 0, 0, 0], [nil, 0, 2, 0, 1, 0]],
+        // maj7 — Gmaj7 3x443x · Cmaj7 x35453 · C-shape x32000 · D-shape xx0222
+        [0, 4, 7, 11]: [[0, nil, 1, 1, 0, nil], [nil, 0, 2, 1, 2, 0],
+                        [nil, 0, -1, -3, -3, -3], [nil, nil, 0, 2, 2, 2]],
+        // 7 — G7 353433 · C7 x35353 · C7-shape x32310 · D7-shape xx0212 · G7-shape 320001
+        [0, 4, 7, 10]: [[0, 2, 0, 1, 0, 0], [nil, 0, 2, 0, 2, 0],
+                        [nil, 0, -1, 0, -2, -3], [nil, nil, 0, 2, 1, 2],
+                        [0, -1, -3, -3, -3, -2]],
+        // m7 — Gm7 353333 · Cm7 x35343 · Dm7-shape xx0211
+        [0, 3, 7, 10]: [[0, 2, 0, 0, 0, 0], [nil, 0, 2, 0, 1, 0],
+                        [nil, nil, 0, 2, 1, 1]],
         // m7♭5 — Gm7♭5 3x332x · Cm7♭5 x3434x
         [0, 3, 6, 10]: [[0, nil, 0, 0, -1, nil], [nil, 0, 1, 0, 1, nil]],
         // dim7 — G°7 3x232x · C°7 x3424x
