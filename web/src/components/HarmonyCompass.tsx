@@ -1,7 +1,7 @@
 // The live Harmony Compass demo — the showcase heart of the landing page.
 // A faithful 2D rendering of the visionOS compass: tap any chord, hear it,
 // and watch its legal departures light up over the quiet lattice.
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   ALL_MOVES,
   ALL_NODES,
@@ -154,10 +154,41 @@ function chordMidis(n: CompassNode): number[] {
 export function HarmonyCompass({ fill = false, wheelOnly = false }: {
   fill?: boolean; wheelOnly?: boolean;
 } = {}) {
-  const [selected, setSelected] = useState<CompassNode>(() => node("majorKey", 0));
-  const [frameTonic, setFrameTonic] = useState(0);
-  const [frameMinor, setFrameMinor] = useState(false);
-  const [path, setPath] = useState<CompassNode[]>([node("majorKey", 0)]);
+  // Key frame, selection and walk persist like the headset's compass.
+  const [selected, setSelected] = useState<CompassNode>(() => {
+    try {
+      const raw = localStorage.getItem("hc-selected");
+      if (raw) {
+        const [ring, index] = JSON.parse(raw) as [CompassNode["ring"], number];
+        return node(ring, index);
+      }
+    } catch { /* fresh start */ }
+    return node("majorKey", 0);
+  });
+  const [frameTonic, setFrameTonic] = useState(() => {
+    try { return Number(localStorage.getItem("hc-tonic") ?? 0) || 0; } catch { return 0; }
+  });
+  const [frameMinor, setFrameMinor] = useState(() => {
+    try { return localStorage.getItem("hc-minor") === "1"; } catch { return false; }
+  });
+  const [path, setPath] = useState<CompassNode[]>(() => {
+    try {
+      const raw = localStorage.getItem("hc-path");
+      if (raw) {
+        const refs = JSON.parse(raw) as [CompassNode["ring"], number][];
+        if (refs.length > 0) return refs.map(([r, i]) => node(r, i));
+      }
+    } catch { /* fresh start */ }
+    return [node("majorKey", 0)];
+  });
+  useEffect(() => {
+    try {
+      localStorage.setItem("hc-selected", JSON.stringify([selected.ring, selected.index]));
+      localStorage.setItem("hc-tonic", String(frameTonic));
+      localStorage.setItem("hc-minor", frameMinor ? "1" : "0");
+      localStorage.setItem("hc-path", JSON.stringify(path.map((n) => [n.ring, n.index])));
+    } catch { /* private mode */ }
+  }, [selected, frameTonic, frameMinor, path]);
   const lattice = useMemo(latticePairs, []);
   const moves = useMemo(() => movesFrom(selected), [selected]);
   // The 2D app's grammar: a three-hop web, blaze → glow → whisper.
