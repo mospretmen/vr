@@ -2,11 +2,8 @@ import { useEffect, useState, type ReactNode } from "react";
 import { FretboardExplorer } from "./components/FretboardExplorer";
 import { HarmonyCompass } from "./components/HarmonyCompass";
 import { ClassicsBrowser, ClassicsShowcase } from "./components/ClassicsShowcase";
-import {
-  PricingSection,
-  VisionProSection,
-  WaitlistSection,
-} from "./components/VisionShowcase";
+import { VisionProSection } from "./components/VisionShowcase";
+import { SongbookLibrary } from "./components/SongbookLibrary";
 import { PracticeStats } from "./components/PracticeStats";
 import { TrackLibrary } from "./components/TrackLibrary";
 
@@ -15,8 +12,6 @@ const NAV_LINKS = [
   { label: "Vision Pro", href: "#visionpro" },
   { label: "Classics", href: "#classics" },
   { label: "Explorer", href: "#explorer" },
-  { label: "Pricing", href: "#pricing" },
-  { label: "Waitlist", href: "#waitlist" },
 ] as const;
 
 function Wordmark() {
@@ -34,6 +29,7 @@ const APP_VIEWS = [
   { hash: "#/compass", label: "Compass" },
   { hash: "#/fretboard", label: "Fretboard" },
   { hash: "#/phrases", label: "Phrases" },
+  { hash: "#/songbook", label: "Songbook" },
 ] as const;
 
 function useHashRoute(): string {
@@ -69,7 +65,7 @@ function AppShell({ route }: { route: string }) {
             </a>
           ))}
         </nav>
-        <a href="#waitlist" onClick={() => { window.location.hash = ""; }}
+        <a href="#visionpro" onClick={() => { window.location.hash = ""; }}
            className="hidden items-center gap-1.5 text-xs text-ink-mute transition-colors hover:text-ink sm:flex">
           <svg width="18" height="12" viewBox="0 0 24 14" fill="none"
                stroke="currentColor" strokeWidth="1.6" aria-hidden="true">
@@ -88,6 +84,11 @@ function AppShell({ route }: { route: string }) {
         {route === "#/phrases" && (
           <div className="h-full overflow-hidden pt-2">
             <ClassicsBrowser fill />
+          </div>
+        )}
+        {route === "#/songbook" && (
+          <div className="h-full overflow-hidden pt-2">
+            <SongbookLibrary />
           </div>
         )}
       </main>
@@ -202,7 +203,7 @@ function Hero() {
         <div className="rise-in rise-in-2 mt-8 flex flex-wrap items-center justify-center gap-3">
           <a href="#/compass"
              className="rounded-xl bg-accent px-6 py-3 text-sm font-semibold text-accent-deep transition-opacity hover:opacity-90">
-            Launch the Compass — free
+            Launch the Compass
           </a>
           <a href="#/fretboard"
              className="rounded-xl border border-line px-6 py-3 text-sm font-medium text-ink transition-colors hover:bg-fill-soft">
@@ -503,8 +504,7 @@ export default function App() {
             <PracticeStats />
           </div>
         </Section>
-        <PricingSection />
-        <WaitlistSection />
+
       </main>
       <Footer />
     </div>

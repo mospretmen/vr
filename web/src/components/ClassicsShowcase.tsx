@@ -36,9 +36,28 @@ function foldFret(fret: number): number {
   return f;
 }
 
+/** VR-parity shelf groups, assigned by name heuristics. */
+const SHELF_GROUPS: [string, RegExp][] = [
+  ["Blues & rock", /B\.B\.|Albert King|Freddie King|Buddy Guy|Otis Rush|Peter Green|Chuck Berry|Gilmour|Knopfler|Hendrix|turnaround|SRV|Magic Sam|Collins|Sumlin|Hooker|Hopkins|Gatemouth/],
+  ["Country & fingerstyle", /Doc Watson|Travis|Atkins|Albert Lee|Brent Mason|Jerry Reed|Nichols|Emmanuel|Les Paul/],
+  ["Bossa & gypsy", /Django|Byrd|Bonfá|Baden|Jobim|Rosenberg|Lagrène/],
+  ["Classical & public domain", /Bach|BWV|Mozart|Beethoven|Grieg|Brahms|Chopin|Tárrega|Sor|Verdi|Rossini|Schubert|Vivaldi|Dvořák|plainchant|traditional|Satie|Paganini|Boccherini|Tchaikovsky|Nachtmusik|Badinerie/],
+];
+
+function shelfGroup(name: string): string {
+  for (const [label, test] of SHELF_GROUPS) if (test.test(name)) return label;
+  return "Jazz masters";
+}
+
+const GROUP_ORDER = [
+  "Jazz masters", "Blues & rock", "Bossa & gypsy",
+  "Country & fingerstyle", "Classical & public domain",
+];
+
 export function ClassicsBrowser({ fill = false }: { fill?: boolean } = {}) {
   const [index, setIndex] = useState(0);
   const [transpose, setTranspose] = useState(0);
+  const [query, setQuery] = useState("");
   const base = WEB_CLASSICS[index];
   const phrase: WebPhrase = transpose === 0 ? base : {
     ...base,
@@ -51,30 +70,54 @@ export function ClassicsBrowser({ fill = false }: { fill?: boolean } = {}) {
   return (
     <div className={fill ? "flex h-full flex-col gap-6 px-1 pt-2 sm:px-2 lg:flex-row" : ""}>
           <div className="flex w-full flex-col gap-5 lg:flex-row">
-            <div className={`no-scrollbar w-full overflow-y-auto lg:max-w-xs ${fill ? "lg:max-h-full max-h-[240px]" : "max-h-[320px]"}`}>
-              <ul className="space-y-1.5">
-                {WEB_CLASSICS.map((p, i) => (
-                  <li key={p.name}>
-                    <button
-                      onClick={() => {
-                        setIndex(i);
-                        setTranspose(0);
-                        playRun(p.steps.map(stepMidi));
-                      }}
-                      className={`w-full border-l-2 px-3 py-2 text-left text-sm transition-colors ${
-                        i === index
-                          ? "border-accent text-ink"
-                          : "border-transparent text-ink-mute hover:text-ink-dim"
-                      }`}
-                    >
-                      <span className="font-medium">{p.name}</span>
-                      <span className="mt-0.5 block text-[11px] text-ink-mute">
-                        {p.context ?? `over ${p.chord.symbol}`}
-                      </span>
-                    </button>
-                  </li>
-                ))}
-              </ul>
+            <div className={`flex w-full flex-col lg:max-w-xs ${fill ? "lg:max-h-full max-h-[280px]" : "max-h-[360px]"}`}>
+              <input
+                value={query}
+                onChange={(e) => setQuery(e.target.value)}
+                placeholder="Search the shelf…"
+                className="mb-2 w-full shrink-0 rounded-md border border-line bg-transparent px-3 py-1.5 text-sm text-ink placeholder:text-ink-mute focus:border-accent focus:outline-none"
+              />
+              <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto">
+                {GROUP_ORDER.map((group) => {
+                  const members = WEB_CLASSICS
+                    .map((p, i) => ({ p, i }))
+                    .filter(({ p }) => shelfGroup(p.name) === group)
+                    .filter(({ p }) =>
+                      query.trim() === ""
+                      || (p.name + " " + p.remark).toLowerCase().includes(query.trim().toLowerCase()));
+                  if (members.length === 0) return null;
+                  return (
+                    <div key={group}>
+                      <div className="px-3 pb-1 pt-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-mute">
+                        {group}
+                      </div>
+                      <ul className="space-y-0.5">
+                        {members.map(({ p, i }) => (
+                          <li key={p.name}>
+                            <button
+                              onClick={() => {
+                                setIndex(i);
+                                setTranspose(0);
+                                playRun(p.steps.map(stepMidi));
+                              }}
+                              className={`w-full border-l-2 px-3 py-1.5 text-left text-sm transition-colors ${
+                                i === index
+                                  ? "border-accent text-ink"
+                                  : "border-transparent text-ink-mute hover:text-ink-dim"
+                              }`}
+                            >
+                              <span className="font-medium">{p.name}</span>
+                              <span className="mt-0.5 block text-[11px] text-ink-mute">
+                                {p.context ?? `over ${p.chord.symbol}`}
+                              </span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
             <div className="min-w-0 flex-1">
               <div className="flex items-baseline justify-between gap-3">
