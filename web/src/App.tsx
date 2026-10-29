@@ -50,7 +50,7 @@ function AppShell({ route }: { route: string }) {
            className="font-display text-base font-bold tracking-tight text-ink">
           Fret<span className="text-accent">space</span>
         </a>
-        <nav className="flex items-center gap-6">
+        <nav className="no-scrollbar flex items-center gap-4 overflow-x-auto sm:gap-6">
           {APP_VIEWS.map((view) => (
             <a key={view.hash} href={view.hash}
                className={`relative py-1.5 text-sm font-medium transition-colors duration-200 ${
