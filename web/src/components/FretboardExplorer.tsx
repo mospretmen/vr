@@ -135,7 +135,11 @@ const TONE_FILL = [
   "fill-tone-fifth",
   "fill-tone-seventh",
 ] as const;
-const TONE_MARKS = ["R", "3", "5", "7"] as const;
+/** Interval-true badge for a chord tone (the 6 in m6 says 6, not 7). */
+function toneMark(intervals: readonly number[], toneIndex: number): string {
+  const semis = intervals[toneIndex] ?? 0;
+  return ["R", "♭2", "2", "♭3", "3", "4", "♭5", "5", "♯5", "6", "♭7", "7"][semis] ?? "R";
+}
 
 /** Connector line under the voicing markers. */
 const SHAPE_STROKE = "rgba(255,255,255,0.45)";
@@ -868,7 +872,7 @@ export function FretboardExplorer({ bare = false }: { bare?: boolean } = {}) {
                         step.tone === 0 ? "fill-accent-deep" : "fill-base"
                       }`}
                     >
-                      {TONE_MARKS[step.tone]}
+                      {toneMark(voicingQuality.intervals, step.tone)}
                     </text>
                   </g>
                 )),

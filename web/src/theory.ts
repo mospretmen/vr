@@ -52,6 +52,12 @@ export const SEVENTH_QUALITIES: readonly TriadQualityPreset[] = [
   { name: "Dominant 7", symbol: "7", intervals: [0, 4, 7, 10] },
   { name: "Minor 7", symbol: "m7", intervals: [0, 3, 7, 10] },
   { name: "Half-diminished", symbol: "m7♭5", intervals: [0, 3, 6, 10] },
+  { name: "Diminished 7", symbol: "°7", intervals: [0, 3, 6, 9] },
+  { name: "Major 6", symbol: "6", intervals: [0, 4, 7, 9] },
+  { name: "Minor 6", symbol: "m6", intervals: [0, 3, 7, 9] },
+  { name: "Minor-major 7", symbol: "m(maj7)", intervals: [0, 3, 7, 11] },
+  { name: "7 sus4", symbol: "7sus4", intervals: [0, 5, 7, 10] },
+  { name: "Augmented 7", symbol: "7♯5", intervals: [0, 4, 8, 10] },
 ] as const;
 
 /**

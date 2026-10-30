@@ -18,12 +18,18 @@ const MAJOR = TRIAD_QUALITIES[0].intervals; // [0, 4, 7]
 const MAJ7 = SEVENTH_QUALITIES[0].intervals; // [0, 4, 7, 11]
 
 describe("catalogs", () => {
-  it("defines the four seventh qualities with their canonical shapes", () => {
+  it("defines the seventh qualities with their canonical shapes", () => {
     expect(SEVENTH_QUALITIES.map((q) => [q.symbol, [...q.intervals]])).toEqual([
       ["maj7", [0, 4, 7, 11]],
       ["7", [0, 4, 7, 10]],
       ["m7", [0, 3, 7, 10]],
       ["m7♭5", [0, 3, 6, 10]],
+      ["°7", [0, 3, 6, 9]],
+      ["6", [0, 4, 7, 9]],
+      ["m6", [0, 3, 7, 9]],
+      ["m(maj7)", [0, 3, 7, 11]],
+      ["7sus4", [0, 5, 7, 10]],
+      ["7♯5", [0, 4, 8, 10]],
     ]);
   });
 
