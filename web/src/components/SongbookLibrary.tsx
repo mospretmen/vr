@@ -266,7 +266,13 @@ export function SongbookLibrary() {
       setViewer({ entry, url: cached });
       return;
     }
-    const blob = await loadBookFile(fileName);
+    let blob = await loadBookFile(fileName);
+    if (!blob && book?.url) {
+      try {
+        const res = await fetch(book.url);
+        if (res.ok) blob = await res.blob();
+      } catch { /* offline */ }
+    }
     if (blob) {
       const url = URL.createObjectURL(blob);
       urlCache.current.set(fileName, url);
@@ -387,7 +393,9 @@ export function SongbookLibrary() {
               const thumb = thumbs[fileName] ?? thumbs[fileName.toLowerCase()];
               const id = `${e.book}|${e.title}|${e.page}`;
               const isFav = favorites.has(id);
-              const inLibrary = book ? storedByKey.map[book.key] !== undefined : false;
+              const inLibrary = book
+                ? storedByKey.map[book.key] !== undefined || book.url !== undefined
+                : false;
               return (
                 <li key={`${id}-${i}`}>
                   <div className="group flex w-full items-center gap-3 border-l-2 border-transparent px-2 py-1.5 transition-colors hover:border-accent hover:bg-fill-soft">

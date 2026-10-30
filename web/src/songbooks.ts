@@ -12,6 +12,8 @@ export interface Songbook {
   pages: number;
   /** Books with no per-song index yet open at page 1. */
   indexed: boolean;
+  /** Public-domain scores served by the site itself — no import needed. */
+  url?: string;
 }
 
 export const SONGBOOKS: Songbook[] = [
@@ -33,7 +35,12 @@ export const SONGBOOKS: Songbook[] = [
   { key: "chico", name: "Chico Buarque Songbook vol. I", file: "Songbook Chico Buarque vol. I.pdf", pages: 105, indexed: false },
   { key: "djavan", name: "Djavan Songbook vol. I & II", file: "Songbook Djavan vol. I & II.pdf", pages: 68, indexed: false },
   { key: "martino", name: "Pat Martino — Linear Expressions", file: "pdfcoffee.com-pat-martino-linear-expressions.pdf", pages: 63, indexed: false },
-  { key: "bwv1002", name: "Bach — Partita No. 1, BWV 1002", file: "IMSLP01305-BWV1002.pdf", pages: 9, indexed: false },
+  { key: "bwv1002", name: "Bach — Partita No. 1, BWV 1002", file: "bwv1002-violin-partita-1.pdf", pages: 9, indexed: false, url: "/scores/bwv1002-violin-partita-1.pdf" },
+  { key: "monk", name: "Thelonious Monk Compositions", file: "Thelonious_Monk_Compositions.pdf", pages: 73, indexed: false },
+  { key: "baden", name: "Baden Powell Songbook vol. I", file: "Baden Pawel Vol. 1.pdf", pages: 26, indexed: false },
+  { key: "bach1007", name: "Bach — Cello Suite No. 1, BWV 1007", file: "bwv1007-cello-suite-1.pdf", pages: 10, indexed: false, url: "/scores/bwv1007-cello-suite-1.pdf" },
+  { key: "bach999", name: "Bach — Prelude in C minor, BWV 999", file: "bwv999-prelude-c-minor.pdf", pages: 3, indexed: false, url: "/scores/bwv999-prelude-c-minor.pdf" },
+  { key: "bach1000", name: "Bach — Fugue in G minor, BWV 1000", file: "bwv1000-fugue-g-minor.pdf", pages: 4, indexed: false, url: "/scores/bwv1000-fugue-g-minor.pdf" },
 ];
 
 export interface SongEntry {
@@ -50,7 +57,8 @@ export function bookByKey(key: string): Songbook | undefined {
 
 /** Loose filename normalization so "Real Book 2.pdf" still lands. */
 export function normalizeName(name: string): string {
-  return name.toLowerCase().replace(/\.pdf$/i, "").replace(/[^a-z0-9]/g, "");
+  return name.toLowerCase().replace(/\.pdf$/i, "")
+    .replace(/[^a-z0-9]/g, "").replace(/^the/, "");
 }
 
 /** Match an arbitrary file to a known book, or null. */
