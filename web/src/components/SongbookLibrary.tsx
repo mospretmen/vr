@@ -17,7 +17,7 @@ function offsetKey(book: string): string {
 }
 /** Measured front-matter offsets (printed page → PDF page); the ± control
  *  overrides and remembers per book. */
-const DEFAULT_OFFSETS: Record<string, number> = { evansbk: 3 };
+const DEFAULT_OFFSETS: Record<string, number> = { evansbk: 3, realbk1: 13 };
 function getOffset(book: string): number {
   try {
     const raw = localStorage.getItem(offsetKey(book));
@@ -154,6 +154,16 @@ async function makeThumb(fileName: string): Promise<string | null> {
   }
 }
 
+function Star({ filled }: { filled: boolean }) {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" aria-hidden
+         fill={filled ? "currentColor" : "none"}
+         stroke="currentColor" strokeWidth={filled ? 0 : 1.6}>
+      <path d="M12 2.6l2.9 5.9 6.5.95-4.7 4.58 1.1 6.47L12 17.45 6.2 20.5l1.1-6.47L2.6 9.45l6.5-.95L12 2.6z" />
+    </svg>
+  );
+}
+
 // ---- In-app PDF viewer (pdf.js): lands exactly on the page ----
 
 type PdfDoc = { numPages: number; getPage: (n: number) => Promise<unknown> };
@@ -258,6 +268,17 @@ export function SongbookLibrary() {
     Object.fromEntries(SONGBOOKS.map((b) => [b.key, getOffset(b.key)])));
 
   const canPick = typeof window !== "undefined" && "showDirectoryPicker" in window;
+  const [manageOpen, setManageOpen] = useState(false);
+  const [remote, setRemote] = useState(() => {
+    try {
+      return {
+        base: localStorage.getItem("sb-remote-url") ?? "",
+        auth: localStorage.getItem("sb-remote-auth") ?? "",
+      };
+    } catch {
+      return { base: "", auth: "" };
+    }
+  });
 
   /** Known books stored (key → actual file name), plus unknown extras. */
   const storedByKey = useMemo(() => {
@@ -351,6 +372,13 @@ export function SongbookLibrary() {
         if (res.ok) blob = await res.blob();
       } catch { /* offline */ }
     }
+    if (!blob && remote.base) {
+      try {
+        const res = await fetch(`${remote.base.replace(/\/+$/, "")}/${encodeURIComponent(fileName)}`,
+          { headers: remote.auth ? { Authorization: remote.auth } : undefined });
+        if (res.ok) blob = await res.blob();
+      } catch { /* unreachable */ }
+    }
     if (blob) {
       blobCache.current.set(fileName, blob);
       setViewerPages(0);
@@ -359,7 +387,7 @@ export function SongbookLibrary() {
       return;
     }
     setStatus(`“${book?.name ?? entry.book}” isn't in your library yet — add its PDF above.`);
-  }, [storedByKey]);
+  }, [storedByKey, remote]);
 
   const bump = useCallback((book: string, delta: number) => {
     setOffsets((prev) => {
@@ -425,36 +453,71 @@ export function SongbookLibrary() {
               {storedCount > 0 && ` ${storedCount} book${storedCount === 1 ? "" : "s"} in your library.`}
             </p>
           </div>
-          <div className="flex items-center gap-2">
-            <label
-              onClick={() => setStatus("Choose your PDF files in the dialog…")}
-              className="cursor-pointer rounded-full bg-accent px-4 py-1.5 text-xs font-semibold text-accent-deep transition-opacity hover:opacity-90">
-              Add book files…
-              <input
-                type="file"
-                multiple
-                accept=".pdf,application/pdf"
-                className="hidden"
-                onChange={(ev) => {
-                  const list = Array.from(ev.target.files ?? []);
-                  void importFiles(list.map((f) => ({ name: f.name, blob: async () => f })));
-                  ev.target.value = "";
-                }}
-              />
-            </label>
-            {canPick && (
-              <button
-                onClick={() => void importLibrary()}
-                disabled={progress !== null}
-                className="rounded-full bg-fill-soft px-4 py-1.5 text-xs font-semibold text-ink-dim transition-colors hover:text-ink"
-              >
-                {progress
-                  ? `Importing ${progress.done + 1}/${progress.total}…`
-                  : "…or the whole folder"}
-              </button>
-            )}
-          </div>
+          <button
+            onClick={() => setManageOpen((v) => !v)}
+            className="rounded-full bg-fill-soft px-3.5 py-1.5 text-xs font-medium text-ink-dim transition-colors hover:text-ink"
+          >
+            ⚙ Library
+          </button>
         </div>
+        {(manageOpen || storedCount === 0) && (
+          <div className="mt-3 rounded-xl border border-line p-3">
+            <div className="flex flex-wrap items-center gap-2">
+              <label
+                onClick={() => setStatus("Choose your PDF files in the dialog…")}
+                className="cursor-pointer rounded-full bg-accent px-4 py-1.5 text-xs font-semibold text-accent-deep transition-opacity hover:opacity-90">
+                Add book files…
+                <input
+                  type="file"
+                  multiple
+                  accept=".pdf,application/pdf"
+                  className="hidden"
+                  onChange={(ev) => {
+                    const list = Array.from(ev.target.files ?? []);
+                    void importFiles(list.map((f) => ({ name: f.name, blob: async () => f })));
+                    ev.target.value = "";
+                  }}
+                />
+              </label>
+              {canPick && (
+                <button
+                  onClick={() => void importLibrary()}
+                  disabled={progress !== null}
+                  className="rounded-full bg-fill-soft px-4 py-1.5 text-xs font-semibold text-ink-dim transition-colors hover:text-ink"
+                >
+                  {progress
+                    ? `Importing ${progress.done + 1}/${progress.total}…`
+                    : "…or import the whole folder"}
+                </button>
+              )}
+              <span className="text-[11px] text-ink-mute">
+                Books stay on this device — nothing is uploaded.
+              </span>
+            </div>
+            <div className="mt-2.5 flex flex-wrap gap-2">
+              <input
+                defaultValue={remote.base}
+                placeholder="Remote library URL (optional — private bucket)"
+                onBlur={(ev) => {
+                  const base = ev.target.value.trim();
+                  try { localStorage.setItem("sb-remote-url", base); } catch { /* */ }
+                  setRemote((r) => ({ ...r, base }));
+                }}
+                className="min-w-[260px] flex-1 rounded-md border border-line bg-transparent px-2.5 py-1.5 text-xs text-ink placeholder:text-ink-mute focus:border-accent focus:outline-none"
+              />
+              <input
+                defaultValue={remote.auth}
+                placeholder="Authorization header (optional)"
+                onBlur={(ev) => {
+                  const auth = ev.target.value.trim();
+                  try { localStorage.setItem("sb-remote-auth", auth); } catch { /* */ }
+                  setRemote((r) => ({ ...r, auth }));
+                }}
+                className="min-w-[200px] flex-1 rounded-md border border-line bg-transparent px-2.5 py-1.5 text-xs text-ink placeholder:text-ink-mute focus:border-accent focus:outline-none"
+              />
+            </div>
+          </div>
+        )}
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -504,7 +567,7 @@ export function SongbookLibrary() {
                         isFav ? "text-accent" : "text-ink-mute/40 hover:text-ink-mute"
                       }`}
                     >
-                      ★
+                      <Star filled={isFav} />
                     </button>
                     <button
                       onClick={() => void open(e)}
