@@ -24,6 +24,9 @@ export const SONGBOOKS: Songbook[] = [
   { key: "realbk2", name: "The Real Book II", file: "REALBK2.PDF", pages: 476, indexed: true },
   { key: "jazzltd", name: "Jazz LTD", file: "JAZZLTD.PDF", pages: 480, indexed: true },
   { key: "library", name: "Library of Musicians' Jazz", file: "LIBRARY.PDF", pages: 320, indexed: true },
+  { key: "newreal1", name: "The New Real Book I", file: "NEWREAL1.PDF", pages: 440, indexed: true },
+  { key: "newreal2", name: "The New Real Book II", file: "NEWREAL2.PDF", pages: 420, indexed: true },
+  { key: "newreal3", name: "The New Real Book III", file: "NEWREAL3.PDF", pages: 400, indexed: true },
   { key: "jobim", name: "Tom Jobim Songbook vol. I", file: "Songbook Tom Jobim vol. I.pdf", pages: 76, indexed: false },
   { key: "jobim2", name: "Tom Jobim Songbook vol. II", file: "Songbook Tom Jobim vol. II.pdf", pages: 90, indexed: false },
   { key: "jobim3", name: "Tom Jobim Songbook vol. III", file: "Songbook Tom Jobim vol. III.pdf", pages: 90, indexed: false },
@@ -43,6 +46,20 @@ export const SONG_INDEX: SongEntry[] = rawIndex as SongEntry[];
 
 export function bookByKey(key: string): Songbook | undefined {
   return SONGBOOKS.find((b) => b.key === key);
+}
+
+/** Loose filename normalization so "Real Book 2.pdf" still lands. */
+export function normalizeName(name: string): string {
+  return name.toLowerCase().replace(/\.pdf$/i, "").replace(/[^a-z0-9]/g, "");
+}
+
+/** Match an arbitrary file to a known book, or null. */
+export function matchBook(filename: string): Songbook | null {
+  const n = normalizeName(filename);
+  for (const b of SONGBOOKS) {
+    if (n === normalizeName(b.file) || n === normalizeName(b.name)) return b;
+  }
+  return null;
 }
 
 /** Rank search: startsWith beats includes; title order ties. */

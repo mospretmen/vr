@@ -1,26 +1,15 @@
-// The songbook room: every fake book and songbook in one searchable place.
-// The library is imported ONCE from the user's folder into the browser's
-// Origin Private File System — after that it lives with the site: no
-// permission prompts, no reconnecting, works offline. Nothing is uploaded;
-// the books stay on this machine.
+// The songbook room: one dynamic search over every tune the user owns.
+// Books are imported once into the browser's own storage (OPFS, with an
+// IndexedDB fallback); each gets a cover thumbnail; songs open at their
+// page in a built-in viewer. Favorites pin to the top. Nothing is ever
+// uploaded — the books live with the site on this machine.
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
-  bookByKey, searchSongs, SONG_INDEX, SONGBOOKS, type SongEntry,
+  bookByKey, matchBook, searchSongs, SONG_INDEX, SONGBOOKS,
+  type SongEntry,
 } from "../songbooks";
 
-const REMOTE_URL_KEY = "sb-remote-url";
-const REMOTE_AUTH_KEY = "sb-remote-auth";
-
-function remoteConfig(): { base: string; auth: string } {
-  try {
-    return {
-      base: localStorage.getItem(REMOTE_URL_KEY) ?? "",
-      auth: localStorage.getItem(REMOTE_AUTH_KEY) ?? "",
-    };
-  } catch {
-    return { base: "", auth: "" };
-  }
-}
+// ---- Local persistence helpers ----
 
 function offsetKey(book: string): string {
   return `sb-offset-${book}`;
@@ -32,6 +21,14 @@ function getOffset(book: string): number {
     return 0;
   }
 }
+const FAVORITES_KEY = "sb-favorites";
+function loadFavorites(): Set<string> {
+  try {
+    return new Set(JSON.parse(localStorage.getItem(FAVORITES_KEY) ?? "[]") as string[]);
+  } catch {
+    return new Set();
+  }
+}
 
 async function opfsRoot(): Promise<FileSystemDirectoryHandle | null> {
   try {
@@ -41,42 +38,44 @@ async function opfsRoot(): Promise<FileSystemDirectoryHandle | null> {
   }
 }
 
-// IndexedDB blob store — the fallback when OPFS writing isn't supported
-// (Safari, visionOS Safari). Same books, same keys (the file name).
 function booksDb(): Promise<IDBDatabase> {
   return new Promise((resolve, reject) => {
-    const req = indexedDB.open("fretspace-books", 1);
-    req.onupgradeneeded = () => req.result.createObjectStore("books");
+    const req = indexedDB.open("fretspace-books", 2);
+    req.onupgradeneeded = () => {
+      const db = req.result;
+      if (!db.objectStoreNames.contains("books")) db.createObjectStore("books");
+      if (!db.objectStoreNames.contains("thumbs")) db.createObjectStore("thumbs");
+    };
     req.onsuccess = () => resolve(req.result);
     req.onerror = () => reject(req.error);
   });
 }
-async function idbPutBook(name: string, blob: Blob): Promise<void> {
+async function idbPut(store: "books" | "thumbs", name: string, value: unknown): Promise<void> {
   const db = await booksDb();
   return new Promise((resolve, reject) => {
-    const tx = db.transaction("books", "readwrite");
-    tx.objectStore("books").put(blob, name.toLowerCase());
+    const tx = db.transaction(store, "readwrite");
+    tx.objectStore(store).put(value, name.toLowerCase());
     tx.oncomplete = () => resolve();
     tx.onerror = () => reject(tx.error);
   });
 }
-async function idbGetBook(name: string): Promise<Blob | null> {
+async function idbGet<T>(store: "books" | "thumbs", name: string): Promise<T | null> {
   try {
     const db = await booksDb();
     return await new Promise((resolve) => {
-      const rq = db.transaction("books", "readonly").objectStore("books").get(name.toLowerCase());
-      rq.onsuccess = () => resolve((rq.result as Blob) ?? null);
+      const rq = db.transaction(store, "readonly").objectStore(store).get(name.toLowerCase());
+      rq.onsuccess = () => resolve((rq.result as T) ?? null);
       rq.onerror = () => resolve(null);
     });
   } catch {
     return null;
   }
 }
-async function idbBookNames(): Promise<string[]> {
+async function idbKeys(store: "books" | "thumbs"): Promise<string[]> {
   try {
     const db = await booksDb();
     return await new Promise((resolve) => {
-      const rq = db.transaction("books", "readonly").objectStore("books").getAllKeys();
+      const rq = db.transaction(store, "readonly").objectStore(store).getAllKeys();
       rq.onsuccess = () => resolve((rq.result as string[]) ?? []);
       rq.onerror = () => resolve([]);
     });
@@ -85,7 +84,6 @@ async function idbBookNames(): Promise<string[]> {
   }
 }
 
-/** Store one book: OPFS when writable, IndexedDB otherwise. */
 async function storeBook(name: string, file: Blob): Promise<void> {
   const root = await opfsRoot();
   if (root) {
@@ -97,11 +95,10 @@ async function storeBook(name: string, file: Blob): Promise<void> {
       return;
     } catch { /* fall through to IDB */ }
   }
-  await idbPutBook(name, file);
+  await idbPut("books", name, file);
 }
 
-/** Load one book from wherever it was stored. */
-async function loadBook(name: string): Promise<Blob | null> {
+async function loadBookFile(name: string): Promise<Blob | null> {
   const root = await opfsRoot();
   if (root) {
     try {
@@ -109,74 +106,136 @@ async function loadBook(name: string): Promise<Blob | null> {
       return await fh.getFile();
     } catch { /* try IDB */ }
   }
-  return idbGetBook(name);
+  return idbGet<Blob>("books", name);
 }
 
+async function storedFileNames(): Promise<string[]> {
+  const names = new Set<string>();
+  const root = await opfsRoot();
+  if (root) {
+    try {
+      // @ts-expect-error async iteration of directory handles
+      for await (const [name] of root.entries()) names.add(name);
+    } catch { /* empty */ }
+  }
+  for (const n of await idbKeys("books")) names.add(n);
+  return [...names];
+}
+
+/** Render page 1 of a stored book to a small cover thumbnail (pdf.js). */
+async function makeThumb(fileName: string): Promise<string | null> {
+  try {
+    const blob = await loadBookFile(fileName);
+    if (!blob) return null;
+    const pdfjs = await import("pdfjs-dist");
+    pdfjs.GlobalWorkerOptions.workerSrc =
+      new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
+    const doc = await pdfjs.getDocument({ data: await blob.arrayBuffer() }).promise;
+    const page = await doc.getPage(1);
+    const viewport = page.getViewport({ scale: 1 });
+    const scale = 72 / viewport.width;
+    const vp = page.getViewport({ scale });
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.ceil(vp.width);
+    canvas.height = Math.ceil(vp.height);
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return null;
+    await page.render({ canvas, canvasContext: ctx, viewport: vp }).promise;
+    const url = canvas.toDataURL("image/jpeg", 0.8);
+    void doc.cleanup();
+    await idbPut("thumbs", fileName, url);
+    return url;
+  } catch (err) {
+    console.error("thumb failed", fileName, err);
+    return null;
+  }
+}
+
+// ---- The room ----
+
 type ImportProgress = { done: number; total: number; current: string } | null;
+const LETTERS = ["★", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M",
+  "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "#"] as const;
+
+function firstLetter(title: string): string {
+  const c = title.replace(/^(The|A|An)\s+/i, "").charAt(0).toUpperCase();
+  return c >= "A" && c <= "Z" ? c : "#";
+}
 
 export function SongbookLibrary() {
-  const [stored, setStored] = useState<Record<string, boolean>>({});
+  const [storedFiles, setStoredFiles] = useState<string[]>([]);
+  const [thumbs, setThumbs] = useState<Record<string, string>>({});
   const [progress, setProgress] = useState<ImportProgress>(null);
   const [query, setQuery] = useState("");
+  const [letter, setLetter] = useState<string>("A");
   const [status, setStatus] = useState<string | null>(null);
+  const [favorites, setFavorites] = useState<Set<string>>(loadFavorites);
   const [viewer, setViewer] = useState<{ entry: SongEntry; url: string } | null>(null);
   const [offsets, setOffsets] = useState<Record<string, number>>(() =>
     Object.fromEntries(SONGBOOKS.map((b) => [b.key, getOffset(b.key)])));
-  const [remote, setRemote] = useState(remoteConfig);
-  const [showSettings, setShowSettings] = useState(false);
   const urlCache = useRef<Map<string, string>>(new Map());
 
   const canPick = typeof window !== "undefined" && "showDirectoryPicker" in window;
 
-  /** What's already in the site's own storage — readable with no prompt. */
-  const scanStored = useCallback(async () => {
-    const names = new Set<string>();
-    const root = await opfsRoot();
-    if (root) {
-      try {
-        // @ts-expect-error async iteration of directory handles
-        for await (const [name] of root.entries()) names.add(name.toLowerCase());
-      } catch { /* empty */ }
+  /** Known books stored (key → actual file name), plus unknown extras. */
+  const storedByKey = useMemo(() => {
+    const map: Record<string, string> = {};
+    const extras: string[] = [];
+    for (const f of storedFiles) {
+      const book = matchBook(f);
+      if (book) map[book.key] = f;
+      else if (f.toLowerCase().endsWith(".pdf")) extras.push(f);
     }
-    for (const name of await idbBookNames()) names.add(name.toLowerCase());
-    setStored(Object.fromEntries(
-      SONGBOOKS.map((b) => [b.key, names.has(b.file.toLowerCase())])));
+    return { map, extras };
+  }, [storedFiles]);
+
+  const refresh = useCallback(async () => {
+    const names = await storedFileNames();
+    setStoredFiles(names);
+    const t: Record<string, string> = {};
+    for (const n of names) {
+      const cached = await idbGet<string>("thumbs", n);
+      if (cached) t[n] = cached;
+    }
+    setThumbs(t);
+    for (const n of names) {
+      if (!t[n]) {
+        const url = await makeThumb(n);
+        if (url) setThumbs((prev) => ({ ...prev, [n]: url }));
+      }
+    }
   }, []);
 
   useEffect(() => {
-    void scanStored();
-  }, [scanStored]);
+    void refresh();
+  }, [refresh]);
 
-  /** Store a batch of picked files; unknown names are reported, not lost. */
   const importFiles = useCallback(async (files: { name: string; blob: () => Promise<Blob> }[]) => {
     void navigator.storage.persist?.();
-    const byName = new Map(SONGBOOKS.map((b) => [b.file.toLowerCase(), b]));
-    const known = files.filter((f) => byName.has(f.name.toLowerCase()));
+    const pdfs = files.filter((f) => f.name.toLowerCase().endsWith(".pdf"));
     let done = 0;
     const failed: string[] = [];
-    for (const f of known) {
-      const book = byName.get(f.name.toLowerCase())!;
-      setProgress({ done, total: known.length, current: book.name });
+    for (const f of pdfs) {
+      const book = matchBook(f.name);
+      // Store under the canonical name when recognized, else as-is —
+      // nothing the user adds is ever silently dropped.
+      const storeName = book ? book.file : f.name;
+      setProgress({ done, total: pdfs.length, current: book?.name ?? f.name });
       try {
-        await storeBook(book.file, await f.blob());
+        await storeBook(storeName, await f.blob());
         done += 1;
       } catch (err) {
-        console.error("songbook import failed", book.file, err);
-        failed.push(book.name);
+        console.error("import failed", f.name, err);
+        failed.push(f.name);
       }
     }
     setProgress(null);
-    setStatus(
-      done > 0
-        ? `Imported ${done} book${done === 1 ? "" : "s"} — your library now lives here.`
-          + (failed.length ? ` Failed: ${failed.join(", ")}.` : "")
-        : files.length > 0
-          ? "None of those files matched a known book name."
-          : "No files chosen.");
-    void scanStored();
-  }, [scanStored]);
+    setStatus(done > 0
+      ? `Imported ${done} book${done === 1 ? "" : "s"}.` + (failed.length ? ` Failed: ${failed.join(", ")}` : "")
+      : "No PDF files chosen.");
+    void refresh();
+  }, [refresh]);
 
-  /** One-time import via the folder picker (Chrome/Edge). */
   const importLibrary = useCallback(async () => {
     setStatus("Opening the folder picker…");
     try {
@@ -186,57 +245,36 @@ export function SongbookLibrary() {
       try {
         // @ts-expect-error async iteration of directory handles
         for await (const [name, handle] of dir.entries()) {
-          if (handle.kind === "file") {
-            files.push({ name, blob: () => handle.getFile() });
-          }
+          if (handle.kind === "file") files.push({ name, blob: () => handle.getFile() });
         }
       } catch { /* partial listing is fine */ }
       await importFiles(files);
     } catch (err) {
       setProgress(null);
       const name = err instanceof Error ? err.name : "UnknownError";
-      setStatus(name === "AbortError"
-        ? null // user closed the dialog — not an error
+      setStatus(name === "AbortError" ? null
         : `Folder picker failed (${name}) — try "Add book files…" instead.`);
     }
   }, [importFiles]);
 
   const open = useCallback(async (entry: SongEntry) => {
     const book = bookByKey(entry.book);
-    if (!book) return;
+    const fileName = book ? (storedByKey.map[book.key] ?? book.file) : entry.book;
     setStatus(null);
-    const cached = urlCache.current.get(book.key);
+    const cached = urlCache.current.get(fileName);
     if (cached) {
       setViewer({ entry, url: cached });
       return;
     }
-    // 1. The library stored with the site (OPFS or IndexedDB).
-    const blob = await loadBook(book.file);
+    const blob = await loadBookFile(fileName);
     if (blob) {
       const url = URL.createObjectURL(blob);
-      urlCache.current.set(book.key, url);
+      urlCache.current.set(fileName, url);
       setViewer({ entry, url });
       return;
     }
-    // 2. A configured remote library (private bucket / static host).
-    if (remote.base) {
-      try {
-        const base = remote.base.replace(/\/+$/, "");
-        const res = await fetch(`${base}/${encodeURIComponent(book.file)}`, {
-          headers: remote.auth ? { Authorization: remote.auth } : undefined,
-        });
-        if (!res.ok) throw new Error(String(res.status));
-        const url = URL.createObjectURL(await res.blob());
-        urlCache.current.set(book.key, url);
-        setViewer({ entry, url });
-        return;
-      } catch {
-        setStatus(`Remote library didn't serve ${book.file} — check the URL/key in settings.`);
-        return;
-      }
-    }
-    setStatus(`“${book.name}” isn't in your library yet — Import it, or set a remote library in ⚙.`);
-  }, [remote]);
+    setStatus(`“${book?.name ?? entry.book}” isn't in your library yet — add its PDF above.`);
+  }, [storedByKey]);
 
   const bump = useCallback((book: string, delta: number) => {
     setOffsets((prev) => {
@@ -248,29 +286,42 @@ export function SongbookLibrary() {
     });
   }, []);
 
-  const results = useMemo(() => searchSongs(query), [query]);
-  const storedCount = Object.values(stored).filter(Boolean).length;
+  const toggleFavorite = useCallback((e: SongEntry) => {
+    setFavorites((prev) => {
+      const next = new Set(prev);
+      const id = `${e.book}|${e.title}|${e.page}`;
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      try {
+        localStorage.setItem(FAVORITES_KEY, JSON.stringify([...next]));
+      } catch { /* private mode */ }
+      return next;
+    });
+  }, []);
+
+  const searching = query.trim().length >= 2;
+  const rows = useMemo<SongEntry[]>(() => {
+    if (searching) return searchSongs(query, 120);
+    if (letter === "★") {
+      return SONG_INDEX.filter((e) => favorites.has(`${e.book}|${e.title}|${e.page}`));
+    }
+    return SONG_INDEX.filter((e) => firstLetter(e.title) === letter);
+  }, [searching, query, letter, favorites]);
+
+  const storedCount = Object.keys(storedByKey.map).length + storedByKey.extras.length;
 
   return (
     <div className="mx-auto flex h-full w-full max-w-5xl flex-col">
-      <div className="shrink-0 pb-4">
+      <div className="shrink-0 pb-3">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div>
             <h2 className="font-display text-xl font-semibold text-ink">Songbook</h2>
             <p className="mt-0.5 text-sm text-ink-dim">
-              {SONG_INDEX.length.toLocaleString()} tunes across {SONGBOOKS.length} books —
-              search, click, play.
+              {SONG_INDEX.length.toLocaleString()} tunes, one search.
               {storedCount > 0 && ` ${storedCount} book${storedCount === 1 ? "" : "s"} in your library.`}
             </p>
           </div>
-          <button
-            onClick={() => setShowSettings((v) => !v)}
-            aria-label="Library settings"
-            className="rounded-full bg-fill-soft px-2.5 py-1.5 text-xs text-ink-dim transition-colors hover:text-ink"
-          >
-            ⚙
-          </button>
-          {storedCount < SONGBOOKS.length && (
+          <div className="flex items-center gap-2">
             <label
               onClick={() => setStatus("Choose your PDF files in the dialog…")}
               className="cursor-pointer rounded-full bg-accent px-4 py-1.5 text-xs font-semibold text-accent-deep transition-opacity hover:opacity-90">
@@ -280,133 +331,106 @@ export function SongbookLibrary() {
                 multiple
                 accept=".pdf,application/pdf"
                 className="hidden"
-                onChange={(e) => {
-                  const list = Array.from(e.target.files ?? []);
+                onChange={(ev) => {
+                  const list = Array.from(ev.target.files ?? []);
                   void importFiles(list.map((f) => ({ name: f.name, blob: async () => f })));
-                  e.target.value = "";
+                  ev.target.value = "";
                 }}
               />
             </label>
-          )}
-          {canPick && storedCount < SONGBOOKS.length && (
-            <button
-              onClick={() => void importLibrary()}
-              disabled={progress !== null}
-              className="rounded-full bg-fill-soft px-4 py-1.5 text-xs font-semibold text-ink-dim transition-colors hover:text-ink"
-            >
-              {progress
-                ? `Importing ${progress.done + 1}/${progress.total}: ${progress.current}…`
-                : "…or import the whole folder"}
-            </button>
-          )}
-        </div>
-        {showSettings && (
-          <div className="mt-3 rounded-xl border border-line p-3 text-xs">
-            <div className="font-semibold text-ink">Remote library (optional)</div>
-            <p className="mt-1 text-ink-mute">
-              A private bucket or host that serves your book files by name —
-              lets every device stream the library without importing.
-            </p>
-            <div className="mt-2 flex flex-wrap gap-2">
-              <input
-                defaultValue={remote.base}
-                placeholder="https://your-bucket.example.com/songbooks"
-                onBlur={(e) => {
-                  const base = e.target.value.trim();
-                  try { localStorage.setItem(REMOTE_URL_KEY, base); } catch { /* */ }
-                  setRemote((r) => ({ ...r, base }));
-                }}
-                className="min-w-[280px] flex-1 rounded-md border border-line bg-transparent px-2.5 py-1.5 text-ink placeholder:text-ink-mute focus:border-accent focus:outline-none"
-              />
-              <input
-                defaultValue={remote.auth}
-                placeholder="Authorization header (optional)"
-                onBlur={(e) => {
-                  const auth = e.target.value.trim();
-                  try { localStorage.setItem(REMOTE_AUTH_KEY, auth); } catch { /* */ }
-                  setRemote((r) => ({ ...r, auth }));
-                }}
-                className="min-w-[220px] flex-1 rounded-md border border-line bg-transparent px-2.5 py-1.5 text-ink placeholder:text-ink-mute focus:border-accent focus:outline-none"
-              />
-            </div>
+            {canPick && (
+              <button
+                onClick={() => void importLibrary()}
+                disabled={progress !== null}
+                className="rounded-full bg-fill-soft px-4 py-1.5 text-xs font-semibold text-ink-dim transition-colors hover:text-ink"
+              >
+                {progress
+                  ? `Importing ${progress.done + 1}/${progress.total}…`
+                  : "…or the whole folder"}
+              </button>
+            )}
           </div>
-        )}
-
+        </div>
         <input
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search a tune — “All The Things”, “Desafinado”, “Nardis”…"
-          className="mt-4 w-full rounded-xl border border-line bg-transparent px-4 py-2.5 text-base text-ink placeholder:text-ink-mute focus:border-accent focus:outline-none"
+          className="mt-3 w-full rounded-xl border border-line bg-transparent px-4 py-2.5 text-base text-ink placeholder:text-ink-mute focus:border-accent focus:outline-none"
           autoFocus
         />
         {status && <p className="mt-2 text-xs text-amber-400/90">{status}</p>}
+        {!searching && (
+          <div className="no-scrollbar mt-2 flex gap-0.5 overflow-x-auto">
+            {LETTERS.map((l) => (
+              <button
+                key={l}
+                onClick={() => setLetter(l)}
+                className={`min-w-7 rounded px-1.5 py-1 text-xs font-semibold transition-colors ${
+                  letter === l ? "bg-accent text-accent-deep"
+                    : l === "★" ? "text-accent/70 hover:text-accent"
+                    : "text-ink-mute hover:text-ink"
+                }`}
+              >
+                {l}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto pb-6">
-        {query.trim().length >= 2 ? (
-          results.length > 0 ? (
-            <ul>
-              {results.map((e, i) => {
-                const book = bookByKey(e.book)!;
-                return (
-                  <li key={`${e.title}-${e.book}-${i}`}>
+        {rows.length > 0 ? (
+          <ul>
+            {rows.map((e, i) => {
+              const book = bookByKey(e.book);
+              const fileName = book ? (storedByKey.map[book.key] ?? book.file) : e.book;
+              const thumb = thumbs[fileName] ?? thumbs[fileName.toLowerCase()];
+              const id = `${e.book}|${e.title}|${e.page}`;
+              const isFav = favorites.has(id);
+              const inLibrary = book ? storedByKey.map[book.key] !== undefined : false;
+              return (
+                <li key={`${id}-${i}`}>
+                  <div className="group flex w-full items-center gap-3 border-l-2 border-transparent px-2 py-1.5 transition-colors hover:border-accent hover:bg-fill-soft">
+                    <button
+                      onClick={() => toggleFavorite(e)}
+                      aria-label={isFav ? "Unfavorite" : "Favorite"}
+                      className={`shrink-0 text-base leading-none transition-colors ${
+                        isFav ? "text-accent" : "text-ink-mute/40 hover:text-ink-mute"
+                      }`}
+                    >
+                      ★
+                    </button>
                     <button
                       onClick={() => void open(e)}
-                      className="group flex w-full items-baseline gap-3 border-l-2 border-transparent px-3 py-2 text-left transition-colors hover:border-accent hover:bg-fill-soft"
+                      className="flex min-w-0 flex-1 items-center gap-3 text-left"
                     >
+                      {thumb ? (
+                        <img src={thumb} alt="" aria-hidden
+                             className="h-10 w-7 shrink-0 rounded-[3px] border border-line object-cover" />
+                      ) : (
+                        <span className="h-10 w-7 shrink-0 rounded-[3px] border border-line bg-fill-soft" />
+                      )}
                       <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">
                         {e.title}
                       </span>
                       <span className="shrink-0 text-xs text-ink-mute">
-                        {book.name} · p.{e.page}
-                        {stored[e.book] === false && storedCount > 0 && " · not imported"}
+                        {book?.name ?? e.book} · p.{e.page}
+                        {!inLibrary && storedCount > 0 && " · not in library"}
                       </span>
                     </button>
-                  </li>
-                );
-              })}
-            </ul>
-          ) : (
-            <p className="px-3 py-6 text-sm text-ink-mute">
-              Nothing in the index for “{query.trim()}”.
-            </p>
-          )
-        ) : (
-          <div className="grid gap-2.5 sm:grid-cols-2 lg:grid-cols-3">
-            {SONGBOOKS.map((b) => {
-              const count = SONG_INDEX.filter((e) => e.book === b.key).length;
-              return (
-                <div key={b.key}
-                     className="rounded-xl border border-line p-4 transition-colors hover:border-white/20">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="min-w-0">
-                      <div className="truncate text-sm font-semibold text-ink">{b.name}</div>
-                      <div className="mt-0.5 text-[11px] text-ink-mute">
-                        {count > 0 ? `${count} tunes indexed` : `${b.pages} pages`}
-                        {stored[b.key] ? " · in library ✓" : " · not imported"}
-                      </div>
-                    </div>
-                    <button
-                      onClick={() => void open({ title: b.name, book: b.key, page: 1 })}
-                      className="shrink-0 rounded-full bg-fill-soft px-3 py-1 text-[11px] text-ink-dim transition-colors hover:text-ink"
-                    >
-                      Open
-                    </button>
                   </div>
-                  {b.indexed && stored[b.key] && (
-                    <div className="mt-2.5 flex items-center gap-1.5 text-[11px] text-ink-mute">
-                      page offset
-                      <button onClick={() => bump(b.key, -1)}
-                              className="rounded bg-fill-soft px-1.5 hover:text-ink">−</button>
-                      <span className="w-5 text-center tabular-nums">{offsets[b.key] ?? 0}</span>
-                      <button onClick={() => bump(b.key, 1)}
-                              className="rounded bg-fill-soft px-1.5 hover:text-ink">+</button>
-                    </div>
-                  )}
-                </div>
+                </li>
               );
             })}
-          </div>
+          </ul>
+        ) : (
+          <p className="px-3 py-6 text-sm text-ink-mute">
+            {searching
+              ? `Nothing in the index for “${query.trim()}”.`
+              : letter === "★"
+                ? "No favorites yet — tap the star on any tune."
+                : "Nothing under this letter."}
+          </p>
         )}
       </div>
 
@@ -416,10 +440,10 @@ export function SongbookLibrary() {
             <div className="min-w-0 flex-1">
               <span className="truncate text-sm font-semibold text-ink">{viewer.entry.title}</span>
               <span className="ml-2 text-xs text-ink-mute">
-                {bookByKey(viewer.entry.book)?.name} · p.{viewer.entry.page}
+                {bookByKey(viewer.entry.book)?.name ?? viewer.entry.book} · p.{viewer.entry.page}
               </span>
             </div>
-            {bookByKey(viewer.entry.book)?.indexed && (
+            {(bookByKey(viewer.entry.book)?.indexed ?? false) && (
               <div className="flex items-center gap-1.5 text-[11px] text-ink-mute">
                 page off by?
                 <button onClick={() => bump(viewer.entry.book, -1)}
