@@ -50,8 +50,20 @@ function booksDb(): Promise<IDBDatabase> {
       if (!db.objectStoreNames.contains("books")) db.createObjectStore("books");
       if (!db.objectStoreNames.contains("thumbs")) db.createObjectStore("thumbs");
     };
-    req.onsuccess = () => resolve(req.result);
+    req.onsuccess = () => {
+      const db = req.result;
+      // Yield to a future upgrade instead of blocking it forever.
+      db.onversionchange = () => db.close();
+      resolve(db);
+    };
     req.onerror = () => reject(req.error);
+    // An old tab holding v1 open would otherwise hang EVERY book load,
+    // silently. Surface it instead.
+    req.onblocked = () => reject(new Error(
+      "Library storage is locked by another Fretspace tab — close other tabs and retry."));
+    // Belt and braces: never hang longer than 5s.
+    setTimeout(() => reject(new Error(
+      "Library storage didn't open (another tab may be holding it). Close other Fretspace tabs and retry.")), 5000);
   });
 }
 async function idbPut(store: "books" | "thumbs", name: string, value: unknown): Promise<void> {
@@ -110,7 +122,13 @@ async function loadBookFile(name: string): Promise<Blob | null> {
       return await fh.getFile();
     } catch { /* try IDB */ }
   }
-  return idbGet<Blob>("books", name);
+  // Unlike idbGet, let a locked database throw so the UI can say so.
+  const db = await booksDb();
+  return await new Promise<Blob | null>((resolve) => {
+    const rq = db.transaction("books", "readonly").objectStore("books").get(name.toLowerCase());
+    rq.onsuccess = () => resolve((rq.result as Blob) ?? null);
+    rq.onerror = () => resolve(null);
+  });
 }
 
 async function storedFileNames(): Promise<string[]> {
@@ -368,7 +386,15 @@ export function SongbookLibrary() {
     const book = bookByKey(entry.book);
     const fileName = book ? (storedByKey.map[book.key] ?? book.file) : entry.book;
     setStatus(null);
-    let blob = blobCache.current.get(fileName) ?? await loadBookFile(fileName);
+    let blob: Blob | null = blobCache.current.get(fileName) ?? null;
+    if (!blob) {
+      try {
+        blob = await loadBookFile(fileName);
+      } catch (err) {
+        setStatus(err instanceof Error ? err.message : String(err));
+        return;
+      }
+    }
     if (!blob && book?.url) {
       try {
         const res = await fetch(book.url);
