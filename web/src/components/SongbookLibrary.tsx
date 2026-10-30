@@ -216,7 +216,10 @@ function PdfPageView({ fileName, blob, page, onPageCount }: {
         holderEl.replaceChildren(canvas);
       } catch (err) {
         console.error("pdf render failed", err);
-        if (!cancelled) setError("Couldn't render this page.");
+        if (!cancelled) {
+          const detail = err instanceof Error ? `${err.name}: ${err.message}` : String(err);
+          setError(`Couldn't render ${fileName} — ${detail.slice(0, 160)}`);
+        }
       }
     })();
     return () => { cancelled = true; };
