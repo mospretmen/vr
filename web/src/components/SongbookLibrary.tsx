@@ -8,18 +8,22 @@ import {
   bookByKey, matchBook, searchSongs, SONG_INDEX, SONGBOOKS,
   type SongEntry,
 } from "../songbooks";
+import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 
 // ---- Local persistence helpers ----
 
 function offsetKey(book: string): string {
   return `sb-offset-${book}`;
 }
+/** Measured front-matter offsets (printed page → PDF page); the ± control
+ *  overrides and remembers per book. */
+const DEFAULT_OFFSETS: Record<string, number> = { evansbk: 3 };
 function getOffset(book: string): number {
   try {
-    return Number(localStorage.getItem(offsetKey(book)) ?? 0) || 0;
-  } catch {
-    return 0;
-  }
+    const raw = localStorage.getItem(offsetKey(book));
+    if (raw !== null) return Number(raw) || 0;
+  } catch { /* private mode */ }
+  return DEFAULT_OFFSETS[book] ?? 0;
 }
 const FAVORITES_KEY = "sb-favorites";
 function loadFavorites(): Set<string> {
@@ -128,8 +132,7 @@ async function makeThumb(fileName: string): Promise<string | null> {
     const blob = await loadBookFile(fileName);
     if (!blob) return null;
     const pdfjs = await import("pdfjs-dist");
-    pdfjs.GlobalWorkerOptions.workerSrc =
-      new URL("pdfjs-dist/build/pdf.worker.min.mjs", import.meta.url).toString();
+    pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
     const doc = await pdfjs.getDocument({ data: await blob.arrayBuffer() }).promise;
     const page = await doc.getPage(1);
     const viewport = page.getViewport({ scale: 1 });
@@ -151,11 +154,89 @@ async function makeThumb(fileName: string): Promise<string | null> {
   }
 }
 
+// ---- In-app PDF viewer (pdf.js): lands exactly on the page ----
+
+type PdfDoc = { numPages: number; getPage: (n: number) => Promise<unknown> };
+const docCache = new Map<string, Promise<PdfDoc>>();
+
+async function openDoc(fileName: string, blob: Blob): Promise<PdfDoc> {
+  const cached = docCache.get(fileName);
+  if (cached) return cached;
+  const p = (async () => {
+    const pdfjs = await import("pdfjs-dist");
+    pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
+    return pdfjs.getDocument({ data: await blob.arrayBuffer() }).promise as unknown as PdfDoc;
+  })();
+  docCache.set(fileName, p);
+  p.catch(() => docCache.delete(fileName));
+  return p;
+}
+
+function PdfPageView({ fileName, blob, page, onPageCount }: {
+  fileName: string; blob: Blob; page: number;
+  onPageCount: (n: number) => void;
+}) {
+  const holder = useRef<HTMLDivElement | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    let cancelled = false;
+    void (async () => {
+      try {
+        const doc = await openDoc(fileName, blob);
+        if (cancelled) return;
+        onPageCount(doc.numPages);
+        const target = Math.min(Math.max(1, page), doc.numPages);
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const pg: any = await doc.getPage(target);
+        if (cancelled) return;
+        const holderEl = holder.current;
+        if (!holderEl) return;
+        const width = holderEl.clientWidth || 800;
+        const base = pg.getViewport({ scale: 1 });
+        const scale = Math.min(2.2, (width - 8) / base.width) * (window.devicePixelRatio || 1);
+        const vp = pg.getViewport({ scale });
+        const canvas = document.createElement("canvas");
+        canvas.width = Math.ceil(vp.width);
+        canvas.height = Math.ceil(vp.height);
+        canvas.style.width = `${Math.ceil(vp.width / (window.devicePixelRatio || 1))}px`;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return;
+        await pg.render({ canvas, canvasContext: ctx, viewport: vp }).promise;
+        if (cancelled) return;
+        holderEl.replaceChildren(canvas);
+      } catch (err) {
+        console.error("pdf render failed", err);
+        if (!cancelled) setError("Couldn't render this page.");
+      }
+    })();
+    return () => { cancelled = true; };
+  }, [fileName, blob, page, onPageCount]);
+  return (
+    <div className="flex min-h-0 flex-1 items-start justify-center overflow-auto bg-black/40 p-2">
+      {error
+        ? <p className="mt-10 text-sm text-amber-400/90">{error}</p>
+        : <div ref={holder} className="flex w-full justify-center" />}
+    </div>
+  );
+}
+
 // ---- The room ----
 
 type ImportProgress = { done: number; total: number; current: string } | null;
 const LETTERS = ["★", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K", "L", "M",
   "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z", "#"] as const;
+
+/** Stable hue per book key for the spine fallback. */
+function spineHue(key: string): number {
+  let h = 0;
+  for (const c of key) h = (h * 31 + c.charCodeAt(0)) % 360;
+  return h;
+}
+function bookInitials(name: string): string {
+  return name.replace(/[^A-Za-z ]/g, "").split(/\s+/)
+    .filter((w) => w && !/^(the|of|in|a|an|vol)$/i.test(w))
+    .map((w) => w[0].toUpperCase()).slice(0, 2).join("");
+}
 
 function firstLetter(title: string): string {
   const c = title.replace(/^(The|A|An)\s+/i, "").charAt(0).toUpperCase();
@@ -170,10 +251,11 @@ export function SongbookLibrary() {
   const [letter, setLetter] = useState<string>("A");
   const [status, setStatus] = useState<string | null>(null);
   const [favorites, setFavorites] = useState<Set<string>>(loadFavorites);
-  const [viewer, setViewer] = useState<{ entry: SongEntry; url: string } | null>(null);
+  const [viewer, setViewer] = useState<{ entry: SongEntry; blob: Blob; fileName: string } | null>(null);
+  const [viewerPage, setViewerPage] = useState(1);
+  const [viewerPages, setViewerPages] = useState(0);
   const [offsets, setOffsets] = useState<Record<string, number>>(() =>
     Object.fromEntries(SONGBOOKS.map((b) => [b.key, getOffset(b.key)])));
-  const urlCache = useRef<Map<string, string>>(new Map());
 
   const canPick = typeof window !== "undefined" && "showDirectoryPicker" in window;
 
@@ -257,16 +339,12 @@ export function SongbookLibrary() {
     }
   }, [importFiles]);
 
+  const blobCache = useRef<Map<string, Blob>>(new Map());
   const open = useCallback(async (entry: SongEntry) => {
     const book = bookByKey(entry.book);
     const fileName = book ? (storedByKey.map[book.key] ?? book.file) : entry.book;
     setStatus(null);
-    const cached = urlCache.current.get(fileName);
-    if (cached) {
-      setViewer({ entry, url: cached });
-      return;
-    }
-    let blob = await loadBookFile(fileName);
+    let blob = blobCache.current.get(fileName) ?? await loadBookFile(fileName);
     if (!blob && book?.url) {
       try {
         const res = await fetch(book.url);
@@ -274,9 +352,10 @@ export function SongbookLibrary() {
       } catch { /* offline */ }
     }
     if (blob) {
-      const url = URL.createObjectURL(blob);
-      urlCache.current.set(fileName, url);
-      setViewer({ entry, url });
+      blobCache.current.set(fileName, blob);
+      setViewerPages(0);
+      setViewerPage(Math.max(1, entry.page + (getOffset(entry.book) || 0)));
+      setViewer({ entry, blob, fileName });
       return;
     }
     setStatus(`“${book?.name ?? entry.book}” isn't in your library yet — add its PDF above.`);
@@ -315,6 +394,25 @@ export function SongbookLibrary() {
   }, [searching, query, letter, favorites]);
 
   const storedCount = Object.keys(storedByKey.map).length + storedByKey.extras.length;
+
+  // Generate covers on demand for whatever the user is looking at.
+  const thumbQueue = useRef<Set<string>>(new Set());
+  useEffect(() => {
+    const names = new Set<string>();
+    for (const e of rows) {
+      const book = bookByKey(e.book);
+      const fileName = book ? (storedByKey.map[book.key] ?? book.file) : e.book;
+      if (!thumbs[fileName] && !thumbQueue.current.has(fileName)) names.add(fileName);
+    }
+    if (names.size === 0) return;
+    void (async () => {
+      for (const n of names) {
+        thumbQueue.current.add(n);
+        const url = await makeThumb(n);
+        if (url) setThumbs((prev) => ({ ...prev, [n]: url }));
+      }
+    })();
+  }, [rows, storedByKey, thumbs]);
 
   return (
     <div className="mx-auto flex h-full w-full max-w-5xl flex-col">
@@ -416,7 +514,11 @@ export function SongbookLibrary() {
                         <img src={thumb} alt="" aria-hidden
                              className="h-10 w-7 shrink-0 rounded-[3px] border border-line object-cover" />
                       ) : (
-                        <span className="h-10 w-7 shrink-0 rounded-[3px] border border-line bg-fill-soft" />
+                        <span aria-hidden
+                              className="flex h-10 w-7 shrink-0 items-center justify-center rounded-[3px] border border-white/10 text-[9px] font-bold text-white/80"
+                              style={{ background: `hsl(${spineHue(e.book)} 45% 28%)` }}>
+                          {bookInitials(book?.name ?? e.book)}
+                        </span>
                       )}
                       <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">
                         {e.title}
@@ -444,20 +546,29 @@ export function SongbookLibrary() {
 
       {viewer && (
         <div className="fixed inset-0 z-50 flex flex-col bg-black/92 backdrop-blur-sm">
-          <div className="flex shrink-0 items-center gap-3 px-4 py-2.5">
+          <div className="flex shrink-0 flex-wrap items-center gap-3 px-4 py-2.5">
             <div className="min-w-0 flex-1">
               <span className="truncate text-sm font-semibold text-ink">{viewer.entry.title}</span>
               <span className="ml-2 text-xs text-ink-mute">
-                {bookByKey(viewer.entry.book)?.name ?? viewer.entry.book} · p.{viewer.entry.page}
+                {bookByKey(viewer.entry.book)?.name ?? viewer.entry.book}
               </span>
+            </div>
+            <div className="flex items-center gap-1.5 text-xs text-ink-dim">
+              <button onClick={() => setViewerPage((p) => Math.max(1, p - 1))}
+                      className="rounded bg-fill-soft px-2.5 py-1 hover:text-ink">‹</button>
+              <span className="tabular-nums">
+                p.{viewerPage}{viewerPages > 0 && ` / ${viewerPages}`}
+              </span>
+              <button onClick={() => setViewerPage((p) => (viewerPages ? Math.min(viewerPages, p + 1) : p + 1))}
+                      className="rounded bg-fill-soft px-2.5 py-1 hover:text-ink">›</button>
             </div>
             {(bookByKey(viewer.entry.book)?.indexed ?? false) && (
               <div className="flex items-center gap-1.5 text-[11px] text-ink-mute">
                 page off by?
-                <button onClick={() => bump(viewer.entry.book, -1)}
+                <button onClick={() => { bump(viewer.entry.book, -1); setViewerPage((p) => Math.max(1, p - 1)); }}
                         className="rounded bg-fill-soft px-2 py-0.5 hover:text-ink">−</button>
                 <span className="w-5 text-center tabular-nums">{offsets[viewer.entry.book] ?? 0}</span>
-                <button onClick={() => bump(viewer.entry.book, 1)}
+                <button onClick={() => { bump(viewer.entry.book, 1); setViewerPage((p) => p + 1); }}
                         className="rounded bg-fill-soft px-2 py-0.5 hover:text-ink">+</button>
               </div>
             )}
@@ -466,11 +577,11 @@ export function SongbookLibrary() {
               ✕ Close
             </button>
           </div>
-          <iframe
-            key={`${viewer.url}-${offsets[viewer.entry.book] ?? 0}`}
-            title={viewer.entry.title}
-            src={`${viewer.url}#page=${Math.max(1, viewer.entry.page + (offsets[viewer.entry.book] ?? 0))}`}
-            className="min-h-0 w-full flex-1 border-0"
+          <PdfPageView
+            fileName={viewer.fileName}
+            blob={viewer.blob}
+            page={viewerPage}
+            onPageCount={setViewerPages}
           />
         </div>
       )}
