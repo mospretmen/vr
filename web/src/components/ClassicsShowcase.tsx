@@ -4,7 +4,8 @@ import { useMemo, useState } from "react";
 import { playRun } from "../audio";
 import { WEB_CLASSICS, stepMidi, stepPitchClass, type WebPhrase } from "../classicsData";
 
-const SHARP = ["C", "C♯", "D", "D♯", "E", "F", "F♯", "G", "G♯", "A", "A♯", "B"];
+// Flat-side spelling for the note trail — B♭ over C7, never A♯.
+const SHARP = ["C", "C♯", "D", "E♭", "E", "F", "F♯", "G", "A♭", "A", "B♭", "B"];
 
 export function ClassicsShowcase() {
   return (
@@ -197,21 +198,35 @@ function PhraseBoard({ phrase }: { phrase: WebPhrase }) {
           <stop offset="1" stopColor="#4d2e1c" />
         </linearGradient>
       </defs>
-      <rect x={left} y={8} width={W - left - 8} height={H - 40} rx={6}
+      <rect x={left} y={8} width={W - left - 8} height={H - 22} rx={6}
         fill="url(#pb-wood)" stroke="rgba(0,0,0,0.4)" />
       {start === 1 && (
-        <rect x={left - 5} y={8} width={6} height={H - 40} rx={2} fill="#ded9cc" />
+        <rect x={left - 5} y={8} width={6} height={H - 22} rx={2} fill="#ded9cc" />
       )}
       {Array.from({ length: span + 1 }, (_, i) => (
         <line key={i} x1={wireX(start + i)} y1={10} x2={wireX(start + i)}
-          y2={H - 34} stroke="rgba(210,210,214,0.7)" strokeWidth={2} />
+          y2={H - 16} stroke="rgba(210,210,214,0.7)" strokeWidth={2} />
       ))}
+      {/* Inlay dots, matching the big fretboard. */}
+      {Array.from({ length: span }, (_, i) => start + i).map((f) => {
+        if (![3, 5, 7, 9, 12, 15, 17, 19, 21].includes(f)) return null;
+        const cx = wireX(f) - gap / 2;
+        const cy = (10 + H - 16) / 2;
+        return f === 12 ? (
+          <g key={f}>
+            <circle cx={cx} cy={cy - 16} r={3.5} fill="rgba(250,250,250,0.25)" />
+            <circle cx={cx} cy={cy + 16} r={3.5} fill="rgba(250,250,250,0.25)" />
+          </g>
+        ) : (
+          <circle key={f} cx={cx} cy={cy} r={3.5} fill="rgba(250,250,250,0.25)" />
+        );
+      })}
       {[0, 1, 2, 3, 4, 5].map((s) => (
         <line key={s} x1={left - 6} y1={stringY(s)} x2={W - 8} y2={stringY(s)}
           stroke={s < 3 ? "#9d9588" : "#c9c7bd"} strokeWidth={2.4 - s * 0.3}
           opacity={0.85} />
       ))}
-      <text x={wireX(start) - gap / 2} y={H - 16} textAnchor="middle"
+      <text x={wireX(start) - gap / 2} y={H - 1} textAnchor="middle"
         fontSize={11} fill="var(--color-ink-mute)">
         {start}
       </text>

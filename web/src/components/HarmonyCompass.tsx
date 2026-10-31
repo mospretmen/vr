@@ -797,20 +797,48 @@ function MiniFretboard({ node: n, grip }: { node: CompassNode; grip: Grip }) {
   const noteX = (f: number) =>
     f === 0 ? left - 13 : fretX(f) - gap / 2;
 
+  const INLAYS = new Set([3, 5, 7, 9, 15, 17, 19, 21]);
+  const boardTop = 6;
+  const boardBottom = H - 24;
   return (
     <svg viewBox={`0 0 ${W} ${H}`} className="mt-3 w-full">
-      <rect x={left} y={6} width={W - left - 8} height={H - 24}
-        rx={5} fill="#4d2e1c" stroke="rgba(0,0,0,0.4)" />
+      <defs>
+        {/* Same rosewood as the Fretboard view — one instrument everywhere. */}
+        <linearGradient id="mini-wood" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#422617" />
+          <stop offset="0.5" stopColor="#5c3821" />
+          <stop offset="1" stopColor="#4d2e1c" />
+        </linearGradient>
+      </defs>
+      <rect x={left} y={boardTop} width={W - left - 8} height={boardBottom - boardTop + 18}
+        rx={5} fill="url(#mini-wood)" stroke="rgba(0,0,0,0.4)" />
       {start === 1 && (
-        <rect x={left - 4} y={6} width={6} height={H - 24} rx={2} fill="#ded9cc" />
+        <rect x={left - 4} y={boardTop} width={6} height={boardBottom - boardTop + 18}
+          rx={2} fill="#ded9cc" />
       )}
       {[0, 1, 2, 3, 4, 5].map((i) => (
-        <line key={i} x1={fretX(start + i)} y1={8} x2={fretX(start + i)}
-          y2={H - 20} stroke="rgba(210,210,214,0.7)" strokeWidth={2} />
+        <line key={i} x1={fretX(start + i)} y1={boardTop + 2} x2={fretX(start + i)}
+          y2={H - 8} stroke="rgba(210,210,214,0.7)" strokeWidth={2} />
       ))}
+      {/* Inlay dots, like the big board. */}
+      {[0, 1, 2, 3, 4].map((i) => {
+        const f = start + i;
+        if (!INLAYS.has(f) && f !== 12) return null;
+        const cx = fretX(f) - gap / 2;
+        const cy = (boardTop + H - 8) / 2;
+        return f === 12 ? (
+          <g key={f}>
+            <circle cx={cx} cy={cy - 12} r={3} fill="rgba(250,250,250,0.25)" />
+            <circle cx={cx} cy={cy + 12} r={3} fill="rgba(250,250,250,0.25)" />
+          </g>
+        ) : (
+          <circle key={f} cx={cx} cy={cy} r={3} fill="rgba(250,250,250,0.25)" />
+        );
+      })}
       {[0, 1, 2, 3, 4, 5].map((s) => (
         <line key={s} x1={left - 4} y1={stringY(s)} x2={W - 10} y2={stringY(s)}
-          stroke="#c9c2b2" strokeWidth={2.4 - s * 0.3} opacity={0.85} />
+          stroke={s < 3 ? "#9d9588" : "#c9c7bd"} strokeWidth={2.4 - s * 0.3}
+          opacity={0.85} />
       ))}
       <text x={left + gap / 2} y={H - 4} textAnchor="middle" fontSize={10}
         fill="var(--color-ink-mute)">
