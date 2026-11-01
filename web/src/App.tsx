@@ -375,7 +375,7 @@ function Section({ id, title, description, children }: SectionHeadingProps) {
         <h2 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
           {title}
         </h2>
-        <p className="mt-2 max-w-2xl text-sm text-ink-dim sm:text-base">
+        <p className="mt-2 max-w-2xl text-sm text-ink-dim sm:text-[16px]">
           {description}
         </p>
         <div className="mt-8">{children}</div>
@@ -391,7 +391,7 @@ function VideoSection() {
         <h2 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
           Watch it move.
         </h2>
-        <p className="mt-2 max-w-2xl text-sm text-ink-dim sm:text-base">
+        <p className="mt-2 max-w-2xl text-sm text-ink-dim sm:text-[16px]">
           Straight screen capture from the visionOS build — the compass and
           its windows opening in the room.
         </p>
@@ -410,26 +410,62 @@ function VideoSection() {
   );
 }
 
+const TEASER_NOTES: { x: number; line: number; delay: number }[] = [
+  { x: 120, line: 2, delay: 0 }, { x: 180, line: 3, delay: 0.5 },
+  { x: 240, line: 1, delay: 1.0 }, { x: 300, line: 2.5, delay: 1.5 },
+  { x: 360, line: 0.5, delay: 2.0 }, { x: 420, line: 2, delay: 2.5 },
+  { x: 480, line: 3.5, delay: 3.0 }, { x: 540, line: 1.5, delay: 3.5 },
+  { x: 600, line: 2, delay: 4.0 },
+];
+
 function SongbookTeaser() {
   return (
-    <section className="border-t border-line">
-      <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
-        <div className="flex flex-wrap items-end justify-between gap-6">
-          <div className="max-w-xl">
-            <h2 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
-              Every tune you own, one search away.
-            </h2>
-            <p className="mt-2 text-sm text-ink-dim sm:text-base">
-              The Songbook room indexes your fake-book library — 2,124 tunes
-              across the Real Books, the Jazz Fakebook, the Colorado, the Bill
-              Evans book and more. Type a title, land on the page.
-            </p>
-          </div>
+    <section className="relative overflow-hidden border-t border-line">
+      <div aria-hidden="true"
+           className="glow-pool pointer-events-none absolute -right-32 top-1/2 h-[480px] w-[640px] -translate-y-1/2" />
+      <div className="relative mx-auto grid max-w-6xl items-center gap-10 px-4 py-16 sm:px-6 sm:py-24 lg:grid-cols-2">
+        <div>
+          <h2 className="font-display text-3xl font-bold tracking-tight sm:text-4xl">
+            Every tune you own,
+            <br />
+            <span className="bg-gradient-to-br from-accent via-accent-strong to-accent/60 bg-clip-text text-transparent">
+              one search away.
+            </span>
+          </h2>
+          <p className="mt-3 max-w-md text-sm text-ink-dim sm:text-[16px]">
+            The Songbook room indexes your whole fake-book shelf — the Real
+            Books, the Jazz Fakebook, the Colorado, the Bill Evans book and
+            more, thousands of tunes in one place. Type a title, land on the
+            exact page, star the keepers.
+          </p>
           <a href="#/songbook"
-             className="rounded-xl bg-accent px-6 py-3 text-sm font-semibold text-accent-deep transition-opacity hover:opacity-90">
+             className="mt-6 inline-block rounded-xl bg-accent px-6 py-3 text-sm font-semibold text-accent-deep transition-opacity hover:opacity-90">
             Open the Songbook
           </a>
         </div>
+        {/* The staff writes itself, over and over. */}
+        <svg viewBox="0 0 660 190" aria-hidden="true" className="w-full select-none">
+          {[0, 1, 2, 3, 4].map((l) => (
+            <line key={l} x1={30} x2={640} y1={40 + l * 22} y2={40 + l * 22}
+                  stroke="currentColor" strokeWidth={1} opacity={0.22} />
+          ))}
+          <text x={34} y={118} fontSize={96} fill="currentColor" opacity={0.6}
+                fontFamily="serif">𝄞</text>
+          {TEASER_NOTES.map((n, i) => {
+            const cy = 40 + n.line * 22;
+            return (
+              <g key={i} className="teaser-note" style={{ animationDelay: `${n.delay}s` }}>
+                <ellipse cx={n.x} cy={cy} rx={9} ry={6.8}
+                         transform={`rotate(-14 ${n.x} ${cy})`}
+                         fill={i % 3 === 0 ? "var(--color-accent-strong)" : "currentColor"}
+                         opacity={0.9} />
+                <line x1={n.x + 8} y1={cy - 2} x2={n.x + 8} y2={cy - 52}
+                      stroke={i % 3 === 0 ? "var(--color-accent-strong)" : "currentColor"}
+                      strokeWidth={1.6} opacity={0.9} />
+              </g>
+            );
+          })}
+        </svg>
       </div>
     </section>
   );

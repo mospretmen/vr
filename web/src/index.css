@@ -258,3 +258,18 @@ body {
   mask-image: linear-gradient(to bottom, transparent, black 7%, black 93%, transparent);
   -webkit-mask-image: linear-gradient(to bottom, transparent, black 7%, black 93%, transparent);
 }
+
+/* Songbook teaser: notes landing on the staff, forever. */
+@keyframes note-pop {
+  0% { opacity: 0; transform: translateY(10px) scale(0.8); }
+  10% { opacity: 1; transform: none; }
+  72% { opacity: 1; }
+  88%, 100% { opacity: 0; }
+}
+.teaser-note {
+  animation: note-pop 7.2s ease-in-out infinite;
+  transform-origin: center;
+}
+@media (prefers-reduced-motion: reduce) {
+  .teaser-note { animation: none; opacity: 1; }
+}

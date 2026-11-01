@@ -14,7 +14,7 @@ export function ClassicsShowcase() {
         <h2 className="font-display text-2xl font-bold tracking-tight sm:text-3xl">
           Steal from the masters.
         </h2>
-        <p className="mt-2 max-w-2xl text-sm text-ink-dim sm:text-base">
+        <p className="mt-2 max-w-2xl text-sm text-ink-dim sm:text-[16px]">
           A taste of the built-in phrase shelf: style-of fragments and
           public-domain themes, every one explained — and in the app,
           transposable to any key and importable into your own library.

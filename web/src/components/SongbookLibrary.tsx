@@ -310,6 +310,19 @@ export function SongbookLibrary() {
     Object.fromEntries(SONGBOOKS.map((b) => [b.key, getOffset(b.key)])));
 
   const canPick = typeof window !== "undefined" && "showDirectoryPicker" in window;
+  // Library management is internal — unlocked once via #/songbook/admin,
+  // then remembered on this device. Visitors only ever see the search.
+  const [isAdmin] = useState(() => {
+    try {
+      if (window.location.hash.includes("admin")) {
+        localStorage.setItem("sb-admin", "1");
+        return true;
+      }
+      return localStorage.getItem("sb-admin") === "1";
+    } catch {
+      return false;
+    }
+  });
   const [manageOpen, setManageOpen] = useState(false);
   const [remote, setRemote] = useState(() => {
     try {
@@ -436,7 +449,7 @@ export function SongbookLibrary() {
       setViewer({ entry, blob, fileName });
       return;
     }
-    setStatus(`“${book?.name ?? entry.book}” isn't in your library yet — add its PDF above.`);
+    setStatus(`“${book?.name ?? entry.book}” isn't in this browser's library yet.`);
   }, [storedByKey, remote]);
 
   const bump = useCallback((book: string, delta: number) => {
@@ -503,14 +516,16 @@ export function SongbookLibrary() {
               {storedCount > 0 && ` ${storedCount} book${storedCount === 1 ? "" : "s"} in your library.`}
             </p>
           </div>
-          <button
-            onClick={() => setManageOpen((v) => !v)}
-            className="rounded-full bg-fill-soft px-3.5 py-1.5 text-xs font-medium text-ink-dim transition-colors hover:text-ink"
-          >
-            ⚙ Library
-          </button>
+          {isAdmin && (
+            <button
+              onClick={() => setManageOpen((v) => !v)}
+              className="rounded-full bg-fill-soft px-3.5 py-1.5 text-xs font-medium text-ink-dim transition-colors hover:text-ink"
+            >
+              ⚙ Library
+            </button>
+          )}
         </div>
-        {(manageOpen || storedCount === 0) && (
+        {isAdmin && (manageOpen || storedCount === 0) && (
           <div className="mt-3 rounded-xl border border-line p-3">
             <div className="flex flex-wrap items-center gap-2">
               <label
