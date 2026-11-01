@@ -253,6 +253,11 @@ struct HarmonyWheelView: View {
             } label: {
                 Label("Phrases", systemImage: "music.quarternote.3")
             }
+            Button {
+                openWindow(id: SceneID.songbook, value: 0)
+            } label: {
+                Label("Songbook", systemImage: "book")
+            }
         }
         .buttonStyle(.bordered)
         .font(.callout)

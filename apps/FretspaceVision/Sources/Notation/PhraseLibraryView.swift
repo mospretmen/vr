@@ -121,13 +121,18 @@ struct PhraseLibraryView: View {
                             .buttonStyle(.borderless)
                         }
                     }
-                    ForEach(Self.classicGroups, id: \.title) { group in
-                        let items = group.phrases.filter(matches)
-                        if !items.isEmpty {
-                            Divider().padding(.vertical, 4)
-                            Text(group.title)
-                                .font(.caption.bold()).foregroundStyle(.secondary)
-                            classicRows(items)
+                    // The built-in classics shelf is hidden for now (owner
+                    // verdict 2026-10-31): this library is the player's own
+                    // phrases until the repository is rebuilt around them.
+                    if Self.showBuiltInClassics {
+                        ForEach(Self.classicGroups, id: \.title) { group in
+                            let items = group.phrases.filter(matches)
+                            if !items.isEmpty {
+                                Divider().padding(.vertical, 4)
+                                Text(group.title)
+                                    .font(.caption.bold()).foregroundStyle(.secondary)
+                                classicRows(items)
+                            }
                         }
                     }
                 }
@@ -208,6 +213,9 @@ struct PhraseLibraryView: View {
         let anchor = phrase.chord?.root ?? phrase.steps.first?.note.pitchClass ?? .c
         return anchor.transposed(by: delta).name()
     }
+
+    /// Flip to resurface the built-in shelf once it's rebuilt.
+    private static let showBuiltInClassics = false
 
     /// The Classics shelf, grouped for browsing at scale.
     private static let classicGroups: [(title: String, phrases: [Phrase])] = {

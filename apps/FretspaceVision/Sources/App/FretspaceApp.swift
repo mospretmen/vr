@@ -61,6 +61,11 @@ struct FretspaceApp: App {
         } defaultValue: { 0 }
         .defaultSize(width: 1100, height: 640)
         .restorationBehavior(.disabled)
+        WindowGroup(id: SceneID.songbook, for: Int.self) { _ in
+            SongbookView()
+        } defaultValue: { 0 }
+        .defaultSize(width: 1100, height: 640)
+        .restorationBehavior(.disabled)
         .defaultWindowPlacement { _, context in
             if let compass = context.windows.first(where: { $0.id == SceneID.harmony }) {
                 return WindowPlacement(.trailing(compass))
@@ -106,5 +111,6 @@ enum SceneID {
     static let compass3D = "compass3D"
     static let movement = "movement"
     static let phrases = "phrases"
+    static let songbook = "songbook"
     static let immersive = "fretboardSpace"
 }

@@ -21,6 +21,8 @@ targets:
       - path: Resources/GuitarSamples
         type: folder
         buildPhase: resources
+      - path: Resources/songIndex.json
+        buildPhase: resources
     dependencies:
       - package: GuitarCore
         product: MusicTheory
