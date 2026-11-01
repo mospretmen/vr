@@ -5,32 +5,23 @@ import { useEffect, useMemo, useState } from "react";
 import {
   ALL_MOVES,
   ALL_NODES,
-  SPOKES,
   chordPitchClasses,
   describe,
   functionalLabel,
   gradedPairs,
   movesFrom,
   node,
+  SPOKES,
   type CompassNode,
   type Move,
   type MoveKind,
 } from "../compass";
 import {
-  DROP3_SET_LABELS,
-  DROP3_SETS,
-  dropGrip,
-  DYAD_KINDS,
-  DYAD_PAIR_LABELS,
-  DYAD_PAIRS,
-  dyadGrips,
   gripFamilies,
-  INVERSION_LABELS,
-  STRING_SET_LABELS,
-  STRING_SETS,
   scaleSuggestions,
   spellScale,
   toneRole,
+  voicingWalk,
   type Grip,
 } from "../demoVoicings";
 import { voiceMoves } from "../voiceLeading";
@@ -508,38 +499,19 @@ function TeachingCard({
 }) {
   const [tab, setTab] = useState<Tab>("pathways");
   const [expanded, setExpanded] = useState<number | null>(null);
-  const [gripIndex, setGripIndex] = useState(0);
   const [qualityIndex, setQualityIndex] = useState(0);
-  const [gripView, setGripView] = useState<"shapes" | "drop2" | "drop3" | "dyads">("shapes");
-  const [setIndex, setSetIndex] = useState(1);
-  const [inversion, setInversion] = useState(0);
-  const [dyadKind, setDyadKind] = useState(0);
-  const [dyadPair, setDyadPair] = useState(1);
-  const [dyadPos, setDyadPos] = useState(0);
+  const [walkIdx, setWalkIdx] = useState(0);
   const families = useMemo(() => gripFamilies(selected), [selected]);
   const family = families[Math.min(qualityIndex, families.length - 1)];
-  const hasShapes = (family?.grips.length ?? 0) > 0;
-  const view = gripView === "shapes" && !hasShapes && family?.seventhIntervals
-    ? "drop2" : gripView;
-  const drop = view === "drop3" ? 3 : 2;
-  const voicingSets = view === "drop3" ? DROP3_SETS : STRING_SETS;
-  const voicingSetLabels = view === "drop3" ? DROP3_SET_LABELS : STRING_SET_LABELS;
-  const boundedSet = Math.min(setIndex, voicingSets.length - 1);
-  const inversionGrip = useMemo(
-    () => family?.seventhIntervals
-      ? dropGrip(selected.root, family.seventhIntervals, voicingSets[boundedSet], inversion, drop)
-      : null,
-    [family, selected, boundedSet, inversion, drop, voicingSets],
-  );
-  const dyads = useMemo(
-    () => family?.seventhIntervals
-      ? dyadGrips(selected.root, family.seventhIntervals, DYAD_KINDS[dyadKind], DYAD_PAIRS[dyadPair])
+  // One walk, same engine and order as the Chords view.
+  const walk = useMemo(
+    () => family
+      ? voicingWalk(selected.root, family.seventhIntervals, family.grips)
       : [],
-    [family, selected, dyadKind, dyadPair],
-  );
-  const grips = family?.grips ?? [];
+    [family, selected]);
+  const walkBounded = Math.min(walkIdx, Math.max(0, walk.length - 1));
+  const walkItem = walk[walkBounded] ?? null;
   const scales = useMemo(() => scaleSuggestions(selected), [selected]);
-  const grip = grips[Math.min(gripIndex, grips.length - 1)];
 
   return (
     <aside className={embedded
@@ -609,13 +581,13 @@ function TeachingCard({
         </ul>
       )}
 
-      {tab === "grips" && grip && (
+      {tab === "grips" && walkItem && (
         <div className="mt-4">
           <div className="flex flex-wrap gap-1.5">
             {families.map((f, i) => (
               <button
                 key={f.suffix || "triad"}
-                onClick={() => { setQualityIndex(i); setGripIndex(0); }}
+                onClick={() => { setQualityIndex(i); setWalkIdx(0); }}
                 className={`rounded-md px-2.5 py-1 text-xs font-medium transition-colors ${
                   i === Math.min(qualityIndex, families.length - 1)
                     ? "bg-fill text-ink"
@@ -626,141 +598,32 @@ function TeachingCard({
               </button>
             ))}
           </div>
-          {family?.seventhIntervals && (
-            <div className="mt-2.5 flex flex-wrap gap-1">
-              {([["shapes", "Shapes"], ["drop2", "Drop-2"], ["drop3", "Drop-3"], ["dyads", "Dyads"]] as const)
-                .filter(([v]) => v !== "shapes" || hasShapes)
-                .map(([v, label]) => (
-                <button
-                  key={v}
-                  onClick={() => setGripView(v)}
-                  className={`rounded-full px-3 py-1 text-[11px] transition-colors ${
-                    view === v ? "bg-accent text-accent-deep" : "bg-fill-soft text-ink-mute hover:text-ink"
-                  }`}
-                >
-                  {label}
-                </button>
-              ))}
-            </div>
-          )}
-          {view === "dyads" && family?.seventhIntervals ? (
-            <div className="mt-2.5">
-              <div className="flex flex-wrap gap-1.5">
-                {DYAD_KINDS.map((k, i) => (
-                  <button
-                    key={k.label}
-                    onClick={() => { setDyadKind(i); setDyadPos(0); }}
-                    className={`rounded-full px-3 py-1 text-xs transition-colors ${
-                      i === dyadKind ? "bg-fill text-ink" : "text-ink-mute hover:text-ink-dim"
-                    }`}
-                  >
-                    {k.label}
-                  </button>
-                ))}
-              </div>
-              <div className="mt-1.5 flex flex-wrap gap-1.5">
-                {DYAD_PAIR_LABELS.map((label, i) => (
-                  <button
-                    key={label}
-                    onClick={() => { setDyadPair(i); setDyadPos(0); }}
-                    className={`rounded-full px-3 py-1 text-xs transition-colors ${
-                      i === dyadPair ? "bg-fill text-ink" : "text-ink-mute hover:text-ink-dim"
-                    }`}
-                  >
-                    strings {label}
-                  </button>
-                ))}
-              </div>
-              <div className="mt-1.5 flex flex-wrap gap-1.5">
-                {dyads.map((g, i) => (
-                  <button
-                    key={i}
-                    onClick={() => { setDyadPos(i); onArpeggiate(g); }}
-                    className={`rounded-full px-3 py-1 text-xs transition-colors ${
-                      i === Math.min(dyadPos, dyads.length - 1)
-                        ? "bg-accent text-accent-deep" : "bg-fill-soft text-ink-dim hover:text-ink"
-                    }`}
-                  >
-                    {g.positionLabel}
-                  </button>
-                ))}
-              </div>
-              {dyads[Math.min(dyadPos, dyads.length - 1)] && (
-                <MiniFretboard node={selected} grip={dyads[Math.min(dyadPos, dyads.length - 1)]} />
-              )}
-              <p className="mt-2 text-[11px] text-ink-mute">
-                Two voices carry the whole chord — slide the pair through the changes.
-              </p>
-            </div>
-          ) : (view === "drop2" || view === "drop3") && family?.seventhIntervals ? (
-            <div className="mt-2.5">
-              <div className="flex flex-wrap gap-1.5">
-                {voicingSetLabels.map((label, i) => (
-                  <button
-                    key={label}
-                    onClick={() => setSetIndex(i)}
-                    className={`rounded-full px-3 py-1 text-xs transition-colors ${
-                      i === boundedSet ? "bg-fill text-ink" : "text-ink-mute hover:text-ink-dim"
-                    }`}
-                  >
-                    strings {label}
-                  </button>
-                ))}
-              </div>
-              <div className="mt-1.5 flex flex-wrap gap-1.5">
-                {INVERSION_LABELS.map((label, i) => (
-                  <button
-                    key={label}
-                    onClick={() => {
-                      setInversion(i);
-                      const g = dropGrip(selected.root, family.seventhIntervals!, voicingSets[boundedSet], i, drop);
-                      if (g) onArpeggiate(g);
-                    }}
-                    className={`rounded-full px-3 py-1 text-xs transition-colors ${
-                      i === inversion ? "bg-accent text-accent-deep" : "bg-fill-soft text-ink-dim hover:text-ink"
-                    }`}
-                  >
-                    {label}
-                  </button>
-                ))}
-              </div>
-              {inversionGrip ? (
-                <MiniFretboard node={selected} grip={inversionGrip} />
-              ) : (
-                <p className="mt-3 text-xs text-ink-mute">
-                  No one-position voicing on this string set — try the next one.
-                </p>
-              )}
-              <p className="mt-2 text-[11px] text-ink-mute">
-                Same four voices, re-stacked: watch the root climb through the shape.
-              </p>
-            </div>
-          ) : (
-          <>
-          <div className="mt-2.5 flex flex-wrap gap-1.5">
-            {grips.map((g, i) => (
-              <button
-                key={i}
-                onClick={() => {
-                  setGripIndex(i);
-                  onArpeggiate(g);
-                }}
-                className={`rounded-full px-3 py-1 text-xs transition-colors ${
-                  i === Math.min(gripIndex, grips.length - 1)
-                    ? "bg-accent text-accent-deep"
-                    : "bg-fill text-ink-dim hover:text-ink"
-                }`}
-              >
-                {g.positionLabel}
-              </button>
-            ))}
+          <div className="mt-2.5 flex items-center gap-2">
+            <button
+              onClick={() => {
+                const next = (walkBounded - 1 + walk.length) % walk.length;
+                setWalkIdx(next);
+                onArpeggiate(walk[next].grip);
+              }}
+              aria-label="Previous voicing"
+              className="shrink-0 rounded-full bg-fill-soft px-2.5 py-4 text-sm text-ink-dim hover:text-ink">‹</button>
+            <button className="min-w-0 flex-1"
+                    onClick={() => onArpeggiate(walkItem.grip)}
+                    aria-label="Play voicing">
+              <MiniFretboard node={selected} grip={walkItem.grip} />
+            </button>
+            <button
+              onClick={() => {
+                const next = (walkBounded + 1) % walk.length;
+                setWalkIdx(next);
+                onArpeggiate(walk[next].grip);
+              }}
+              aria-label="Next voicing"
+              className="shrink-0 rounded-full bg-fill-soft px-2.5 py-4 text-sm text-ink-dim hover:text-ink">›</button>
           </div>
-          <MiniFretboard node={selected} grip={grip} />
-          <p className="mt-2 text-[11px] text-ink-mute">
-            Tap a position to hear it, bottom to top.
+          <p className="mt-1.5 text-center text-[11px] text-ink-mute">
+            {walkItem.kind} · {walkBounded + 1}/{walk.length} — tap to hear, ‹ › walks the neck
           </p>
-          </>
-          )}
         </div>
       )}
 

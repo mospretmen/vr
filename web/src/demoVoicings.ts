@@ -413,6 +413,69 @@ export function dyadGrips(
   return grips.slice(0, 5);
 }
 
+/** THE voicing walk — one ordered sequence of every real voicing of a
+ *  chord, sorted by neck position (closest grip is always next), shapes
+ *  and drop voicings deduped, guide-tone dyads at the tail. One system,
+ *  used by the Chords view and the compass card alike. */
+export interface WalkItem {
+  grip: Grip;
+  /** What this voicing is — caption, not a control. */
+  kind: string;
+}
+
+const BASS_NAMES = ["bass root", "bass 3rd", "bass 5th", "bass 7th"];
+
+export function voicingWalk(
+  root: number, intervals: number[] | null, shapes: Grip[],
+): WalkItem[] {
+  const items: WalkItem[] = [];
+  const seen = new Set<string>();
+  const push = (grip: Grip | null, kind: string) => {
+    if (!grip) return;
+    const key = grip.frets.join(",");
+    if (seen.has(key)) return;
+    seen.add(key);
+    items.push({ grip, kind });
+  };
+  for (const g of shapes) push(g, "shape");
+  if (intervals) {
+    STRING_SETS.forEach((set, si) => {
+      for (let inv = 0; inv < 4; inv++) {
+        push(dropGrip(root, intervals, set, inv, 2),
+             `drop-2 · ${BASS_NAMES[inv]} · strings ${STRING_SET_LABELS[si]}`);
+      }
+    });
+    DROP3_SETS.forEach((set, si) => {
+      for (let inv = 0; inv < 4; inv++) {
+        push(dropGrip(root, intervals, set, inv, 3),
+             `drop-3 · ${BASS_NAMES[inv]} · strings ${DROP3_SET_LABELS[si]}`);
+      }
+    });
+  }
+  const position = (g: Grip) => {
+    const fretted = g.frets.filter((f): f is number => f !== null && f > 0);
+    return fretted.length ? Math.min(...fretted) : 0;
+  };
+  items.sort((a, b) => position(a.grip) - position(b.grip));
+  if (intervals) {
+    const dyads: WalkItem[] = [];
+    DYAD_KINDS.forEach((kind) => {
+      DYAD_PAIRS.forEach((pair, pi) => {
+        for (const g of dyadGrips(root, intervals, kind, pair)) {
+          const key = g.frets.join(",");
+          if (!seen.has(key)) {
+            seen.add(key);
+            dyads.push({ grip: g, kind: `dyad ${kind.label} · strings ${DYAD_PAIR_LABELS[pi]}` });
+          }
+        }
+      });
+    });
+    dyads.sort((a, b) => position(a.grip) - position(b.grip));
+    items.push(...dyads);
+  }
+  return items;
+}
+
 export function gripsFor(node: CompassNode): Grip[] {
   const grips: Grip[] = [];
   for (const offsets of TEMPLATES[node.ring]) {
