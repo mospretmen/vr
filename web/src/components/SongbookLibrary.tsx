@@ -8,7 +8,7 @@ import {
   bookByKey, matchBook, searchSongs, SONG_INDEX, SONGBOOKS,
   type SongEntry,
 } from "../songbooks";
-import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
+import pdfWorkerUrl from "pdfjs-dist/legacy/build/pdf.worker.min.mjs?url";
 
 // ---- Local persistence helpers ----
 
@@ -149,7 +149,7 @@ async function makeThumb(fileName: string): Promise<string | null> {
   try {
     const blob = await loadBookFile(fileName);
     if (!blob) return null;
-    const pdfjs = await import("pdfjs-dist");
+    const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
     pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
     const doc = await pdfjs.getDocument({ data: await blob.arrayBuffer() }).promise;
     const page = await doc.getPage(1);
@@ -191,7 +191,7 @@ async function openDoc(fileName: string, blob: Blob): Promise<PdfDoc> {
   const cached = docCache.get(fileName);
   if (cached) return cached;
   const p = (async () => {
-    const pdfjs = await import("pdfjs-dist");
+    const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
     pdfjs.GlobalWorkerOptions.workerSrc = pdfWorkerUrl;
     return pdfjs.getDocument({ data: await blob.arrayBuffer() }).promise as unknown as PdfDoc;
   })();
@@ -242,6 +242,24 @@ function PdfPageView({ fileName, blob, page, onPageCount }: {
     })();
     return () => { cancelled = true; };
   }, [fileName, blob, page, onPageCount]);
+  const fallbackUrl = useMemo(() => {
+    if (!error) return null;
+    try {
+      return URL.createObjectURL(blob);
+    } catch {
+      return null;
+    }
+  }, [error, blob]);
+  if (error && fallbackUrl) {
+    // pdf.js couldn't run here — let the browser's own viewer carry it.
+    return (
+      <div className="flex min-h-0 flex-1 flex-col">
+        <p className="shrink-0 px-4 py-1 text-[11px] text-amber-400/80">{error} — using the browser viewer.</p>
+        <iframe title={fileName} src={`${fallbackUrl}#page=${page}`}
+                className="min-h-0 w-full flex-1 border-0" />
+      </div>
+    );
+  }
   return (
     <div className="flex min-h-0 flex-1 items-start justify-center overflow-auto bg-black/40 p-2">
       {error
