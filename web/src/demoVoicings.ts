@@ -353,14 +353,17 @@ export function dropGrip(
   // to minimise the hand span (opens count toward the span).
   const base = voiced.map((pc, k) => ((pc - OPEN_PCS[set[k]]) % 12 + 12) % 12);
   let best: number[] | null = null;
-  let bestSpan = 99;
+  let bestScore = Infinity;
   for (let mask = 0; mask < 16; mask++) {
     const frets = base.map((f, k) => (mask & (1 << k) ? f + 12 : f));
     if (frets.some((f) => f > 14)) continue;
     const span = Math.max(...frets) - Math.min(...frets);
-    if (span <= 5 && span < bestSpan) {
+    if (span > 4) continue; // real grips: a hand, not a stretch machine
+    // Prefer the tightest span, then the lowest position on the neck.
+    const score = span * 100 + Math.min(...frets);
+    if (score < bestScore) {
       best = frets;
-      bestSpan = span;
+      bestScore = score;
     }
   }
   if (!best) return null;

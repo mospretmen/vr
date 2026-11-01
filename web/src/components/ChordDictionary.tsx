@@ -12,7 +12,6 @@ import {
 
 const ROOTS = ["C", "C♯/D♭", "D", "D♯/E♭", "E", "F", "F♯/G♭", "G", "G♯/A♭", "A", "A♯/B♭", "B"];
 const OPEN_MIDI = [40, 45, 50, 55, 59, 64];
-const FAMILIES = ["Major", "Minor", "Dominant", "Sus", "Diminished"] as const;
 
 function gripMidis(frets: (number | null)[]): number[] {
   return frets.flatMap((f, s) => (f === null ? [] : [OPEN_MIDI[s] + f]));
@@ -130,9 +129,48 @@ function BigBoard({ root, grip, intervals }: {
 
 type ViewKind = "shapes" | "drop2" | "drop3" | "dyads";
 
+type BuilderFamily = "Major" | "Minor" | "Dominant" | "Diminished";
+
+/** The chips each family offers, and what each legal combination means.
+ *  Keys are sorted chip lists joined with "+" — the builder only allows
+ *  combinations that name a real chord. */
+const FAMILY_CHIPS: Record<BuilderFamily, string[]> = {
+  Major: ["6", "maj7", "9", "13", "♯11", "♯5", "sus2", "sus4"],
+  Minor: ["6", "7", "maj7", "9", "11", "13"],
+  Dominant: ["9", "13", "♭9", "♯9", "♭5", "♯5", "sus4"],
+  Diminished: ["half-dim ♭7"],
+};
+const COMBOS: Record<BuilderFamily, Record<string, string>> = {
+  Major: {
+    "": "", "6": "6", "6+9": "6/9", "maj7": "maj7", "9+maj7": "maj9",
+    "13+maj7": "maj13", "maj7+♯11": "maj7♯11", "maj7+♯5": "maj7♯5",
+    "9": "add9", "sus2": "sus2", "sus4": "sus4",
+  },
+  Minor: {
+    "": "m", "7": "m7", "7+9": "m9", "11+7": "m11", "13+7": "m13",
+    "6": "m6", "6+9": "m6/9", "maj7": "m(maj7)", "9+maj7": "m(maj9)",
+    "9": "m(add9)",
+  },
+  Dominant: {
+    "": "7", "9": "9", "13": "13", "♭9": "7♭9", "♯9": "7♯9",
+    "♭5": "7♭5", "♯5": "7♯5", "9+♭5": "9♭5", "9+♯5": "9♯5",
+    "13+♭9": "13♭9", "♭5+♭9": "7♭5♭9", "♭5+♯9": "7♭5♯9",
+    "♭9+♯5": "7♯5♭9", "♯5+♯9": "7♯5♯9", "sus4": "7sus4",
+    "9+sus4": "9sus4", "13+sus4": "13sus4",
+  },
+  Diminished: { "": "°7", "half-dim ♭7": "ø7" },
+};
+function comboKey(chips: Set<string>): string {
+  return [...chips].sort().join("+");
+}
+function resolveSuffix(family: BuilderFamily, chips: Set<string>): string | null {
+  return COMBOS[family][comboKey(chips)] ?? null;
+}
+
 export function ChordDictionary() {
   const [root, setRoot] = useState(0);
-  const [qualityKey, setQualityKey] = useState("maj7");
+  const [builderFamily, setBuilderFamily] = useState<BuilderFamily>("Major");
+  const [chips, setChips] = useState<Set<string>>(() => new Set(["maj7"]));
   const [view, setView] = useState<ViewKind>("shapes");
   const [shapeIdx, setShapeIdx] = useState(0);
   const [setIdx, setSetIdx] = useState(1);
@@ -141,8 +179,25 @@ export function ChordDictionary() {
   const [dyadPair, setDyadPair] = useState(1);
 
   const families = useMemo(() => allQualityFamilies(root), [root]);
-  const family = families.find((f) => (f.suffix || "major") === qualityKey)
-    ?? families[0];
+  const suffix = resolveSuffix(builderFamily, chips) ?? "";
+  const family = families.find((f) => f.suffix === suffix) ?? families[0];
+  const toggleChip = (chip: string) => {
+    setChips((prev) => {
+      const next = new Set(prev);
+      if (next.has(chip)) next.delete(chip);
+      else next.add(chip);
+      return resolveSuffix(builderFamily, next) !== null ? next : prev;
+    });
+    setShapeIdx(0);
+    setInversion(0);
+  };
+  /** A chip is offered when toggling it (from here) names a real chord. */
+  const chipPossible = (chip: string): boolean => {
+    const next = new Set(chips);
+    if (next.has(chip)) next.delete(chip);
+    else next.add(chip);
+    return resolveSuffix(builderFamily, next) !== null;
+  };
   const rootName = ROOTS[root].split("/")[0];
   const symbol = `${rootName}${family.suffix}`;
   const hasShapes = family.grips.length > 0;
@@ -230,33 +285,8 @@ export function ChordDictionary() {
     }`;
 
   return (
-    <div className="mx-auto flex h-full w-full max-w-5xl flex-col gap-3 lg:flex-row lg:gap-6">
-      {/* Quality rail, grouped by family */}
-      <aside className="no-scrollbar hidden w-44 shrink-0 overflow-y-auto border-r border-line pr-2 lg:block">
-        {FAMILIES.map((fam) => {
-          const members = families.filter((f) => f.family === fam);
-          if (members.length === 0) return null;
-          return (
-            <div key={fam}>
-              <div className="pb-1 pt-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-mute">
-                {fam}
-              </div>
-              {members.map((f) => (
-                <button
-                  key={f.suffix || "major"}
-                  onClick={() => { setQualityKey(f.suffix || "major"); setShapeIdx(0); setInversion(0); }}
-                  className={`block w-full border-l-2 px-3 py-1 text-left text-sm transition-colors ${
-                    family === f ? "border-accent text-ink"
-                      : "border-transparent text-ink-mute hover:text-ink-dim"
-                  }`}
-                >
-                  {rootName}{f.suffix}
-                </button>
-              ))}
-            </div>
-          );
-        })}
-      </aside>
+    <div className="mx-auto flex h-full w-full max-w-4xl flex-col">
+
 
       <div className="no-scrollbar min-w-0 flex-1 overflow-y-auto pb-8">
         {/* Root pills */}
@@ -270,19 +300,44 @@ export function ChordDictionary() {
             </button>
           ))}
         </div>
-        {/* Mobile quality picker */}
-        <select
-          value={family.suffix || "major"}
-          onChange={(e) => { setQualityKey(e.target.value); setShapeIdx(0); setInversion(0); }}
-          className="mt-3 rounded-md border border-line bg-transparent px-2 py-1.5 text-sm text-ink lg:hidden"
-        >
-          {FAMILIES.flatMap((fam) =>
-            families.filter((f) => f.family === fam).map((f) => (
-              <option key={f.suffix || "major"} value={f.suffix || "major"}>
-                {rootName}{f.suffix}
-              </option>
-            )))}
-        </select>
+        {/* The chord builder: family, then the extensions that exist. */}
+        <div className="mt-3 flex flex-wrap items-center gap-1.5">
+          {(Object.keys(FAMILY_CHIPS) as BuilderFamily[]).map((fam) => (
+            <button key={fam}
+              onClick={() => {
+                setBuilderFamily(fam);
+                setChips(new Set());
+                setShapeIdx(0);
+                setInversion(0);
+              }}
+              className={`rounded-lg px-3.5 py-1.5 text-sm font-medium transition-colors ${
+                builderFamily === fam ? "bg-fill text-ink" : "text-ink-mute hover:text-ink-dim"
+              }`}>
+              {fam}
+            </button>
+          ))}
+        </div>
+        <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <span className="mr-1 text-[11px] font-medium uppercase tracking-[0.14em] text-ink-mute">
+            Color it
+          </span>
+          {FAMILY_CHIPS[builderFamily].map((chip) => {
+            const active = chips.has(chip);
+            const possible = chipPossible(chip);
+            return (
+              <button key={chip}
+                onClick={() => toggleChip(chip)}
+                disabled={!possible}
+                className={`rounded-full px-3 py-1 text-xs transition-colors ${
+                  active ? "bg-accent text-accent-deep"
+                    : possible ? "bg-fill-soft text-ink-dim hover:text-ink"
+                    : "bg-fill-soft/40 text-ink-mute/40"
+                }`}>
+                {chip}
+              </button>
+            );
+          })}
+        </div>
 
         <div className="mt-3 flex flex-wrap items-baseline gap-3">
           <h2 className="font-display text-3xl font-semibold text-ink">{symbol}</h2>
@@ -353,7 +408,8 @@ export function ChordDictionary() {
                                     i, effectiveView === "drop2" ? 2 : 3));
                     }
                   }}>
-                  {label}
+                  {label.replace("Root", "Bass: root").replace("1st inv", "Bass: 3rd")
+                        .replace("2nd inv", "Bass: 5th").replace("3rd inv", "Bass: 7th")}
                 </button>
               ))}
             </div>
