@@ -17,7 +17,10 @@ function offsetKey(book: string): string {
 }
 /** Measured front-matter offsets (printed page → PDF page); the ± control
  *  overrides and remembers per book. */
-const DEFAULT_OFFSETS: Record<string, number> = { evansbk: 3, realbk1: 13 };
+const DEFAULT_OFFSETS: Record<string, number> = {
+  evansbk: 3, realbk1: 13, realbk2: 7, realbk3: 5, jazzfake: -1,
+  colorado: 3, jazzltd: 7, library: 4, thebook: 13,
+};
 function getOffset(book: string): number {
   try {
     const raw = localStorage.getItem(offsetKey(book));
