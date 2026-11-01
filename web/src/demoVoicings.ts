@@ -186,22 +186,101 @@ function instantiate(shapes: (number | null)[][], root: number): Grip[] {
     .slice(0, 6);
 }
 
+/** The dictionary catalog: every quality the Chords view knows, grouped
+ *  by family. `intervals` are the four voices in third-stack order (chord
+ *  books omit the 5th freely; stacked alterations are voiced rootless, as
+ *  players actually grab them). `shapes` are chart-movable templates. */
+export interface DictEntry {
+  family: "Major" | "Minor" | "Dominant" | "Sus" | "Diminished";
+  suffix: string;
+  intervals: number[] | null;
+  shapes: (number | null)[][];
+  rootless?: boolean;
+}
+
+export const DICTIONARY: DictEntry[] = [
+  // ---- Major ----
+  { family: "Major", suffix: "", intervals: null, shapes: TEMPLATES.majorKey },
+  { family: "Major", suffix: "5", intervals: null,
+    shapes: [[0, 2, 2, null, null, null], [null, 0, 2, 2, null, null]] },
+  { family: "Major", suffix: "add9", intervals: [0, 4, 7, 2], shapes: [] },
+  { family: "Major", suffix: "6", intervals: [0, 4, 7, 9],
+    shapes: [[0, null, -1, 1, 0, null], [null, 0, 2, 2, 2, 2]] },
+  { family: "Major", suffix: "6/9", intervals: [0, 4, 9, 2],
+    shapes: [[null, 0, -1, -1, 0, 0]] },
+  { family: "Major", suffix: "maj7", intervals: [0, 4, 7, 11],
+    shapes: [[0, null, 1, 1, 0, null], [null, 0, 2, 1, 2, 0],
+             [null, 0, -1, -3, -3, -3], [null, null, 0, 2, 2, 2]] },
+  { family: "Major", suffix: "maj9", intervals: [0, 4, 11, 2],
+    shapes: [[null, 0, -1, 1, 0, null]] },
+  { family: "Major", suffix: "maj13", intervals: [0, 4, 11, 9], shapes: [] },
+  { family: "Major", suffix: "maj7♯11", intervals: [0, 4, 6, 11], shapes: [] },
+  { family: "Major", suffix: "maj7♯5", intervals: [0, 4, 8, 11], shapes: [] },
+  // ---- Minor ----
+  { family: "Minor", suffix: "m", intervals: null, shapes: TEMPLATES.relativeMinor },
+  { family: "Minor", suffix: "m(add9)", intervals: [0, 3, 7, 2], shapes: [] },
+  { family: "Minor", suffix: "m6", intervals: [0, 3, 7, 9],
+    shapes: [[0, null, -1, 0, 0, null], [null, 0, -2, -1, -2, null]] },
+  { family: "Minor", suffix: "m6/9", intervals: [0, 3, 9, 2], shapes: [] },
+  { family: "Minor", suffix: "m7", intervals: [0, 3, 7, 10],
+    shapes: [[0, 2, 0, 0, 0, 0], [null, 0, 2, 0, 1, 0], [null, null, 0, 2, 1, 1]] },
+  { family: "Minor", suffix: "m9", intervals: [0, 3, 10, 2],
+    shapes: [[null, 0, -2, 0, 0, 0], [0, 2, 0, 0, 0, 2]] },
+  { family: "Minor", suffix: "m11", intervals: [0, 3, 10, 5],
+    shapes: [[0, null, 0, 0, -2, null], [0, 0, 0, 0, 0, 0], [null, 0, 0, 0, 1, null]] },
+  { family: "Minor", suffix: "m13", intervals: [0, 3, 10, 9], shapes: [] },
+  { family: "Minor", suffix: "m(maj7)", intervals: [0, 3, 7, 11],
+    shapes: [[0, null, 1, 0, 0, null], [null, 0, 2, 1, 1, null]] },
+  { family: "Minor", suffix: "m(maj9)", intervals: [0, 3, 11, 2], shapes: [] },
+  // ---- Dominant ----
+  { family: "Dominant", suffix: "7", intervals: [0, 4, 7, 10], shapes: TEMPLATES.dominant },
+  { family: "Dominant", suffix: "9", intervals: [0, 4, 10, 2],
+    shapes: [[null, 0, -1, 0, 0, 0]] },
+  { family: "Dominant", suffix: "13", intervals: [0, 4, 10, 9],
+    shapes: [[null, 0, -1, 0, 0, 2]] },
+  { family: "Dominant", suffix: "7♭9", intervals: [0, 4, 10, 1],
+    shapes: [[null, 0, -1, 0, -1, null]] },
+  { family: "Dominant", suffix: "7♯9", intervals: [0, 4, 10, 3],
+    shapes: [[null, 0, -1, 0, 1, null]] },
+  { family: "Dominant", suffix: "7♭5", intervals: [0, 4, 6, 10],
+    shapes: [[0, null, 0, 1, -1, null]] },
+  { family: "Dominant", suffix: "7♯5", intervals: [0, 4, 8, 10],
+    shapes: [[0, null, 0, 1, 1, null]] },
+  { family: "Dominant", suffix: "9♭5", intervals: [4, 6, 10, 2], rootless: true, shapes: [] },
+  { family: "Dominant", suffix: "9♯5", intervals: [4, 8, 10, 2], rootless: true, shapes: [] },
+  { family: "Dominant", suffix: "13♭9", intervals: [4, 10, 1, 9], rootless: true, shapes: [] },
+  { family: "Dominant", suffix: "7♭5♭9", intervals: [4, 6, 10, 1], rootless: true, shapes: [] },
+  { family: "Dominant", suffix: "7♭5♯9", intervals: [4, 6, 10, 3], rootless: true, shapes: [] },
+  { family: "Dominant", suffix: "7♯5♭9", intervals: [4, 8, 10, 1], rootless: true, shapes: [] },
+  { family: "Dominant", suffix: "7♯5♯9", intervals: [4, 8, 10, 3], rootless: true, shapes: [] },
+  // ---- Sus ----
+  { family: "Sus", suffix: "sus2", intervals: null,
+    shapes: [[null, 0, 2, 2, 0, 0], [null, null, 0, 2, 3, 0]] },
+  { family: "Sus", suffix: "sus4", intervals: null,
+    shapes: [[0, 2, 2, 2, 0, 0], [null, 0, 2, 2, 3, 0]] },
+  { family: "Sus", suffix: "7sus4", intervals: [0, 5, 7, 10],
+    shapes: [[null, 0, 2, 0, 3, 0]] },
+  { family: "Sus", suffix: "9sus4", intervals: [0, 5, 10, 2],
+    shapes: [[null, 0, 0, 0, 0, 0]] },
+  { family: "Sus", suffix: "13sus4", intervals: [0, 5, 10, 9], shapes: [] },
+  // ---- Diminished ----
+  { family: "Diminished", suffix: "°7", intervals: [0, 3, 6, 9], shapes: TEMPLATES.diminished },
+  { family: "Diminished", suffix: "ø7", intervals: [0, 3, 6, 10],
+    shapes: [[0, null, 0, 0, -1, null], [null, 0, 1, 0, 1, null]] },
+];
+
 /** The full dictionary, family-agnostic: every quality for a given root. */
-export function allQualityFamilies(root: number): { suffix: string; grips: Grip[]; seventhIntervals: number[] | null }[] {
-  const out: { suffix: string; grips: Grip[]; seventhIntervals: number[] | null }[] = [];
-  const seen = new Set<string>();
-  for (const ring of ["majorKey", "relativeMinor", "dominant", "diminished"] as const) {
-    for (const [suffix, shapes] of QUALITY_SHAPES[ring]) {
-      if (seen.has(suffix)) continue;
-      seen.add(suffix);
-      out.push({
-        suffix,
-        grips: instantiate(shapes, root),
-        seventhIntervals: SUFFIX_INTERVALS[suffix] ?? null,
-      });
-    }
-  }
-  return out.filter((f) => f.grips.length > 0 || f.seventhIntervals !== null);
+export function allQualityFamilies(root: number): {
+  family: DictEntry["family"]; suffix: string; grips: Grip[];
+  seventhIntervals: number[] | null; rootless: boolean;
+}[] {
+  return DICTIONARY.map((d) => ({
+    family: d.family,
+    suffix: d.suffix,
+    grips: instantiate(d.shapes, root),
+    seventhIntervals: d.intervals,
+    rootless: d.rootless ?? false,
+  })).filter((f) => f.grips.length > 0 || f.seventhIntervals !== null);
 }
 
 export interface GripFamily {

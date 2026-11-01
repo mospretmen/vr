@@ -1,256 +1,387 @@
-// The chord dictionary: pick a root, pick a quality, see every shape the
-// book knows — CAGED shapes up the neck, then drop-2 and drop-3 inversions
-// on each string set, then guide-tone dyads. Every diagram is playable.
-import { useMemo, useState } from "react";
+// The chord dictionary: one root, one quality, ONE big fretboard — and you
+// flip through everything that chord can be: shapes up the neck, drop-2 and
+// drop-3 inversions per string set, guide-tone dyads. Arrows step, every
+// step sounds. The catalog is grouped Major / Minor / Dominant / Sus / Dim.
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { strum } from "../audio";
 import {
   allQualityFamilies, dropGrip, DROP3_SET_LABELS, DROP3_SETS,
   DYAD_KINDS, DYAD_PAIR_LABELS, DYAD_PAIRS, dyadGrips,
-  INVERSION_LABELS, STRING_SET_LABELS, STRING_SETS,
-  toneRole, type Grip,
+  INVERSION_LABELS, STRING_SET_LABELS, STRING_SETS, type Grip,
 } from "../demoVoicings";
 
 const ROOTS = ["C", "C♯/D♭", "D", "D♯/E♭", "E", "F", "F♯/G♭", "G", "G♯/A♭", "A", "A♯/B♭", "B"];
 const OPEN_MIDI = [40, 45, 50, 55, 59, 64];
-const ROLE_COLOR = [
-  "var(--color-accent-strong)", "#22d3ee", "#4ade80", "#c084fc",
-];
+const FAMILIES = ["Major", "Minor", "Dominant", "Sus", "Diminished"] as const;
 
 function gripMidis(frets: (number | null)[]): number[] {
   return frets.flatMap((f, s) => (f === null ? [] : [OPEN_MIDI[s] + f]));
 }
 
-/** One compact diagram, same furniture as every other board in the app. */
-function GripBoard({ root, grip, label }: { root: number; grip: Grip; label: string }) {
+/** Exact interval figure, chord-aware (♯9 when a major 3rd is present). */
+function figure(semis: number, intervals: number[] | null): string {
+  const has = (x: number) => intervals?.includes(x) ?? false;
+  switch (semis) {
+    case 0: return "R";
+    case 1: return "♭9";
+    case 2: return "9";
+    case 3: return has(4) ? "♯9" : "♭3";
+    case 4: return "3";
+    case 5: return has(4) || has(3) ? "11" : "4";
+    case 6: return has(7) ? "♯11" : "♭5";
+    case 7: return "5";
+    case 8: return has(7) ? "♭13" : "♯5";
+    case 9: return has(10) ? "13" : "6";
+    case 10: return "♭7";
+    default: return "7";
+  }
+}
+
+function figureColor(semis: number): string {
+  if (semis === 0) return "var(--color-accent-strong)";
+  if (semis === 3 || semis === 4) return "#22d3ee";
+  if (semis >= 5 && semis <= 8) return "#4ade80";
+  return "#c084fc";
+}
+
+/** The one big board. Same furniture as everywhere else, readable size. */
+function BigBoard({ root, grip, intervals }: {
+  root: number; grip: Grip; intervals: number[] | null;
+}) {
   const sounded = grip.frets
     .map((f, s) => (f === null ? null : { s, f }))
     .filter((x): x is { s: number; f: number } => x !== null);
   const fretted = sounded.map(({ f }) => f).filter((f) => f > 0);
   const low = fretted.length ? Math.min(...fretted) : 1;
   const start = Math.max(1, Math.min(low, 11));
-  const W = 150;
-  const H = 96;
-  const left = 20;
-  const gap = (W - left - 8) / 5;
-  const stringY = (s: number) => 10 + (5 - s) * ((H - 32) / 5);
+  const W = 640;
+  const H = 230;
+  const left = 46;
+  const gap = (W - left - 16) / 5;
+  const stringY = (s: number) => 24 + (5 - s) * ((H - 72) / 5);
   const fretX = (f: number) => left + (f - start + 1) * gap;
-  const noteX = (f: number) => (f === 0 ? left - 10 : fretX(f) - gap / 2);
+  const noteX = (f: number) => (f === 0 ? left - 22 : fretX(f) - gap / 2);
   const INLAYS = new Set([3, 5, 7, 9, 15, 17, 19, 21]);
   return (
-    <button
-      onClick={() => strum(gripMidis(grip.frets))}
-      className="group rounded-lg border border-line p-2 text-left transition-colors hover:border-accent/50"
-    >
-      <svg viewBox={`0 0 ${W} ${H}`} className="w-full">
-        <defs>
-          <linearGradient id="gd-wood" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0" stopColor="#422617" />
-            <stop offset="0.5" stopColor="#5c3821" />
-            <stop offset="1" stopColor="#4d2e1c" />
-          </linearGradient>
-        </defs>
-        <rect x={left} y={4} width={W - left - 4} height={H - 20} rx={4}
-          fill="url(#gd-wood)" stroke="rgba(0,0,0,0.4)" />
-        {start === 1 && (
-          <rect x={left - 3} y={4} width={5} height={H - 20} rx={2} fill="#ded9cc" />
-        )}
-        {[0, 1, 2, 3, 4, 5].map((i) => (
-          <line key={i} x1={fretX(start + i)} y1={5} x2={fretX(start + i)}
-            y2={H - 17} stroke="rgba(210,210,214,0.7)" strokeWidth={1.5} />
-        ))}
-        {[0, 1, 2, 3, 4].map((i) => {
-          const f = start + i;
-          if (!INLAYS.has(f) && f !== 12) return null;
-          const cx = fretX(f) - gap / 2;
-          const cy = (4 + H - 16) / 2;
-          return f === 12 ? (
-            <g key={f}>
-              <circle cx={cx} cy={cy - 9} r={2.2} fill="rgba(250,250,250,0.25)" />
-              <circle cx={cx} cy={cy + 9} r={2.2} fill="rgba(250,250,250,0.25)" />
-            </g>
-          ) : (
-            <circle key={f} cx={cx} cy={cy} r={2.2} fill="rgba(250,250,250,0.25)" />
-          );
-        })}
-        {[0, 1, 2, 3, 4, 5].map((s) => (
-          <line key={s} x1={left - 3} y1={stringY(s)} x2={W - 6} y2={stringY(s)}
-            stroke={s < 3 ? "#9d9588" : "#c9c7bd"} strokeWidth={1.9 - s * 0.22}
-            opacity={0.85} />
-        ))}
-        {grip.frets.map((f, s) =>
-          f === null ? (
-            <text key={s} x={left - 11} y={stringY(s) + 2.6} fontSize={8}
-              fill="var(--color-ink-mute)" textAnchor="middle">×</text>
-          ) : null)}
-        {sounded.map(({ s, f }) => {
-          const role = toneRole({ root }, s, f);
-          return (
-            <g key={s}>
-              <circle cx={noteX(f)} cy={stringY(s)} r={6.4} fill={ROLE_COLOR[role]} />
-              <text x={noteX(f)} y={stringY(s) + 2.4} textAnchor="middle"
-                fontSize={6.6} fontWeight={700} fill="#1a1208">
-                {["R", "3", "5", "7"][role]}
-              </text>
-            </g>
-          );
-        })}
-        <text x={fretX(start) - gap / 2} y={H - 3} textAnchor="middle"
-          fontSize={8} fill="var(--color-ink-mute)">{start}</text>
-      </svg>
-      <div className="mt-1 truncate text-center text-[10px] text-ink-mute group-hover:text-ink-dim">
-        {label}
-      </div>
-    </button>
+    <svg viewBox={`0 0 ${W} ${H}`} className="w-full select-none">
+      <defs>
+        <linearGradient id="bb-wood" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0" stopColor="#422617" />
+          <stop offset="0.5" stopColor="#5c3821" />
+          <stop offset="1" stopColor="#4d2e1c" />
+        </linearGradient>
+      </defs>
+      <rect x={left} y={10} width={W - left - 10} height={H - 48} rx={8}
+        fill="url(#bb-wood)" stroke="rgba(0,0,0,0.4)" />
+      {start === 1 && (
+        <rect x={left - 7} y={10} width={8} height={H - 48} rx={3} fill="#ded9cc" />
+      )}
+      {[0, 1, 2, 3, 4, 5].map((i) => (
+        <line key={i} x1={fretX(start + i)} y1={12} x2={fretX(start + i)}
+          y2={H - 40} stroke="rgba(210,210,214,0.7)" strokeWidth={2.4} />
+      ))}
+      {[0, 1, 2, 3, 4].map((i) => {
+        const f = start + i;
+        if (!INLAYS.has(f) && f !== 12) return null;
+        const cx = fretX(f) - gap / 2;
+        const cy = (10 + H - 38) / 2;
+        return f === 12 ? (
+          <g key={f}>
+            <circle cx={cx} cy={cy - 26} r={5} fill="rgba(250,250,250,0.25)" />
+            <circle cx={cx} cy={cy + 26} r={5} fill="rgba(250,250,250,0.25)" />
+          </g>
+        ) : (
+          <circle key={f} cx={cx} cy={cy} r={5} fill="rgba(250,250,250,0.25)" />
+        );
+      })}
+      {[0, 1, 2, 3, 4, 5].map((s) => (
+        <line key={s} x1={left - 7} y1={stringY(s)} x2={W - 12} y2={stringY(s)}
+          stroke={s < 3 ? "#9d9588" : "#c9c7bd"} strokeWidth={3.6 - s * 0.42}
+          opacity={0.85} />
+      ))}
+      {grip.frets.map((f, s) =>
+        f === null ? (
+          <text key={s} x={left - 24} y={stringY(s) + 5} fontSize={15}
+            fill="var(--color-ink-mute)" textAnchor="middle">×</text>
+        ) : null)}
+      {sounded.map(({ s, f }) => {
+        const semis = ((OPEN_MIDI[s] + f) % 12 - root + 12) % 12;
+        return (
+          <g key={s}>
+            <circle cx={noteX(f)} cy={stringY(s)} r={14.5}
+              fill={figureColor(semis)} />
+            <text x={noteX(f)} y={stringY(s) + 4.6} textAnchor="middle"
+              fontSize={11.5} fontWeight={700} fill="#1a1208">
+              {figure(semis, intervals)}
+            </text>
+          </g>
+        );
+      })}
+      {[0, 1, 2, 3, 4].map((i) => (
+        <text key={i} x={fretX(start + i) - gap / 2} y={H - 16}
+          textAnchor="middle" fontSize={13} fill="var(--color-ink-mute)"
+          className="tabular-nums">
+          {start + i}
+        </text>
+      ))}
+    </svg>
   );
 }
 
+type ViewKind = "shapes" | "drop2" | "drop3" | "dyads";
+
 export function ChordDictionary() {
   const [root, setRoot] = useState(0);
-  const [qualityIndex, setQualityIndex] = useState(0);
-  const families = useMemo(() => allQualityFamilies(root), [root]);
-  const family = families[Math.min(qualityIndex, families.length - 1)];
-  const rootName = ROOTS[root].split("/")[0];
-  const symbol = `${rootName}${family?.suffix ?? ""}`;
+  const [qualityKey, setQualityKey] = useState("maj7");
+  const [view, setView] = useState<ViewKind>("shapes");
+  const [shapeIdx, setShapeIdx] = useState(0);
+  const [setIdx, setSetIdx] = useState(1);
+  const [inversion, setInversion] = useState(0);
+  const [dyadKind, setDyadKind] = useState(0);
+  const [dyadPair, setDyadPair] = useState(1);
 
-  const drop2 = useMemo(() => {
-    if (!family?.seventhIntervals) return [];
-    return STRING_SETS.map((set, si) =>
-      INVERSION_LABELS.map((_, inv) =>
-        dropGrip(root, family.seventhIntervals!, set, inv, 2))
-        .map((g, inv) => ({ g, inv, si })));
-  }, [family, root]);
-  const drop3 = useMemo(() => {
-    if (!family?.seventhIntervals) return [];
-    return DROP3_SETS.map((set, si) =>
-      INVERSION_LABELS.map((_, inv) =>
-        dropGrip(root, family.seventhIntervals!, set, inv, 3))
-        .map((g, inv) => ({ g, inv, si })));
-  }, [family, root]);
+  const families = useMemo(() => allQualityFamilies(root), [root]);
+  const family = families.find((f) => (f.suffix || "major") === qualityKey)
+    ?? families[0];
+  const rootName = ROOTS[root].split("/")[0];
+  const symbol = `${rootName}${family.suffix}`;
+  const hasShapes = family.grips.length > 0;
+  const hasVoicings = family.seventhIntervals !== null;
+
+  const effectiveView: ViewKind =
+    view === "shapes" && !hasShapes ? "drop2"
+    : (view !== "shapes" && !hasVoicings) ? "shapes" : view;
+
+  const voicingSets = effectiveView === "drop3" ? DROP3_SETS : STRING_SETS;
+  const voicingSetLabels = effectiveView === "drop3" ? DROP3_SET_LABELS : STRING_SET_LABELS;
+  const boundedSet = Math.min(setIdx, voicingSets.length - 1);
+
+  const dyads = useMemo(
+    () => hasVoicings
+      ? dyadGrips(root, family.seventhIntervals!, DYAD_KINDS[dyadKind], DYAD_PAIRS[dyadPair])
+      : [],
+    [hasVoicings, family, root, dyadKind, dyadPair]);
+  const [dyadPos, setDyadPos] = useState(0);
+
+  const grip: Grip | null = useMemo(() => {
+    switch (effectiveView) {
+      case "shapes":
+        return family.grips[Math.min(shapeIdx, family.grips.length - 1)] ?? null;
+      case "drop2":
+      case "drop3":
+        return hasVoicings
+          ? dropGrip(root, family.seventhIntervals!, voicingSets[boundedSet],
+                     inversion, effectiveView === "drop2" ? 2 : 3)
+          : null;
+      case "dyads":
+        return dyads[Math.min(dyadPos, Math.max(0, dyads.length - 1))] ?? null;
+    }
+  }, [effectiveView, family, shapeIdx, hasVoicings, root, voicingSets,
+      boundedSet, inversion, dyads, dyadPos]);
+
+  const play = useCallback((g: Grip | null) => {
+    if (g) strum(gripMidis(g.frets));
+  }, []);
+
+  /** Step through the current view's sequence with ‹ › or arrow keys. */
+  const step = useCallback((dir: 1 | -1) => {
+    if (effectiveView === "shapes") {
+      const n = family.grips.length;
+      if (n === 0) return;
+      const next = (shapeIdx + dir + n) % n;
+      setShapeIdx(next);
+      play(family.grips[next]);
+    } else if (effectiveView === "dyads") {
+      const n = dyads.length;
+      if (n === 0) return;
+      const next = (dyadPos + dir + n) % n;
+      setDyadPos(next);
+      play(dyads[next]);
+    } else {
+      const next = (inversion + dir + 4) % 4;
+      setInversion(next);
+      if (hasVoicings) {
+        play(dropGrip(root, family.seventhIntervals!, voicingSets[boundedSet],
+                      next, effectiveView === "drop2" ? 2 : 3));
+      }
+    }
+  }, [effectiveView, family, shapeIdx, dyads, dyadPos, inversion,
+      hasVoicings, root, voicingSets, boundedSet, play]);
+
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.target instanceof HTMLInputElement || e.target instanceof HTMLSelectElement) return;
+      if (e.key === "ArrowRight") { e.preventDefault(); step(1); }
+      if (e.key === "ArrowLeft") { e.preventDefault(); step(-1); }
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [step]);
+
+  const currentLabel = effectiveView === "shapes"
+    ? grip?.positionLabel ?? ""
+    : effectiveView === "dyads"
+      ? `${DYAD_KINDS[dyadKind].label} · strings ${DYAD_PAIR_LABELS[dyadPair]} · ${grip?.positionLabel ?? ""}`
+      : `${INVERSION_LABELS[inversion]} · strings ${voicingSetLabels[boundedSet]}`;
+
+  const chip = (active: boolean) =>
+    `rounded-full px-3 py-1 text-xs transition-colors ${
+      active ? "bg-accent text-accent-deep" : "bg-fill-soft text-ink-dim hover:text-ink"
+    }`;
 
   return (
-    <div className="mx-auto flex h-full w-full max-w-6xl gap-5">
-      {/* Quality rail */}
-      <aside className="no-scrollbar hidden w-40 shrink-0 overflow-y-auto border-r border-line pr-2 lg:block">
-        <div className="pb-1 pt-2 text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-mute">
-          Quality
-        </div>
-        {families.map((f, i) => (
-          <button
-            key={f.suffix || "major"}
-            onClick={() => setQualityIndex(i)}
-            className={`block w-full border-l-2 px-3 py-1.5 text-left text-sm transition-colors ${
-              i === Math.min(qualityIndex, families.length - 1)
-                ? "border-accent text-ink"
-                : "border-transparent text-ink-mute hover:text-ink-dim"
-            }`}
-          >
-            {rootName}{f.suffix}
-          </button>
-        ))}
+    <div className="mx-auto flex h-full w-full max-w-5xl flex-col gap-3 lg:flex-row lg:gap-6">
+      {/* Quality rail, grouped by family */}
+      <aside className="no-scrollbar hidden w-44 shrink-0 overflow-y-auto border-r border-line pr-2 lg:block">
+        {FAMILIES.map((fam) => {
+          const members = families.filter((f) => f.family === fam);
+          if (members.length === 0) return null;
+          return (
+            <div key={fam}>
+              <div className="pb-1 pt-3 text-[10px] font-semibold uppercase tracking-[0.16em] text-ink-mute">
+                {fam}
+              </div>
+              {members.map((f) => (
+                <button
+                  key={f.suffix || "major"}
+                  onClick={() => { setQualityKey(f.suffix || "major"); setShapeIdx(0); setInversion(0); }}
+                  className={`block w-full border-l-2 px-3 py-1 text-left text-sm transition-colors ${
+                    family === f ? "border-accent text-ink"
+                      : "border-transparent text-ink-mute hover:text-ink-dim"
+                  }`}
+                >
+                  {rootName}{f.suffix}
+                </button>
+              ))}
+            </div>
+          );
+        })}
       </aside>
 
       <div className="no-scrollbar min-w-0 flex-1 overflow-y-auto pb-8">
         {/* Root pills */}
         <div className="flex flex-wrap items-center gap-1 pt-1">
-          <span className="mr-2 text-[11px] font-medium uppercase tracking-[0.14em] text-ink-mute">
-            Root
-          </span>
           {ROOTS.map((name, pc) => (
-            <button
-              key={pc}
-              onClick={() => setRoot(pc)}
+            <button key={pc} onClick={() => setRoot(pc)}
               className={`rounded-md px-2 py-1 text-sm font-medium transition-colors ${
                 root === pc ? "bg-accent text-accent-deep" : "text-ink-mute hover:text-ink"
-              }`}
-            >
+              }`}>
               {name}
             </button>
           ))}
         </div>
         {/* Mobile quality picker */}
         <select
-          value={Math.min(qualityIndex, families.length - 1)}
-          onChange={(e) => setQualityIndex(Number(e.target.value))}
+          value={family.suffix || "major"}
+          onChange={(e) => { setQualityKey(e.target.value); setShapeIdx(0); setInversion(0); }}
           className="mt-3 rounded-md border border-line bg-transparent px-2 py-1.5 text-sm text-ink lg:hidden"
         >
-          {families.map((f, i) => (
-            <option key={f.suffix || "major"} value={i}>{rootName}{f.suffix}</option>
-          ))}
+          {FAMILIES.flatMap((fam) =>
+            families.filter((f) => f.family === fam).map((f) => (
+              <option key={f.suffix || "major"} value={f.suffix || "major"}>
+                {rootName}{f.suffix}
+              </option>
+            )))}
         </select>
 
-        <h2 className="mt-4 font-display text-2xl font-semibold text-ink">{symbol}</h2>
-        <p className="mt-0.5 text-sm text-ink-dim">
-          Every shape is playable — tap a diagram to hear it, low string to high.
+        <div className="mt-3 flex flex-wrap items-baseline gap-3">
+          <h2 className="font-display text-3xl font-semibold text-ink">{symbol}</h2>
+          <span className="text-sm text-ink-dim">{currentLabel}</span>
+          {family.rootless && (
+            <span className="rounded-full bg-fill-soft px-2.5 py-0.5 text-[11px] text-ink-mute">
+              rootless — as played
+            </span>
+          )}
+        </div>
+
+        {/* THE board */}
+        <div className="mt-2 flex items-center gap-2">
+          <button onClick={() => step(-1)} aria-label="Previous voicing"
+                  className="shrink-0 rounded-full bg-fill-soft px-3 py-6 text-lg text-ink-dim hover:text-ink">‹</button>
+          <button onClick={() => play(grip)} className="min-w-0 flex-1" aria-label="Play voicing">
+            {grip
+              ? <BigBoard root={root} grip={grip} intervals={family.seventhIntervals} />
+              : <p className="py-16 text-center text-sm text-ink-mute">
+                  No one-position voicing here — step on.
+                </p>}
+          </button>
+          <button onClick={() => step(1)} aria-label="Next voicing"
+                  className="shrink-0 rounded-full bg-fill-soft px-3 py-6 text-lg text-ink-dim hover:text-ink">›</button>
+        </div>
+        <p className="mt-1 text-center text-[11px] text-ink-mute">
+          Tap the board to hear it · ‹ › or arrow keys step through voicings
         </p>
 
-        {family && family.grips.length > 0 && (
+        {/* Voicing controls */}
+        <div className="mt-4 flex flex-wrap gap-1.5">
+          {([["shapes", "Shapes"], ["drop2", "Drop-2"], ["drop3", "Drop-3"], ["dyads", "Dyads"]] as const)
+            .filter(([v]) => (v === "shapes" ? hasShapes : hasVoicings))
+            .map(([v, label]) => (
+              <button key={v} onClick={() => setView(v)} className={chip(effectiveView === v)}>
+                {label}
+              </button>
+            ))}
+        </div>
+
+        {effectiveView === "shapes" && (
+          <div className="mt-2.5 flex flex-wrap gap-1.5">
+            {family.grips.map((g, i) => (
+              <button key={i} className={chip(i === Math.min(shapeIdx, family.grips.length - 1))}
+                onClick={() => { setShapeIdx(i); play(g); }}>
+                {g.positionLabel}
+              </button>
+            ))}
+          </div>
+        )}
+        {(effectiveView === "drop2" || effectiveView === "drop3") && (
           <>
-            <h3 className="mt-6 text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-mute">
-              Shapes up the neck
-            </h3>
-            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4">
-              {family.grips.map((g, i) => (
-                <GripBoard key={i} root={root} grip={g} label={`${symbol} · ${g.positionLabel}`} />
+            <div className="mt-2.5 flex flex-wrap gap-1.5">
+              {voicingSetLabels.map((label, i) => (
+                <button key={label} className={chip(i === boundedSet)}
+                  onClick={() => { setSetIdx(i); }}>
+                  strings {label}
+                </button>
+              ))}
+            </div>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {INVERSION_LABELS.map((label, i) => (
+                <button key={label} className={chip(i === inversion)}
+                  onClick={() => {
+                    setInversion(i);
+                    if (hasVoicings) {
+                      play(dropGrip(root, family.seventhIntervals!, voicingSets[boundedSet],
+                                    i, effectiveView === "drop2" ? 2 : 3));
+                    }
+                  }}>
+                  {label}
+                </button>
               ))}
             </div>
           </>
         )}
-
-        {family?.seventhIntervals && (
+        {effectiveView === "dyads" && (
           <>
-            <h3 className="mt-8 text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-mute">
-              Drop-2 inversions — by string set
-            </h3>
-            {drop2.map((row, si) => (
-              <div key={si} className="mt-3">
-                <div className="text-xs text-ink-dim">strings {STRING_SET_LABELS[si]}</div>
-                <div className="mt-1.5 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  {row.map(({ g, inv }) =>
-                    g ? (
-                      <GripBoard key={inv} root={root} grip={g}
-                        label={INVERSION_LABELS[inv]} />
-                    ) : (
-                      <div key={inv} className="rounded-lg border border-dashed border-line p-2 text-center text-[10px] text-ink-mute">
-                        no one-position<br />{INVERSION_LABELS[inv]}
-                      </div>
-                    ))}
-                </div>
-              </div>
-            ))}
-
-            <h3 className="mt-8 text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-mute">
-              Drop-3 inversions — by string set
-            </h3>
-            {drop3.map((row, si) => (
-              <div key={si} className="mt-3">
-                <div className="text-xs text-ink-dim">strings {DROP3_SET_LABELS[si]}</div>
-                <div className="mt-1.5 grid grid-cols-2 gap-2 sm:grid-cols-4">
-                  {row.map(({ g, inv }) =>
-                    g ? (
-                      <GripBoard key={inv} root={root} grip={g}
-                        label={INVERSION_LABELS[inv]} />
-                    ) : (
-                      <div key={inv} className="rounded-lg border border-dashed border-line p-2 text-center text-[10px] text-ink-mute">
-                        no one-position<br />{INVERSION_LABELS[inv]}
-                      </div>
-                    ))}
-                </div>
-              </div>
-            ))}
-
-            <h3 className="mt-8 text-[11px] font-semibold uppercase tracking-[0.16em] text-ink-mute">
-              Guide-tone dyads
-            </h3>
-            <div className="mt-2 grid grid-cols-2 gap-2 sm:grid-cols-4">
-              {DYAD_KINDS.map((kind) =>
-                DYAD_PAIRS.map((pair, pi) => {
-                  const grips = dyadGrips(root, family.seventhIntervals!, kind, pair);
-                  if (grips.length === 0) return null;
-                  return (
-                    <GripBoard key={`${kind.label}-${pi}`} root={root} grip={grips[0]}
-                      label={`${kind.label} · strings ${DYAD_PAIR_LABELS[pi]}`} />
-                  );
-                }))}
+            <div className="mt-2.5 flex flex-wrap gap-1.5">
+              {DYAD_KINDS.map((k, i) => (
+                <button key={k.label} className={chip(i === dyadKind)}
+                  onClick={() => { setDyadKind(i); setDyadPos(0); }}>
+                  {k.label}
+                </button>
+              ))}
+            </div>
+            <div className="mt-1.5 flex flex-wrap gap-1.5">
+              {DYAD_PAIR_LABELS.map((label, i) => (
+                <button key={label} className={chip(i === dyadPair)}
+                  onClick={() => { setDyadPair(i); setDyadPos(0); }}>
+                  strings {label}
+                </button>
+              ))}
+              {dyads.map((g, i) => (
+                <button key={`p${i}`} className={chip(i === Math.min(dyadPos, dyads.length - 1))}
+                  onClick={() => { setDyadPos(i); play(g); }}>
+                  {g.positionLabel}
+                </button>
+              ))}
             </div>
           </>
         )}
