@@ -186,6 +186,24 @@ function instantiate(shapes: (number | null)[][], root: number): Grip[] {
     .slice(0, 6);
 }
 
+/** The full dictionary, family-agnostic: every quality for a given root. */
+export function allQualityFamilies(root: number): { suffix: string; grips: Grip[]; seventhIntervals: number[] | null }[] {
+  const out: { suffix: string; grips: Grip[]; seventhIntervals: number[] | null }[] = [];
+  const seen = new Set<string>();
+  for (const ring of ["majorKey", "relativeMinor", "dominant", "diminished"] as const) {
+    for (const [suffix, shapes] of QUALITY_SHAPES[ring]) {
+      if (seen.has(suffix)) continue;
+      seen.add(suffix);
+      out.push({
+        suffix,
+        grips: instantiate(shapes, root),
+        seventhIntervals: SUFFIX_INTERVALS[suffix] ?? null,
+      });
+    }
+  }
+  return out.filter((f) => f.grips.length > 0 || f.seventhIntervals !== null);
+}
+
 export interface GripFamily {
   /** Chord-symbol suffix: "", "6/9", "maj9"… */
   suffix: string;
@@ -346,7 +364,7 @@ function gripLow(g: Grip): number {
 }
 
 /** Chord-tone role per sounded position: 0 root, 1 third, 2 fifth, 3 seventh. */
-export function toneRole(node: CompassNode, stringIndex: number, fret: number): number {
+export function toneRole(node: { root: number }, stringIndex: number, fret: number): number {
   const pc = (OPEN_PCS[stringIndex] + fret) % 12;
   const semis = (pc - node.root + 12) % 12;
   if (semis === 0) return 0;

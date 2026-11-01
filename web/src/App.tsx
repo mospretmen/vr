@@ -1,15 +1,16 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { FretboardExplorer } from "./components/FretboardExplorer";
 import { HarmonyCompass } from "./components/HarmonyCompass";
-import { ClassicsBrowser, ClassicsShowcase } from "./components/ClassicsShowcase";
+import { ChordDictionary } from "./components/ChordDictionary";
 import { VisionProSection } from "./components/VisionShowcase";
 import { SongbookLibrary } from "./components/SongbookLibrary";
 
 const NAV_LINKS = [
   { label: "Compass", href: "#compass" },
-  { label: "Vision Pro", href: "#visionpro" },
-  { label: "Classics", href: "#classics" },
   { label: "Explorer", href: "#explorer" },
+  { label: "Songbook", href: "#/songbook" },
+  { label: "Chords", href: "#/chords" },
+  { label: "Vision Pro", href: "#visionpro" },
 ] as const;
 
 function Wordmark() {
@@ -26,7 +27,7 @@ function Wordmark() {
 const APP_VIEWS = [
   { hash: "#/compass", label: "Compass" },
   { hash: "#/fretboard", label: "Fretboard" },
-  { hash: "#/phrases", label: "Phrases" },
+  { hash: "#/chords", label: "Chords" },
   { hash: "#/songbook", label: "Songbook" },
 ] as const;
 
@@ -79,9 +80,9 @@ function AppShell({ route }: { route: string }) {
             <FretboardExplorer bare />
           </div>
         )}
-        {route === "#/phrases" && (
-          <div className="h-full overflow-hidden pt-2">
-            <ClassicsBrowser fill />
+        {route === "#/chords" && (
+          <div className="h-full overflow-auto pt-2">
+            <ChordDictionary />
           </div>
         )}
         {route === "#/songbook" && (
@@ -229,9 +230,9 @@ function Hero() {
              className="rounded-xl border border-line px-6 py-3 text-sm font-medium text-ink transition-colors hover:bg-fill-soft">
             Fretboard
           </a>
-          <a href="#/phrases"
+          <a href="#/chords"
              className="rounded-xl border border-line px-6 py-3 text-sm font-medium text-ink transition-colors hover:bg-fill-soft">
-            Phrases
+            Chords
           </a>
           <a href="#/songbook"
              className="rounded-xl border border-line px-6 py-3 text-sm font-medium text-ink transition-colors hover:bg-fill-soft">
@@ -456,7 +457,6 @@ export default function App() {
       <main>
         <Hero />
         <Reveal><Features /></Reveal>
-        <Reveal><ClassicsShowcase /></Reveal>
         <Reveal>
           <Section
             id="explorer"
