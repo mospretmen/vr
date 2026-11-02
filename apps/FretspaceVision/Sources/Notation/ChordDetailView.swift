@@ -27,6 +27,7 @@ struct ChordDetailView: View {
     }
 
     private enum Mode: String, CaseIterable, Identifiable {
+        case walk = "Voicings"
         case grips = "Grips"
         case shells = "Shells"
         case triads = "Triads"
@@ -36,7 +37,8 @@ struct ChordDetailView: View {
         var id: String { rawValue }
     }
 
-    @State private var mode: Mode = .grips
+    @State private var mode: Mode = .walk
+    @State private var walkIndex = 0
     @State private var gripIndex = 0
     @State private var shellIndex = 0
     @State private var bass: ChordTone = .root
@@ -88,10 +90,31 @@ struct ChordDetailView: View {
     private var hasSeventh: Bool { chord.quality.intervals.count >= 4 }
 
     private var modes: [Mode] {
-        var list: [Mode] = hasSeventh ? [.grips, .shells, .triads, .drop2, .dyads]
-                                      : [.grips, .triads, .dyads]
+        // One voicing walk replaces the old Grips + Inversions tabs — the
+        // same engine and order as the web Chords view.
+        var list: [Mode] = hasSeventh ? [.walk, .shells, .triads, .dyads]
+                                      : [.walk, .triads, .dyads]
         if movementSixChord != nil { list.append(.movement) }
         return list
+    }
+
+    private var walkItems: [WalkVoicing] {
+        VoicingWalk.walk(for: chord, on: board)
+    }
+
+    private var walkItem: WalkVoicing? {
+        let items = walkItems
+        guard !items.isEmpty else { return nil }
+        return items[min(walkIndex, items.count - 1)]
+    }
+
+    private func stepWalk(_ direction: Int) {
+        let items = walkItems
+        guard !items.isEmpty else { return }
+        let bounded = min(walkIndex, items.count - 1)
+        walkIndex = (bounded + direction + items.count) % items.count
+        let voicing = items[walkIndex].voicing
+        pads.playRun(voicing.positions.map { board.note(at: $0) })
     }
     @State private var rungIndex = 0
     @State private var ladderTask: Task<Void, Never>? = nil
@@ -209,6 +232,20 @@ struct ChordDetailView: View {
     @ViewBuilder
     private var shapeControls: some View {
         switch mode {
+        case .walk:
+            HStack(spacing: 10) {
+                Button { stepWalk(-1) } label: { Image(systemName: "chevron.left") }
+                    .buttonStyle(.bordered)
+                Button { stepWalk(1) } label: { Image(systemName: "chevron.right") }
+                    .buttonStyle(.bordered)
+                if let item = walkItem {
+                    Text("\(item.kind) · \(min(walkIndex, walkItems.count - 1) + 1)/\(walkItems.count)")
+                        .font(.caption).foregroundStyle(.secondary)
+                }
+                Spacer()
+                Text("Every voicing, closest first — tap the board to hear it")
+                    .font(.caption2).foregroundStyle(.tertiary)
+            }
         case .grips, .shells:
             let shapes = mode == .grips ? grips : shellVoicings
             let selection = mode == .grips ? gripIndex : shellIndex
@@ -369,6 +406,11 @@ struct ChordDetailView: View {
             return [InversionShape(shape: v.positions,
                                    label: rungLabel(step),
                                    notes: v.steps.map(\.note))]
+        case .walk:
+            guard let item = walkItem else { return [] }
+            return [InversionShape(shape: item.voicing.positions,
+                                   label: item.kind,
+                                   notes: item.voicing.positions.map { board.note(at: $0) })]
         case .grips, .shells:
             let shapes = mode == .grips ? grips : shellVoicings
             let index = mode == .grips ? gripIndex : shellIndex
