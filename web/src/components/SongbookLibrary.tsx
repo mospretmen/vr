@@ -700,7 +700,7 @@ export function SongbookLibrary() {
                       <span className="min-w-0 flex-1 truncate text-sm font-medium text-ink">
                         {e.title}
                       </span>
-                      <span className="shrink-0 text-xs text-ink-mute">
+                      <span className="max-w-[45%] shrink-0 truncate text-xs text-ink-mute">
                         {book?.name ?? e.book} · p.{e.page}
                         {!inLibrary && storedCount > 0 && " · not in library"}
                       </span>
