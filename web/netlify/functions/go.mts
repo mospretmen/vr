@@ -14,8 +14,20 @@ export default (req: Request) => {
     return new Response("not found", { status: 404 });
   }
   const lib = encodeURIComponent("https://vr-music-app.netlify.app/book?f=");
-  return Response.redirect(
-    `https://vr-music-app.netlify.app/#/songbook/admin?lib=${lib}&key=${key}`, 302);
+  const dest = `/#/songbook/admin?lib=${lib}&key=${key}`;
+  // Not an HTTP redirect: iOS WebKit drops URL fragments across 302s,
+  // and the whole device config rides in the fragment. A client-side
+  // location.replace carries it intact on every browser.
+  const html = `<!doctype html><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Fretspace setup</title>
+<body style="background:#09090b;color:#a1a1aa;font-family:system-ui;display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
+<p>Setting up your songbook…</p>
+<script>location.replace(${JSON.stringify(dest)});</script>
+</body>`;
+  return new Response(html, {
+    headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" },
+  });
 };
 
 export const config = { path: ["/go", "/go/:pin"] };
