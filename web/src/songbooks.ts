@@ -45,6 +45,10 @@ export const SONGBOOKS: Songbook[] = [
   { key: "bach1007", name: "Bach — Cello Suite No. 1, BWV 1007", file: "bwv1007-cello-suite-1.pdf", pages: 10, indexed: false, url: "/scores/bwv1007-cello-suite-1.pdf" },
   { key: "bach999", name: "Bach — Prelude in C minor, BWV 999", file: "bwv999-prelude-c-minor.pdf", pages: 3, indexed: false, url: "/scores/bwv999-prelude-c-minor.pdf" },
   { key: "bach1000", name: "Bach — Fugue in G minor, BWV 1000", file: "bwv1000-fugue-g-minor.pdf", pages: 4, indexed: false, url: "/scores/bwv1000-fugue-g-minor.pdf" },
+  { key: "bach996", name: "Bach — Lute Suite in E minor, BWV 996", file: "bwv996-lute-suite-e-minor.pdf", pages: 12, indexed: false, url: "/scores/bwv996-lute-suite-e-minor.pdf" },
+  { key: "bach1001", name: "Bach — Violin Sonata No. 1, BWV 1001", file: "bwv1001-violin-sonata-1.pdf", pages: 7, indexed: false, url: "/scores/bwv1001-violin-sonata-1.pdf" },
+  { key: "bach1004", name: "Bach — Partita No. 2 (Chaconne), BWV 1004", file: "bwv1004-violin-partita-2.pdf", pages: 11, indexed: false, url: "/scores/bwv1004-violin-partita-2.pdf" },
+  { key: "bach1006", name: "Bach — Violin Partita No. 3, BWV 1006", file: "bwv1006-violin-partita-3.pdf", pages: 9, indexed: false, url: "/scores/bwv1006-violin-partita-3.pdf" },
 ];
 
 export interface SongEntry {

@@ -43,6 +43,14 @@ enum SongbookCatalog {
                          url: "https://vr-music-app.netlify.app/scores/bwv1000-fugue-g-minor.pdf"),
         "bwv1002": Book(name: "Bach — Partita No. 1, BWV 1002", file: "bwv1002-violin-partita-1.pdf", offset: 0,
                         url: "https://vr-music-app.netlify.app/scores/bwv1002-violin-partita-1.pdf"),
+        "bach996": Book(name: "Bach — Lute Suite in E minor, BWV 996", file: "bwv996-lute-suite-e-minor.pdf", offset: 0,
+                        url: "https://vr-music-app.netlify.app/scores/bwv996-lute-suite-e-minor.pdf"),
+        "bach1001": Book(name: "Bach — Violin Sonata No. 1, BWV 1001", file: "bwv1001-violin-sonata-1.pdf", offset: 0,
+                         url: "https://vr-music-app.netlify.app/scores/bwv1001-violin-sonata-1.pdf"),
+        "bach1004": Book(name: "Bach — Partita No. 2 (Chaconne), BWV 1004", file: "bwv1004-violin-partita-2.pdf", offset: 0,
+                         url: "https://vr-music-app.netlify.app/scores/bwv1004-violin-partita-2.pdf"),
+        "bach1006": Book(name: "Bach — Violin Partita No. 3, BWV 1006", file: "bwv1006-violin-partita-3.pdf", offset: 0,
+                         url: "https://vr-music-app.netlify.app/scores/bwv1006-violin-partita-3.pdf"),
     ]
 
     static let all: [SongEntry] = {
