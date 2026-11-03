@@ -330,7 +330,9 @@ export function SongbookLibrary() {
         return false;
       }
       if (hash.includes("admin")) {
-        localStorage.setItem("sb-admin", "1");
+        // "2" — v1 grants leaked onto phones via the old /go link; they
+        // expire here and admin must be re-granted via #/songbook/admin.
+        localStorage.setItem("sb-admin", "2");
         const lib = params?.get("lib");
         const key = params?.get("key");
         if (lib) localStorage.setItem("sb-remote-url", lib);
@@ -338,7 +340,7 @@ export function SongbookLibrary() {
         if (params) window.location.hash = "#/songbook";
         return true;
       }
-      return localStorage.getItem("sb-admin") === "1";
+      return localStorage.getItem("sb-admin") === "2";
     } catch {
       return false;
     }
@@ -567,7 +569,7 @@ export function SongbookLibrary() {
             </button>
           )}
         </div>
-        {isAdmin && (manageOpen || storedCount === 0) && (
+        {isAdmin && manageOpen && (
           <div className="mt-3 rounded-xl border border-line p-3">
             <div className="flex flex-wrap items-center gap-2">
               <label
