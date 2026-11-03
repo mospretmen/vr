@@ -46,15 +46,15 @@ function useHashRoute(): string {
 function AppShell({ route }: { route: string }) {
   return (
     <div className="stage-panel app-ambient flex h-screen flex-col overflow-hidden">
-      <header className="flex h-14 shrink-0 items-center justify-between gap-3 px-4 sm:px-6">
+      <header className="flex h-14 shrink-0 items-center justify-between gap-2 px-3 sm:gap-3 sm:px-6">
         <a href="#top" onClick={() => { window.location.hash = ""; }}
-           className="font-display text-base font-bold tracking-tight text-ink">
+           className="font-display text-[15px] font-bold tracking-tight text-ink sm:text-[16px]">
           Fret<span className="text-accent">space</span>
         </a>
-        <nav className="no-scrollbar flex items-center gap-4 overflow-x-auto sm:gap-6">
+        <nav className="no-scrollbar flex items-center gap-3 overflow-x-auto sm:gap-6">
           {APP_VIEWS.map((view) => (
             <a key={view.hash} href={view.hash}
-               className={`relative py-1.5 text-sm font-medium transition-colors duration-200 ${
+               className={`relative shrink-0 py-1.5 text-[13px] font-medium transition-colors duration-200 sm:text-sm ${
                  route.startsWith(view.hash) ? "text-ink" : "text-ink-mute hover:text-ink-dim"
                }`}>
               {view.label}
