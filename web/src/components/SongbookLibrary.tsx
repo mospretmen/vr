@@ -304,6 +304,7 @@ export function SongbookLibrary() {
   const [status, setStatus] = useState<string | null>(null);
   const [favorites, setFavorites] = useState<Set<string>>(loadFavorites);
   const [viewer, setViewer] = useState<{ entry: SongEntry; blob: Blob; fileName: string } | null>(null);
+  const [diag, setDiag] = useState<string | null>(null);
   const [viewerPage, setViewerPage] = useState(1);
   const [viewerPages, setViewerPages] = useState(0);
   const [offsets, setOffsets] = useState<Record<string, number>>(() =>
@@ -447,6 +448,7 @@ export function SongbookLibrary() {
     }
     if (!blob && remote.base) {
       try {
+        setDiag("fetching from cloud…");
         const base = remote.base.trim();
         const target = base.includes("{f}")
           ? base.replace("{f}", encodeURIComponent(fileName))
@@ -455,8 +457,15 @@ export function SongbookLibrary() {
             : `${base.replace(/\/+$/, "")}/${encodeURIComponent(fileName)}`;
         const res = await fetch(target,
           { headers: remote.auth ? { Authorization: remote.auth } : undefined });
-        if (res.ok) blob = await res.blob();
-      } catch { /* unreachable */ }
+        if (res.ok) {
+          blob = await res.blob();
+          setDiag(`cloud ok (${(blob.size / 1048576).toFixed(0)}MB)`);
+        } else {
+          setDiag(`cloud HTTP ${res.status}`);
+        }
+      } catch (err) {
+        setDiag(`cloud failed: ${err instanceof Error ? err.message.slice(0, 60) : "network"}`);
+      }
     }
     if (blob) {
       blobCache.current.set(fileName, blob);
@@ -607,6 +616,11 @@ export function SongbookLibrary() {
           autoFocus
         />
         {status && <p className="mt-2 text-xs text-amber-400/90">{status}</p>}
+        <p className="mt-1 text-[10px] text-ink-mute/70">
+          library: {storedCount > 0 ? `${storedCount} on device` : "none on device"}
+          {" · cloud: "}{remote.base ? "configured ✓" : "not set"}
+          {diag ? ` · last open: ${diag}` : ""}
+        </p>
         {!searching && (
           <div className="no-scrollbar mt-2 flex gap-0.5 overflow-x-auto">
             {LETTERS.map((l) => (
