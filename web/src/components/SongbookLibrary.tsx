@@ -314,8 +314,18 @@ export function SongbookLibrary() {
   // then remembered on this device. Visitors only ever see the search.
   const [isAdmin] = useState(() => {
     try {
-      if (window.location.hash.includes("admin")) {
+      const hash = window.location.hash;
+      if (hash.includes("admin")) {
         localStorage.setItem("sb-admin", "1");
+        const q = hash.indexOf("?");
+        if (q !== -1) {
+          const params = new URLSearchParams(hash.slice(q + 1));
+          const lib = params.get("lib");
+          const key = params.get("key");
+          if (lib) localStorage.setItem("sb-remote-url", lib);
+          if (key) localStorage.setItem("sb-remote-auth", key);
+          window.location.hash = "#/songbook";
+        }
         return true;
       }
       return localStorage.getItem("sb-admin") === "1";
@@ -437,7 +447,13 @@ export function SongbookLibrary() {
     }
     if (!blob && remote.base) {
       try {
-        const res = await fetch(`${remote.base.replace(/\/+$/, "")}/${encodeURIComponent(fileName)}`,
+        const base = remote.base.trim();
+        const target = base.includes("{f}")
+          ? base.replace("{f}", encodeURIComponent(fileName))
+          : base.includes("?")
+            ? `${base}${base.endsWith("?") || base.endsWith("=") ? "" : "&f="}${encodeURIComponent(fileName)}`
+            : `${base.replace(/\/+$/, "")}/${encodeURIComponent(fileName)}`;
+        const res = await fetch(target,
           { headers: remote.auth ? { Authorization: remote.auth } : undefined });
         if (res.ok) blob = await res.blob();
       } catch { /* unreachable */ }
