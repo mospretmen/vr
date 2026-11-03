@@ -25,8 +25,16 @@ export default (req: Request) => {
 <p>Setting up your songbook…</p>
 <script>location.replace(${JSON.stringify(dest)});</script>
 </body>`;
+  // The key also rides in a year-long HttpOnly cookie: /book accepts it,
+  // so the device stays authorized even when the browser purges
+  // localStorage (iOS does). The fragment setup remains as a fallback.
   return new Response(html, {
-    headers: { "content-type": "text/html; charset=utf-8", "cache-control": "no-store" },
+    headers: {
+      "content-type": "text/html; charset=utf-8",
+      "cache-control": "no-store",
+      "set-cookie":
+        `sbk=${encodeURIComponent(key)}; Path=/; Max-Age=31536000; Secure; HttpOnly; SameSite=Lax`,
+    },
   });
 };
 

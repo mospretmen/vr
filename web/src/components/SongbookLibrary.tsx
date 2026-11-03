@@ -349,13 +349,32 @@ export function SongbookLibrary() {
   const [remote, setRemote] = useState(() => {
     try {
       return {
-        base: localStorage.getItem("sb-remote-url") ?? "",
+        // The cloud library lives on this same site — always configured.
+        // A stored URL only overrides it for exotic setups.
+        base: localStorage.getItem("sb-remote-url") ?? "/book?f=",
         auth: localStorage.getItem("sb-remote-auth") ?? "",
       };
     } catch {
-      return { base: "", auth: "" };
+      return { base: "/book?f=", auth: "" };
     }
   });
+  // Authorization truth: the /go cookie or the stored key, checked
+  // against the server — not a guess from localStorage.
+  const [cloudState, setCloudState] = useState<"checking" | "ready" | "locked">("checking");
+  useEffect(() => {
+    let dead = false;
+    (async () => {
+      try {
+        const res = await fetch("/book?probe=1", {
+          headers: remote.auth ? { Authorization: remote.auth } : undefined,
+        });
+        if (!dead) setCloudState(res.status === 204 ? "ready" : "locked");
+      } catch {
+        if (!dead) setCloudState("locked");
+      }
+    })();
+    return () => { dead = true; };
+  }, [remote.auth]);
 
   /** Known books stored (key → actual file name), plus unknown extras. */
   const storedByKey = useMemo(() => {
@@ -637,9 +656,17 @@ export function SongbookLibrary() {
         {status && <p className="mt-2 text-xs text-amber-400/90">{status}</p>}
         <p className="mt-1 text-[10px] text-ink-mute/70">
           library: {storedCount > 0 ? `${storedCount} on device` : "none on device"}
-          {" · cloud: "}{remote.base ? "configured ✓" : "not set"}
+          {" · cloud: "}
+          {cloudState === "checking" ? "checking…" : cloudState === "ready" ? "ready ✓" : "locked"}
           {diag ? ` · last open: ${diag}` : ""}
         </p>
+        {cloudState === "locked" && (
+          <p className="mt-1 text-[11px] text-amber-400/90">
+            This device isn't linked to the cloud library yet — open your
+            setup link once (vr-music-app.netlify.app/go/…) and charts load
+            anywhere.
+          </p>
+        )}
         {!searching && (
           <div className="no-scrollbar mt-2 flex gap-0.5 overflow-x-auto">
             {LETTERS.map((l) => (
