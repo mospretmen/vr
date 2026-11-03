@@ -361,6 +361,8 @@ export function SongbookLibrary() {
   // Authorization truth: the /go cookie or the stored key, checked
   // against the server — not a guess from localStorage.
   const [cloudState, setCloudState] = useState<"checking" | "ready" | "locked">("checking");
+  const [pinDraft, setPinDraft] = useState("");
+  const [unlockErr, setUnlockErr] = useState("");
   useEffect(() => {
     let dead = false;
     (async () => {
@@ -661,11 +663,43 @@ export function SongbookLibrary() {
           {diag ? ` · last open: ${diag}` : ""}
         </p>
         {cloudState === "locked" && (
-          <p className="mt-1 text-[11px] text-amber-400/90">
-            This device isn't linked to the cloud library yet — open your
-            setup link once (vr-music-app.netlify.app/go/…) and charts load
-            anywhere.
-          </p>
+          <form
+            className="mt-2 flex items-center gap-2"
+            onSubmit={(ev) => {
+              ev.preventDefault();
+              void (async () => {
+                setUnlockErr("");
+                try {
+                  const res = await fetch(`/unlock?p=${encodeURIComponent(pinDraft.trim())}`);
+                  if (!res.ok) { setUnlockErr("Wrong PIN."); return; }
+                  const { key } = (await res.json()) as { key: string };
+                  try { localStorage.setItem("sb-remote-auth", key); } catch { /* cookie covers it */ }
+                  setRemote((r) => ({ ...r, auth: key }));
+                  setCloudState("ready");
+                } catch {
+                  setUnlockErr("Couldn't reach the library — try again.");
+                }
+              })();
+            }}
+          >
+            <span className="text-[11px] text-amber-400/90">Cloud library is locked —</span>
+            <input
+              value={pinDraft}
+              onChange={(ev) => setPinDraft(ev.target.value)}
+              inputMode="numeric"
+              autoComplete="one-time-code"
+              placeholder="PIN"
+              aria-label="Library PIN"
+              className="w-16 rounded-lg border border-line bg-transparent px-2 py-1 text-center text-sm text-ink placeholder:text-ink-mute focus:border-accent focus:outline-none"
+            />
+            <button
+              type="submit"
+              className="rounded-full bg-accent px-3 py-1 text-xs font-semibold text-accent-deep transition-opacity hover:opacity-90"
+            >
+              Unlock
+            </button>
+            {unlockErr && <span className="text-[11px] text-red-400">{unlockErr}</span>}
+          </form>
         )}
         {!searching && (
           <div className="no-scrollbar mt-2 flex gap-0.5 overflow-x-auto">
