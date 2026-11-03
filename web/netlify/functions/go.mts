@@ -4,7 +4,12 @@
 // personal site without making the URL untypable.
 export default (req: Request) => {
   const key = process.env.SONGBOOK_KEY ?? "";
-  const pin = new URL(req.url).searchParams.get("p");
+  const url = new URL(req.url);
+  // Pin in the PATH (/go/XXXX) — typed query strings get stripped by
+  // mobile address bars; a plain path survives. ?p= still accepted.
+  const pin = url.pathname.split("/").filter(Boolean).pop() === "go"
+    ? url.searchParams.get("p")
+    : url.pathname.split("/").filter(Boolean).pop();
   if (!key || pin !== key.slice(-4)) {
     return new Response("not found", { status: 404 });
   }
@@ -13,4 +18,4 @@ export default (req: Request) => {
     `https://vr-music-app.netlify.app/#/songbook/admin?lib=${lib}&key=${key}`, 302);
 };
 
-export const config = { path: "/go" };
+export const config = { path: ["/go", "/go/:pin"] };
