@@ -16,6 +16,8 @@ enum SongbookCatalog {
         let name: String
         let file: String
         let offset: Int
+        /// Public-domain scores served by the site directly — no key needed.
+        var url: String?
     }
 
     /// Book metadata + measured front-matter offsets (parity with the web).
@@ -23,15 +25,24 @@ enum SongbookCatalog {
         "realbk1": Book(name: "The Real Book I", file: "REALBK1.PDF", offset: 13),
         "realbk2": Book(name: "The Real Book II", file: "REALBK2.PDF", offset: 7),
         "realbk3": Book(name: "The Real Book III", file: "REALBK3.PDF", offset: 5),
-        "newreal1": Book(name: "The New Real Book I", file: "NEWREAL1.PDF", offset: 0),
-        "newreal2": Book(name: "The New Real Book II", file: "NEWREAL2.PDF", offset: 0),
-        "newreal3": Book(name: "The New Real Book III", file: "NEWREAL3.PDF", offset: 0),
+        // The New Real Books are indexed in INDEXES.PDF but the PDFs aren't
+        // in the library — re-add here once uploaded to the remote store.
         "jazzfake": Book(name: "The Jazz Fakebook", file: "JAZZFAKE-1.PDF", offset: -1),
         "colorado": Book(name: "The Colorado Cookbook", file: "COLOBK.PDF", offset: 3),
         "jazzltd": Book(name: "Jazz LTD", file: "JAZZLTD.PDF", offset: 7),
         "library": Book(name: "Library of Musicians' Jazz", file: "LIBRARY.PDF", offset: 4),
         "evansbk": Book(name: "The Bill Evans Fakebook", file: "EVANSBK.PDF", offset: 3),
         "thebook": Book(name: "The Book (commercial)", file: "THEBOOK.PDF", offset: 13),
+        "monk": Book(name: "Thelonious Monk Compositions", file: "Thelonious_Monk_Compositions.pdf", offset: 0),
+        "baden": Book(name: "Baden Powell Songbook vol. I", file: "Baden Pawel Vol. 1.pdf", offset: 0),
+        "bach1007": Book(name: "Bach — Cello Suite No. 1, BWV 1007", file: "bwv1007-cello-suite-1.pdf", offset: 0,
+                         url: "https://vr-music-app.netlify.app/scores/bwv1007-cello-suite-1.pdf"),
+        "bach999": Book(name: "Bach — Prelude in C minor, BWV 999", file: "bwv999-prelude-c-minor.pdf", offset: 0,
+                        url: "https://vr-music-app.netlify.app/scores/bwv999-prelude-c-minor.pdf"),
+        "bach1000": Book(name: "Bach — Fugue in G minor, BWV 1000", file: "bwv1000-fugue-g-minor.pdf", offset: 0,
+                         url: "https://vr-music-app.netlify.app/scores/bwv1000-fugue-g-minor.pdf"),
+        "bwv1002": Book(name: "Bach — Partita No. 1, BWV 1002", file: "bwv1002-violin-partita-1.pdf", offset: 0,
+                        url: "https://vr-music-app.netlify.app/scores/bwv1002-violin-partita-1.pdf"),
     ]
 
     static let all: [SongEntry] = {
@@ -42,7 +53,8 @@ enum SongbookCatalog {
             AppLog.state.error("Song index failed to load from bundle")
             return []
         }
-        return entries
+        // Only tunes whose book we can actually serve.
+        return entries.filter { books[$0.book] != nil }
     }()
 
     static func search(_ query: String, limit: Int = 60) -> [SongEntry] {
@@ -225,7 +237,7 @@ struct SongSheetView: View {
         if let document {
             SongPDFView(document: document,
                         page: max(1, entry.page + (book?.offset ?? 0)))
-        } else if failed || remoteURL.isEmpty {
+        } else if failed || (remoteURL.isEmpty && book?.url == nil) {
             VStack(spacing: 8) {
                 Image(systemName: "book.closed")
                     .font(.system(size: 44)).foregroundStyle(.secondary)
@@ -243,7 +255,13 @@ struct SongSheetView: View {
     }
 
     private func load() async {
-        guard !remoteURL.isEmpty, let book else { return }
+        guard let book else { return }
+        // Site-served public-domain scores need no remote library or key.
+        if let direct = book.url {
+            await fetch(direct, withKey: false)
+            return
+        }
+        guard !remoteURL.isEmpty else { return }
         // Supports plain hosts (…/dir/<file>) and function endpoints
         // (…/book?f=<file>) — same convention as the web app.
         let base = remoteURL.trimmingCharacters(in: .whitespaces)
@@ -261,13 +279,18 @@ struct SongSheetView: View {
         } else {
             target = (base.hasSuffix("/") ? String(base.dropLast()) : base) + "/" + encoded
         }
+        await fetch(target, withKey: true)
+    }
+
+    private func fetch(_ target: String, withKey: Bool) async {
         guard let url = URL(string: target) else {
             failed = true
             return
         }
         do {
             var request = URLRequest(url: url)
-            if let key = UserDefaults.standard.string(forKey: "songbook.remoteKey"),
+            if withKey,
+               let key = UserDefaults.standard.string(forKey: "songbook.remoteKey"),
                !key.isEmpty {
                 request.setValue(key, forHTTPHeaderField: "Authorization")
             }
@@ -279,7 +302,7 @@ struct SongSheetView: View {
             }
             document = doc
         } catch {
-            AppLog.state.error("Songbook fetch failed for \(book.file): \(error)")
+            AppLog.state.error("Songbook fetch failed for \(target): \(error)")
             failed = true
         }
     }

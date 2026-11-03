@@ -14,6 +14,10 @@ export interface Songbook {
   indexed: boolean;
   /** Public-domain scores served by the site itself — no import needed. */
   url?: string;
+  /** Indexed in INDEXES.PDF but the PDF isn't in the library (no device
+   *  copy, not in the cloud store) — keep out of search so every result
+   *  actually opens. Clear this after uploading the file. */
+  missing?: boolean;
 }
 
 export const SONGBOOKS: Songbook[] = [
@@ -26,9 +30,9 @@ export const SONGBOOKS: Songbook[] = [
   { key: "realbk2", name: "The Real Book II", file: "REALBK2.PDF", pages: 476, indexed: true },
   { key: "jazzltd", name: "Jazz LTD", file: "JAZZLTD.PDF", pages: 480, indexed: true },
   { key: "library", name: "Library of Musicians' Jazz", file: "LIBRARY.PDF", pages: 320, indexed: true },
-  { key: "newreal1", name: "The New Real Book I", file: "NEWREAL1.PDF", pages: 440, indexed: true },
-  { key: "newreal2", name: "The New Real Book II", file: "NEWREAL2.PDF", pages: 420, indexed: true },
-  { key: "newreal3", name: "The New Real Book III", file: "NEWREAL3.PDF", pages: 400, indexed: true },
+  { key: "newreal1", name: "The New Real Book I", file: "NEWREAL1.PDF", pages: 440, indexed: true, missing: true },
+  { key: "newreal2", name: "The New Real Book II", file: "NEWREAL2.PDF", pages: 420, indexed: true, missing: true },
+  { key: "newreal3", name: "The New Real Book III", file: "NEWREAL3.PDF", pages: 400, indexed: true, missing: true },
   { key: "jobim", name: "Tom Jobim Songbook vol. I", file: "Songbook Tom Jobim vol. I.pdf", pages: 76, indexed: false },
   { key: "jobim2", name: "Tom Jobim Songbook vol. II", file: "Songbook Tom Jobim vol. II.pdf", pages: 90, indexed: false },
   { key: "jobim3", name: "Tom Jobim Songbook vol. III", file: "Songbook Tom Jobim vol. III.pdf", pages: 90, indexed: false },
@@ -49,7 +53,11 @@ export interface SongEntry {
   page: number;
 }
 
-export const SONG_INDEX: SongEntry[] = rawIndex as SongEntry[];
+const UNAVAILABLE = new Set(SONGBOOKS.filter((b) => b.missing).map((b) => b.key));
+
+export const SONG_INDEX: SongEntry[] = (rawIndex as SongEntry[]).filter(
+  (e) => !UNAVAILABLE.has(e.book),
+);
 
 export function bookByKey(key: string): Songbook | undefined {
   return SONGBOOKS.find((b) => b.key === key);
