@@ -14,7 +14,7 @@ export default (req: Request) => {
     return new Response("not found", { status: 404 });
   }
   const lib = encodeURIComponent("https://vr-music-app.netlify.app/book?f=");
-  const dest = `/#/songbook/admin?lib=${lib}&key=${key}`;
+  const dest = `/#/songbook/setup?lib=${lib}&key=${key}`;
   // Not an HTTP redirect: iOS WebKit drops URL fragments across 302s,
   // and the whole device config rides in the fragment. A client-side
   // location.replace carries it intact on every browser.

@@ -303,7 +303,7 @@ export function SongbookLibrary() {
   const [letter, setLetter] = useState<string>("A");
   const [status, setStatus] = useState<string | null>(null);
   const [favorites, setFavorites] = useState<Set<string>>(loadFavorites);
-  const [viewer, setViewer] = useState<{ entry: SongEntry; blob: Blob; fileName: string } | null>(null);
+  const [viewer, setViewer] = useState<{ entry: SongEntry; blob: Blob | null; fileName: string } | null>(null);
   const [diag, setDiag] = useState<string | null>(null);
   const [viewerPage, setViewerPage] = useState(1);
   const [viewerPages, setViewerPages] = useState(0);
@@ -316,17 +316,26 @@ export function SongbookLibrary() {
   const [isAdmin] = useState(() => {
     try {
       const hash = window.location.hash;
+      const q = hash.indexOf("?");
+      const params = q !== -1 ? new URLSearchParams(hash.slice(q + 1)) : null;
+      if (hash.includes("setup")) {
+        // Device setup: store the cloud config, keep admin OFF — the
+        // import/library controls are the owner's desktop business.
+        const lib = params?.get("lib");
+        const key = params?.get("key");
+        if (lib) localStorage.setItem("sb-remote-url", lib);
+        if (key) localStorage.setItem("sb-remote-auth", key);
+        localStorage.removeItem("sb-admin");
+        window.location.hash = "#/songbook";
+        return false;
+      }
       if (hash.includes("admin")) {
         localStorage.setItem("sb-admin", "1");
-        const q = hash.indexOf("?");
-        if (q !== -1) {
-          const params = new URLSearchParams(hash.slice(q + 1));
-          const lib = params.get("lib");
-          const key = params.get("key");
-          if (lib) localStorage.setItem("sb-remote-url", lib);
-          if (key) localStorage.setItem("sb-remote-auth", key);
-          window.location.hash = "#/songbook";
-        }
+        const lib = params?.get("lib");
+        const key = params?.get("key");
+        if (lib) localStorage.setItem("sb-remote-url", lib);
+        if (key) localStorage.setItem("sb-remote-auth", key);
+        if (params) window.location.hash = "#/songbook";
         return true;
       }
       return localStorage.getItem("sb-admin") === "1";
@@ -433,9 +442,15 @@ export function SongbookLibrary() {
     setStatus(null);
     let blob: Blob | null = blobCache.current.get(fileName) ?? null;
     if (!blob) {
+      // Open the viewer immediately in its loading state — a cloud book
+      // can take a while on cellular, and silence reads as broken.
+      setViewerPages(0);
+      setViewerPage(Math.max(1, entry.page + (getOffset(entry.book) || 0)));
+      setViewer({ entry, blob: null, fileName });
       try {
         blob = await loadBookFile(fileName);
       } catch (err) {
+        setViewer(null);
         setStatus(err instanceof Error ? err.message : String(err));
         return;
       }
@@ -446,9 +461,9 @@ export function SongbookLibrary() {
         if (res.ok) blob = await res.blob();
       } catch { /* offline */ }
     }
-    if (!blob && remote.base) {
+    for (let attempt = 0; attempt < 2 && !blob && remote.base; attempt++) {
       try {
-        setDiag("fetching from cloud…");
+        setDiag(attempt === 0 ? "fetching from cloud…" : "retrying cloud…");
         const base = remote.base.trim();
         const target = base.includes("{f}")
           ? base.replace("{f}", encodeURIComponent(fileName))
@@ -465,6 +480,7 @@ export function SongbookLibrary() {
         }
       } catch (err) {
         setDiag(`cloud failed: ${err instanceof Error ? err.message.slice(0, 60) : "network"}`);
+        await new Promise((r) => setTimeout(r, 1200));
       }
     }
     if (blob) {
@@ -474,6 +490,7 @@ export function SongbookLibrary() {
       setViewer({ entry, blob, fileName });
       return;
     }
+    setViewer(null);
     setStatus(`“${book?.name ?? entry.book}” isn't in this browser's library yet.`);
   }, [storedByKey, remote]);
 
@@ -735,12 +752,20 @@ export function SongbookLibrary() {
               ✕ Close
             </button>
           </div>
-          <PdfPageView
-            fileName={viewer.fileName}
-            blob={viewer.blob}
-            page={viewerPage}
-            onPageCount={setViewerPages}
-          />
+          {viewer.blob ? (
+            <PdfPageView
+              fileName={viewer.fileName}
+              blob={viewer.blob}
+              page={viewerPage}
+              onPageCount={setViewerPages}
+            />
+          ) : (
+            <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 text-ink-dim">
+              <div className="h-8 w-8 animate-spin rounded-full border-2 border-fill border-t-accent" />
+              <p className="text-sm">Fetching the book from your library…</p>
+              <p className="text-xs text-ink-mute">big books take a moment on mobile data</p>
+            </div>
+          )}
         </div>
       )}
     </div>
