@@ -683,11 +683,15 @@ export function SongbookLibrary() {
             }}
           >
             <span className="text-[11px] text-amber-400/90">Cloud library is locked —</span>
+            {/* Shaped as a login so iCloud Keychain / password managers
+                save the PIN once and autofill it on every device after. */}
+            <input type="text" autoComplete="username" value="songbook" readOnly
+                   aria-hidden className="hidden" tabIndex={-1} />
             <input
               value={pinDraft}
               onChange={(ev) => setPinDraft(ev.target.value)}
-              inputMode="numeric"
-              autoComplete="one-time-code"
+              type="password"
+              autoComplete="current-password"
               placeholder="PIN"
               aria-label="Library PIN"
               className="w-16 rounded-lg border border-line bg-transparent px-2 py-1 text-center text-sm text-ink placeholder:text-ink-mute focus:border-accent focus:outline-none"
