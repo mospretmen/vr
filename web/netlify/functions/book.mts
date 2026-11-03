@@ -3,13 +3,21 @@
 // (or &k=<key>). Streams, so big fake books pass through.
 import { getStore } from "@netlify/blobs";
 
+const CORS = {
+  "access-control-allow-origin": "*",
+  "access-control-allow-headers": "authorization",
+};
+
 export default async (req: Request) => {
+  if (req.method === "OPTIONS") {
+    return new Response(null, { status: 204, headers: CORS });
+  }
   const url = new URL(req.url);
   const file = url.searchParams.get("f");
   const key = req.headers.get("authorization") ?? url.searchParams.get("k");
   const expected = process.env.SONGBOOK_KEY;
   if (!expected || key !== expected) {
-    return new Response("forbidden", { status: 403 });
+    return new Response("forbidden", { status: 403, headers: CORS });
   }
   if (!file) return new Response("missing f", { status: 400 });
   const store = getStore("songbooks");
@@ -17,6 +25,7 @@ export default async (req: Request) => {
   if (!body) return new Response("not found", { status: 404 });
   return new Response(body, {
     headers: {
+      ...CORS,
       "content-type": "application/pdf",
       "cache-control": "private, max-age=3600",
     },

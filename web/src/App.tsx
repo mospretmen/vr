@@ -55,10 +55,10 @@ function AppShell({ route }: { route: string }) {
           {APP_VIEWS.map((view) => (
             <a key={view.hash} href={view.hash}
                className={`relative py-1.5 text-sm font-medium transition-colors duration-200 ${
-                 route === view.hash ? "text-ink" : "text-ink-mute hover:text-ink-dim"
+                 route.startsWith(view.hash) ? "text-ink" : "text-ink-mute hover:text-ink-dim"
                }`}>
               {view.label}
-              {route === view.hash && (
+              {route.startsWith(view.hash) && (
                 <span className="absolute -bottom-0.5 left-0 right-0 mx-auto h-[2px] w-5 rounded-full bg-accent" />
               )}
             </a>
@@ -74,18 +74,18 @@ function AppShell({ route }: { route: string }) {
         </a>
       </header>
       <main className="min-h-0 flex-1 overflow-y-auto px-3 pb-3 sm:px-5 sm:pb-5">
-        {route === "#/compass" && <HarmonyCompass fill />}
-        {route === "#/fretboard" && (
+        {route.startsWith("#/compass") && <HarmonyCompass fill />}
+        {route.startsWith("#/fretboard") && (
           <div className="h-full overflow-auto pt-2">
             <FretboardExplorer bare />
           </div>
         )}
-        {route === "#/chords" && (
+        {route.startsWith("#/chords") && (
           <div className="h-full overflow-auto pt-2">
             <ChordDictionary />
           </div>
         )}
-        {route === "#/songbook" && (
+        {route.startsWith("#/songbook") && (
           <div className="h-full overflow-hidden pt-2">
             <SongbookLibrary />
           </div>
@@ -484,7 +484,9 @@ function Footer() {
 
 export default function App() {
   const route = useHashRoute();
-  if (APP_VIEWS.some((v) => v.hash === route)) {
+  // Prefix match so deep links like #/songbook/admin?lib=… still land
+  // in the app shell (exact match alone sent them to the landing page).
+  if (APP_VIEWS.some((v) => route === v.hash || route.startsWith(v.hash + "/"))) {
     return <AppShell route={route} />;
   }
   return (
