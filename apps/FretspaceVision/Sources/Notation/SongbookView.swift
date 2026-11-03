@@ -69,6 +69,8 @@ struct SongbookView: View {
         Set(UserDefaults.standard.stringArray(forKey: "songbook.favorites") ?? [])
     @State private var remoteURL: String =
         UserDefaults.standard.string(forKey: "songbook.remoteURL") ?? ""
+    @State private var remoteKey: String =
+        UserDefaults.standard.string(forKey: "songbook.remoteKey") ?? ""
     @State private var viewing: SongEntry?
     @State private var showSettings = false
 
@@ -162,10 +164,15 @@ struct SongbookView: View {
             Text("Remote library").font(.title3.bold())
             Text("A private URL that serves your book PDFs by file name. With it set, tunes open right here at the exact page.")
                 .font(.caption).foregroundStyle(.secondary)
-            TextField("https://your-bucket.example.com/songbooks", text: $remoteURL)
+            TextField("https://your-site/book?f=", text: $remoteURL)
                 .textFieldStyle(.roundedBorder)
                 .onChange(of: remoteURL) { _, value in
                     UserDefaults.standard.set(value, forKey: "songbook.remoteURL")
+                }
+            TextField("Access key (optional)", text: $remoteKey)
+                .textFieldStyle(.roundedBorder)
+                .onChange(of: remoteKey) { _, value in
+                    UserDefaults.standard.set(value, forKey: "songbook.remoteKey")
                 }
             Button("Done") { showSettings = false }
                 .buttonStyle(.borderedProminent)
@@ -237,14 +244,34 @@ struct SongSheetView: View {
 
     private func load() async {
         guard !remoteURL.isEmpty, let book else { return }
-        let base = remoteURL.hasSuffix("/") ? String(remoteURL.dropLast()) : remoteURL
-        guard let encoded = book.file.addingPercentEncoding(withAllowedCharacters: .urlPathAllowed),
-              let url = URL(string: "\(base)/\(encoded)") else {
+        // Supports plain hosts (…/dir/<file>) and function endpoints
+        // (…/book?f=<file>) — same convention as the web app.
+        let base = remoteURL.trimmingCharacters(in: .whitespaces)
+        guard let encoded = book.file.addingPercentEncoding(
+            withAllowedCharacters: .urlQueryAllowed) else {
+            failed = true
+            return
+        }
+        let target: String
+        if base.contains("{f}") {
+            target = base.replacingOccurrences(of: "{f}", with: encoded)
+        } else if base.contains("?") {
+            target = base.hasSuffix("=") || base.hasSuffix("?")
+                ? base + encoded : base + "&f=" + encoded
+        } else {
+            target = (base.hasSuffix("/") ? String(base.dropLast()) : base) + "/" + encoded
+        }
+        guard let url = URL(string: target) else {
             failed = true
             return
         }
         do {
-            let (data, response) = try await URLSession.shared.data(from: url)
+            var request = URLRequest(url: url)
+            if let key = UserDefaults.standard.string(forKey: "songbook.remoteKey"),
+               !key.isEmpty {
+                request.setValue(key, forHTTPHeaderField: "Authorization")
+            }
+            let (data, response) = try await URLSession.shared.data(for: request)
             guard (response as? HTTPURLResponse)?.statusCode == 200,
                   let doc = PDFDocument(data: data) else {
                 failed = true
